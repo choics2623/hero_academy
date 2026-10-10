@@ -45,6 +45,10 @@
     - { when: "know.kaiden_palace", text: "황궁 이야기를 할 때만 표정이 굳는다." }
     # 41_town_festival
     - { when: "fest.with == 'kaiden' and fest.moment", text: "봄 축제 날, 회색 후드를 쓴 황자에게 꼬치를 사 줬다. 빚은 잊지 않는다고 했다." }
+    # 42_dorm_quests
+    - { when: "news.case == 3 and news.case_end == 'buried'", text: "신문부 기사를 묻어 줬다. 황족은 빚을 잊지 않는다고 했다." }
+    - { when: "news.case == 3 and news.case_end == 'rewritten'", text: "어깨 대신 새벽 연습 이야기가 신문에 실렸다. 그 얘기만 나오면 귀가 빨개진다." }
+    - { when: "news.case == 3 and news.case_end == 'published'", text: "어깨 기사가 나갔다. 무투대회에서 틀렸다는 걸 증명하겠다고 했다." }
 
 - id: bruno
   name: 브루노
@@ -65,6 +69,9 @@
     - { when: "finn.mentor == 'garen'", text: "가렌 교관에게 소개했다. 밤마다 둘이 연무장에 있다." }
     # 41_town_festival
     - { when: "fest.with == 'finn' and fest.moment", text: "봄 축제 밤, 시계탑 꼭대기에서 같이 불꽃을 봤다. 아무도 모르는 자리라고 했다." }
+    # 42_dorm_quests
+    - { when: "item.핀의쪽지", text: "글자를 배우는 중. '고마어요'라고 쓴 냅킨 쪽지를 아직 간직하고 있다." }
+    - { when: "finn.letters >= 3", text: "글자를 배우는 중. 처음 쓴 단어는 자기 이름이었다." }
 
 - id: dorothy
   name: 도로시
@@ -75,6 +82,9 @@
     - { when: "found.dorothy", text: "그 냄비 속은 요리가 아니라 연금약이었다." }
     # 41_town_festival
     - { when: "fest.with == 'dorothy' and fest.moment", text: "봄 축제 노점에서 무지개 레모네이드 소동을 같이 겪었다. 공범이라고 부른다." }
+    # 42_dorm_quests
+    - { when: "fired.dorothy_trial_3 and dorothy.bistol_warned", text: "비스톨 교수의 연구실에 혼자 가지 않겠다고 새끼손가락을 걸었다." }
+    - { when: "fired.dorothy_trial_3 and dorothy.trial >= 3", text: "강장제 라벨에 나를 공동 개발자로 적어 줬다." }
 
 - id: sera
   name: 세라
@@ -95,6 +105,9 @@
     - { when: "fs.F09.noticed", text: "술잔에 낯선 왕가의 문장이 새겨져 있었다." }
     # 41_town_festival
     - { when: "fest.with == 'noel' and fest.moment", text: "봄 축제 밤, 망한 나라의 노래를 들려줬다. 가사를 아는 사람은 이제 노엘뿐이라고." }
+    # 42_dorm_quests
+    - { when: "noel.rune_seen", text: "룬 사전 여백에 사전보다 정확한 메모를 적어 둔다. 만년 꼴찌의 글씨가 아니다." }
+    - { when: "noel.laundry", text: "기숙사비가 밀려 세탁실에서 잔다. 3층 유령 소문의 정체." }
 
 - id: garen
   name: 가렌
@@ -129,6 +142,9 @@
   memo:
     - "말수가 적은 도서관 사서 노인."
     - { when: "fs.F02.noticed", text: "입학식 날 성검을 보며 '또 시작이구나'라고 했다." }
+    # 42_dorm_quests
+    - { when: "fired.lib_night_3 and libnight.keeper", text: "밤마다 등불을 들고 같이 서가를 정리한다. 빈 의자 이야기는 서로 꺼내지 않는다." }
+    - { when: "fired.lib_night_3 and libnight.step >= 3", text: "밤마다 등불을 들고 서가를 걷는다. 창가의 빈 의자에 말을 건다." }
 
 - id: edric
   name: 에드릭

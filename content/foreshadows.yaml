@@ -22,3 +22,5 @@
 - { id: F23, title: 가렌이 지키지 못한 20년 전의 용사 후보, meaning: "실패한 용사 파티", pending: "5장" }
 # 41_town_festival
 - { id: F41, title: 처음 온 시계탑을 아는 아렌, meaning: "아렌도 반복의 기억 조각을 가지고 있다", pending: "9장" }
+# 42_dorm_quests
+- { id: F40, title: 처음 보는데 익숙한 곳, meaning: "아렌도 반복의 기억 조각을 가지고 있다", pending: "9장" }
