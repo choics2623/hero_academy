@@ -22,5 +22,6 @@ npm run lint:story                  # 스토리 정적 분석
 npm run sim -- --runs 3000          # 자동 플레이테스트 → reports/sim.md
 npm run seek -- "fate.sera == 'saved'" --origin 평민장학생
 npm run verify                      # 모든 갈림길 결과 도달 가능성 검증
+npm run gallery                     # 도트 초상화·아이콘·삽화 전체를 dist/gallery.html로
 npm test
 ```
