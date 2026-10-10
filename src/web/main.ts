@@ -14,14 +14,19 @@ declare global {
   }
 }
 
-type LogItem = { k: 'scene'; when: string; title?: string; lines: RenderedLine[]; cont?: boolean } | { k: 'act'; text: string };
+type LogItem =
+  | { k: 'scene'; when: string; title?: string; lines: RenderedLine[]; cont?: boolean; flavor?: boolean }
+  | { k: 'act'; text: string; deltas?: string[] }
+  | { k: 'week'; title: string; items: string[] };
 interface Save {
   v: 1;
   build: Build;
   state: GameState;
   log: LogItem[];
+  weekKey?: string;
+  weekSnap?: Record<string, number>;
 }
-type Tab = 'status' | 'notes' | 'fs' | 'fate';
+type Tab = 'goals' | 'status' | 'people' | 'notes' | 'fate';
 
 const content: Content = buildContent({ files: window.__HERO_CONTENT__ });
 const cal = content.calendar;
@@ -33,7 +38,9 @@ let build: Build = exampleBuild();
 let game: Game | null = null;
 let log: LogItem[] = [];
 let rendered = 0;
-let tab: Tab = 'status';
+let tab: Tab = 'goals';
+let weekKey = '';
+let weekSnap: Record<string, number> = {};
 
 // ------------------------------------------------------------ helpers
 
@@ -86,7 +93,7 @@ function twoStep(b: HTMLButtonElement, armedText: string, run: () => void) {
 // ------------------------------------------------------------ save
 
 function snapshot(): Save | null {
-  return game ? { v: 1, build, state: game.state, log: log.slice(-150) } : null;
+  return game ? { v: 1, build, state: game.state, log: log.slice(-150), weekKey, weekSnap } : null;
 }
 function readSave(): Save | null {
   try {
@@ -250,7 +257,7 @@ function renderCreate() {
     sTal.append(el('div', 'cat', cat));
     const tc = el('div', 'cards');
     for (const t of content.talents.values()) {
-      if (t.category !== cat) continue;
+      if (t.category !== cat || t.evolved) continue;
       const isBase = origin.talents.includes(t.id);
       const sel = build.talents.find((x) => x.id === t.id);
       const on = isBase || !!sel;
@@ -398,6 +405,7 @@ function startGame() {
   if (!checkBuild(content, build).ok) return;
   game = Game.create(content, structuredClone(build), Math.floor(Math.random() * 2147483646) + 1);
   log = [];
+  weekKey = '';
   capture(false);
   writeSave();
   showGame();
@@ -407,19 +415,90 @@ function resume(s: Save) {
   build = s.build;
   game = Game.restore(content, s.state);
   log = s.log ?? [];
+  weekKey = s.weekKey ?? '';
+  weekSnap = s.weekSnap ?? {};
   showGame();
 }
 
+// ---- 변화량 기록: 행동마다 "근력 +2.5 · 피로 +15", 주마다 결산
+
+function tracked(): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(game!.state.vars)) {
+    if (typeof v !== 'number') continue;
+    if (k.startsWith('stat.') || k.startsWith('affinity.') || k === 'fatigue' || k === 'stress' || k === 'money') out[k] = v;
+  }
+  return out;
+}
+
+function describeDiff(a: Record<string, number>, b: Record<string, number>, min = 0.5): string[] {
+  const order = (k: string) =>
+    k.startsWith('stat.') ? content.rules.stats.indexOf(k.slice(5)) : k.startsWith('affinity.') ? 20 : ({ fatigue: 30, stress: 31, money: 32 } as Record<string, number>)[k] ?? 40;
+  const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])].sort((x, y) => order(x) - order(y));
+  const out: string[] = [];
+  for (const k of keys) {
+    const d = Math.round(((b[k] ?? 0) - (a[k] ?? 0)) * 10) / 10;
+    if (Math.abs(d) < min) continue;
+    const label = k.startsWith('stat.')
+      ? k.slice(5)
+      : k.startsWith('affinity.')
+        ? `${content.characters.get(k.slice(9))?.name ?? k.slice(9)} 호감`
+        : ({ fatigue: '피로', stress: '스트레스', money: '은화' } as Record<string, string>)[k];
+    out.push(`${label} ${d > 0 ? '+' : ''}${d}`);
+  }
+  return out;
+}
+
+function currentWeek(): string {
+  const t = game!.state.time;
+  return `${t.y}.${t.m}.${t.w}`;
+}
+
+function checkWeek() {
+  if (!game || game.ended) return;
+  const key = currentWeek();
+  if (!weekKey) {
+    weekKey = key;
+    weekSnap = tracked();
+    return;
+  }
+  if (key === weekKey) return;
+  const [y, m, w] = weekKey.split('.');
+  const items = describeDiff(weekSnap, tracked(), 1).filter((x) => !x.startsWith('피로') && !x.startsWith('스트레스'));
+  if (items.length) log.push({ k: 'week', title: `${y === '0' ? '입학 전' : `${y}학년`} ${m}월 ${w}주차 결산`, items });
+  weekKey = key;
+  weekSnap = tracked();
+}
+
+/** 선택지 없는 일상 묘사 (제목 없는 반복 장면) */
+function isFlavor(): boolean {
+  const sc = game!.state.scene;
+  if (!sc || sc.choices.length) return false;
+  return !sc.eventId || !content.events.get(sc.eventId)?.title;
+}
+
 function capture(cont: boolean) {
+  checkWeek();
   const v = game!.view();
-  if (v.phase === 'scene' && v.lines.length) log.push({ k: 'scene', when: v.time, title: v.title, lines: v.lines, cont });
+  if (v.phase === 'scene' && v.lines.length) {
+    log.push({ k: 'scene', when: v.time, title: v.title, lines: v.lines, cont, flavor: isFlavor() });
+  }
 }
 
 function act(a: Action, label: string) {
   if (!game) return;
-  if (label) log.push({ k: 'act', text: label });
+  const before = tracked();
+  const at = log.length;
   game.act(a);
+  const deltas = a.type === 'continue' ? [] : describeDiff(before, tracked());
   capture(a.type === 'choice');
+  // 일상 묘사는 '계속'을 누르지 않아도 다음으로 넘어간다
+  for (let i = 0; i < 20 && game.state.phase === 'scene' && isFlavor(); i++) {
+    game.act({ type: 'continue' });
+    capture(false);
+  }
+  checkWeek();
+  if (label || deltas.length) log.splice(at, 0, { k: 'act', text: label, deltas });
   writeSave();
   renderGame(true);
 }
@@ -436,6 +515,12 @@ function renderLine(l: RenderedLine): HTMLElement {
   if (!l.speaker) return el('p', undefined, l.text);
   if (l.speaker === '속마음') return el('p', 'inner', l.text);
   if (l.speaker === '시스템') return el('div', 'sysline', l.text);
+  if (l.speaker === '판정') {
+    const ok = l.text.endsWith('성공');
+    const d = el('div', ok ? 'check ok' : 'check ng');
+    d.append(el('span', 'tag', ok ? '성공' : '실패'), el('span', undefined, l.text.replace(/ · (성공|실패)$/, '')));
+    return d;
+  }
   if (l.speaker === '📌') {
     const [kind, rest] = l.text.split(' — ');
     const d = el('div', 'pin');
@@ -448,9 +533,21 @@ function renderLine(l: RenderedLine): HTMLElement {
 }
 
 function renderItem(item: LogItem): HTMLElement {
-  if (item.k === 'act') return el('div', 'act', item.text);
-  const a = el('article', item.cont ? 'scene cont' : 'scene');
-  if (!item.cont) {
+  if (item.k === 'act') {
+    const d = el('div', item.text ? 'act' : 'act bare', item.text);
+    if (item.deltas?.length) d.append(el('span', 'delta', item.deltas.join(' · ')));
+    return d;
+  }
+  if (item.k === 'week') {
+    const d = el('div', 'weekly');
+    d.append(el('span', 'wt', item.title));
+    const chips = el('span', 'chips');
+    for (const x of item.items) chips.append(el('span', x.includes('-') ? 'chip down' : 'chip', x));
+    d.append(chips);
+    return d;
+  }
+  const a = el('article', item.cont || item.flavor ? 'scene cont' : 'scene');
+  if (!item.cont && !item.flavor) {
     a.append(el('div', 'when', item.when));
     if (item.title) a.append(el('h2', undefined, item.title));
   }
@@ -477,7 +574,7 @@ function renderControls() {
   c.replaceChildren();
   if (v.phase === 'ended') {
     const box = el('div', 'ending');
-    box.append(el('h3', undefined, '1학년 6월 — 프로토타입은 여기까지'));
+    box.append(el('h3', undefined, '1학년 1학기 끝 — 프로토타입은 여기까지'));
     box.append(el('p', undefined, `원작 붕괴도 ${g.world.collapse()}%. 지금까지 바꾼 운명은 이렇다.`));
     const ul = el('ul');
     for (const cr of content.crossroads.values()) {
@@ -501,12 +598,29 @@ function renderControls() {
   if (v.phase === 'activity') {
     const slot = cal.slotName(g.state.time);
     c.append(el('div', 'prompt', `무엇을 할까? · ${slot}`));
+    const next = g.upcoming(1)[0];
+    const active = g.goals().filter((x) => x.status === 'active');
+    if (next || active.length) {
+      const nu = el('div', 'nextup');
+      if (next) nu.append(el('span', undefined, `다음 일정 · ${next.label} (${next.weeks <= 0 ? '이번 주' : `${next.weeks}주 뒤`})`));
+      if (active.length) {
+        const gb = button('linkish', `목표 ${active.length}개 진행 중`, () => {
+          tab = 'goals';
+          renderPanel();
+          $('panel').classList.add('open');
+          $('panel-toggle').textContent = '닫기';
+        });
+        nu.append(gb);
+      }
+      c.append(nu);
+    }
     const grid = el('div', 'activities');
     v.activities.forEach((a, i) => {
       const b = button('activity', '', () => act({ type: 'activity', id: a.id }, a.name));
       b.dataset.idx = String(i + 1);
       if (i < 9) b.append(el('span', 'k', String(i + 1)));
       b.append(el('b', undefined, a.name));
+      if (a.desc) b.append(el('span', 'ad', a.desc));
       const fx = effectSummary(a.id);
       if (fx) b.append(el('span', 'fx', fx));
       grid.append(b);
@@ -531,19 +645,27 @@ function renderControls() {
   c.append(button('continue', '계속', () => act({ type: 'continue' }, '')));
 }
 
+function window_(title: string): HTMLElement {
+  const w = el('div', 'window');
+  w.append(el('h4', undefined, title));
+  return w;
+}
+
 function renderPanel() {
   const g = game!;
   const p = $('panel');
   p.replaceChildren();
   const notes = g.notes();
-  const noticed = [...content.foreshadows.values()].filter((f) => g.state.vars[`fs.${f.id}.noticed`]);
+  const goals = g.goals();
+  const people = g.relationships();
   const tabs = el('div', 'tabs');
   tabs.setAttribute('role', 'tablist');
   const defs: [Tab, string, number?][] = [
-    ['status', '상태창'],
-    ['notes', '공략 노트', notes.length],
-    ['fs', '복선', noticed.length],
-    ['fate', '갈림길'],
+    ['goals', '목표', goals.filter((x) => x.status === 'active').length],
+    ['status', '상태'],
+    ['people', '인연', people.length],
+    ['notes', '노트', notes.length],
+    ['fate', '운명'],
   ];
   for (const [id, label, n] of defs) {
     const b = button('tab', label, () => {
@@ -552,17 +674,34 @@ function renderPanel() {
     });
     b.setAttribute('role', 'tab');
     b.setAttribute('aria-selected', String(tab === id));
-    if (n !== undefined) b.append(el('span', 'n', String(n)));
+    if (n) b.append(el('span', 'n', String(n)));
     tabs.append(b);
   }
   p.append(tabs);
   const pane = el('div', 'pane');
   p.append(pane);
 
-  if (tab === 'status') {
+  if (tab === 'goals') {
+    const sch = window_('[다가오는 일정]');
+    const up = g.upcoming(5);
+    if (!up.length) sch.append(el('div', 'legend', '남은 일정이 없다.'));
+    for (const u of up) {
+      const r = el('div', 'row');
+      r.append(el('span', undefined, u.label), el('span', 'when-s', u.weeks <= 0 ? '이번 주' : `${u.weeks}주 뒤`));
+      sch.append(r);
+    }
+    pane.append(sch);
+    const order = { active: 0, done: 1, failed: 2 } as const;
+    for (const x of [...goals].sort((a, b) => order[a.status] - order[b.status])) {
+      const d = el('div', `goal ${x.status}`);
+      d.append(el('span', 'gs', x.status === 'active' ? '진행 중' : x.status === 'done' ? '달성' : '실패'), el('b', undefined, x.title));
+      if (x.status === 'active' && x.hint) d.append(el('p', undefined, x.hint));
+      pane.append(d);
+    }
+    if (!goals.length) pane.append(el('p', 'empty', '아직 목표가 없다.'));
+  } else if (tab === 'status') {
     const exact = !!g.state.vars['perk.상태창'];
-    const w = el('div', 'window');
-    w.append(el('h4', undefined, `[상태창] ${build.name}`));
+    const w = window_(`[상태창] ${build.name}`);
     w.append(el('div', 'legend', content.origins.get(build.origin)?.name ?? ''));
     if (!exact) w.append(el('div', 'legend', '상태창 특전이 없어서 등급만 보인다'));
     for (const s of content.rules.stats) {
@@ -577,8 +716,7 @@ function renderPanel() {
     }
     pane.append(w);
 
-    const cond = el('div', 'window');
-    cond.append(el('h4', undefined, '[컨디션]'));
+    const cond = window_('[컨디션]');
     for (const [key, label] of [['fatigue', '피로'], ['stress', '스트레스']] as const) {
       const v = Math.floor(Number(g.get(key) ?? 0));
       const r = el('div', 'stat');
@@ -592,16 +730,17 @@ function renderPanel() {
     const money = el('div', 'row');
     money.append(el('span', undefined, '돈'), el('span', undefined, `은화 ${Math.floor(Number(g.get('money') ?? 0))}`));
     cond.append(money);
+    if (Number(g.get('fatigue') ?? 0) >= 50) cond.append(el('div', 'legend', '피로가 50을 넘으면 훈련 효율이 떨어진다. 85가 넘으면 쓰러진다.'));
     pane.append(cond);
 
-    const tw = el('div', 'window');
-    tw.append(el('h4', undefined, '[재능]'));
+    const tw = window_('[재능]');
     const chips = el('div', 'chips');
     for (const t of content.talents.values()) {
       const lv = Number(g.state.vars[`talent.${t.id}`] ?? 0);
       if (!lv) continue;
       const opt = t.options?.find((o) => g.state.vars[`talent.${t.id}.${o}`]);
-      chips.append(el('span', lv >= 2 ? 'chip bloom' : 'chip', `${t.name}${opt ? `(${opt})` : ''}${lv >= 2 ? ' · 개화' : ''}`));
+      const bloom = lv >= 2 || t.evolved;
+      chips.append(el('span', bloom ? 'chip bloom' : 'chip', `${t.name}${opt ? `(${opt})` : ''}${lv >= 2 ? ' · 개화' : t.evolved ? ' · 진화' : ''}`));
     }
     tw.append(chips);
     const perks = [...content.perks.values()].filter((x) => g.state.vars[`perk.${x.id}`]);
@@ -612,6 +751,23 @@ function renderPanel() {
       tw.append(pc);
     }
     pane.append(tw);
+  } else if (tab === 'people') {
+    if (!people.length) pane.append(el('p', 'empty', '아직 인연을 맺은 사람이 없다.'));
+    for (const r of people) {
+      const d = el('div', 'rel');
+      const top = el('div', 'rel-top');
+      top.append(el('b', undefined, r.name), el('span', 'rank', `인연 ${r.rank}`));
+      const bar = el('div', 'bar-s');
+      const fill = el('i');
+      fill.style.width = `${Math.min(100, Math.max(0, r.affinity))}%`;
+      bar.append(fill);
+      d.append(top, bar);
+      if (r.memo) d.append(el('p', undefined, r.memo));
+      if (r.trust >= 15) d.append(el('span', 'trust', '나를 믿고 있다'));
+      else if (r.trust < 0) d.append(el('span', 'trust low', '나를 경계한다'));
+      pane.append(d);
+    }
+    pane.append(el('p', 'legend', '호감도 10마다 인연 1단계. 신뢰는 숫자로 보이지 않는다.'));
   } else if (tab === 'notes') {
     if (!notes.length) pane.append(el('p', 'empty', '기억나는 원작 정보가 없다.'));
     for (const n of [...notes].sort((a, b) => b.grade - a.grade)) {
@@ -621,17 +777,8 @@ function renderPanel() {
       pane.append(d);
     }
     pane.append(el('p', 'legend', '★★★ 직접 플레이 · ★★ 커뮤니티 공략 · ★ 데이터마이닝. 원작을 바꾸면 관련 기억은 더 이상 믿을 수 없다.'));
-  } else if (tab === 'fs') {
-    if (!noticed.length) pane.append(el('p', 'empty', '아직 눈치챈 복선이 없다.'));
-    for (const f of noticed) {
-      const d = el('div', 'note');
-      const paid = !!g.state.vars[`fs.${f.id}.paid`];
-      d.append(el('span', 'stars', paid ? '회수됨' : '미회수'), el('b', undefined, f.title));
-      if (paid && f.meaning) d.append(el('p', undefined, f.meaning));
-      pane.append(d);
-    }
-    pane.append(el('p', 'legend', '눈치챈 복선만 기록된다. 지성, 직감, 마력 감응이 높을수록 더 많이 알아챈다.'));
   } else {
+    pane.append(el('div', 'cat', '갈림길'));
     for (const cr of content.crossroads.values()) {
       const val = g.state.vars[cr.key];
       const d = el('div', 'fate');
@@ -641,14 +788,24 @@ function renderPanel() {
       else d.append(el('span', 'st changed', `원작 이탈 — ${cr.labels[String(val)] ?? String(val)} · 붕괴도 +${cr.weight}`));
       pane.append(d);
     }
-    pane.append(el('p', 'legend', '마감까지 개입하지 않으면 원작대로 흘러간다. 원작에서 벗어날수록 공략 노트를 믿기 어려워진다.'));
+    const noticed = [...content.foreshadows.values()].filter((f) => g.state.vars[`fs.${f.id}.noticed`]);
+    pane.append(el('div', 'cat', `복선 ${noticed.length}`));
+    if (!noticed.length) pane.append(el('p', 'empty', '아직 눈치챈 복선이 없다.'));
+    for (const f of noticed) {
+      const d = el('div', 'note');
+      const paid = !!g.state.vars[`fs.${f.id}.paid`];
+      d.append(el('span', 'stars', paid ? '회수됨' : '미회수'), el('b', undefined, f.title));
+      if (paid && f.meaning) d.append(el('p', undefined, f.meaning));
+      pane.append(d);
+    }
+    pane.append(el('p', 'legend', '눈치챈 복선만 기록된다. 지성, 직감, 마력 감응이 높을수록 더 많이 알아챈다.'));
   }
 }
 
 function renderGame(scroll: boolean) {
   const g = game!;
   const v = g.view();
-  $('time').textContent = v.phase === 'ended' ? '1학년 6월 끝' : v.time;
+  $('time').textContent = v.phase === 'ended' ? '1학년 1학기 끝' : v.time;
   $('doom').textContent = doomText();
   const collapse = g.world.collapse();
   ($('collapse-fill') as HTMLElement).style.width = `${collapse}%`;

@@ -45,3 +45,22 @@
   text: 뒷골목 정보상 그림은 황제 암살이 일어난 밤 황궁 근처에 있었다.
   grade: 2
   when: "perk.공략위키편집자 or perk.고인물의기억"
+
+- id: note_tourney
+  title: 1학년 무투대회
+  text: 원작에선 결승에서 카이든이 아렌을 꺾고 우승한다. 아렌은 이 패배로 처음 이를 악문다.
+  grade: 3
+  about: [tourney]
+
+- id: note_kaiden_style
+  title: 카이든의 버릇
+  text: 카이든은 어릴 적 낙마로 다친 왼쪽 어깨를 감싸며 싸운다. 오른쪽 아래로 빈틈이 생긴다.
+  grade: 3
+  when: "perk.고인물의기억 or perk.공략위키편집자"
+
+- id: note_aren_final
+  title: 결승의 아렌
+  text: 아렌은 성검의 목소리에 정신이 팔리면 동작이 굳는다. 말로 흔들면 무너진다는 공략이 있었다.
+  grade: 2
+  when: "perk.공략위키편집자"
+  fragile: 20

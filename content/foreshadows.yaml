@@ -9,3 +9,10 @@
 - { id: F07, title: 핀이 피를 보면 손을 떪, meaning: "핀의 트라우마", pending: "핀 각성 이벤트" }
 - { id: F10, title: 그날 밤 황궁의 검은 마차, meaning: "황제 암살 진범 단서", pending: "6장" }
 - { id: F14, title: 찢긴 일기장의 마지막 장, meaning: "몸 주인은 이전 회차를 눈치챈 사람", pending: "3학년 가을" }
+- { id: F09, title: 노엘 선배 술잔의 문장, meaning: "망국 왕가의 문장", pending: "노엘 각성 이벤트" }
+- { id: F11, title: 엘베라가 마왕을 존칭으로 부를 뻔함, meaning: "엘베라와 이그니스의 과거", pending: "9장" }
+- { id: F15, title: 사서가 천 년 전 지명을 지금처럼 말함, meaning: "사서는 초대 용사", pending: "10장" }
+- { id: F16, title: 도로시의 약을 먹은 화분이 살아남, meaning: "세계수 치유약의 가능성", pending: "7장" }
+- { id: F17, title: 비스톨이 빌려간 사자 소생 연구서, meaning: "죽은 딸을 되살리려 한다", pending: "4학년 봄" }
+- { id: F18, title: 브루노 할아버지의 망치, meaning: "성검을 다시 벼릴 수 있는 혈통", pending: "6장" }
+- { id: F19, title: "루나: \"성검은 고르지 않는다, 교회가 고른다\"", meaning: "용사 선정의 진실", pending: "3장" }

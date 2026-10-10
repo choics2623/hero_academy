@@ -1,33 +1,40 @@
 # 활동: 플레이어가 슬롯마다 고르는 행동. 고르면 effects가 적용되고,
-# 그 활동에 걸린(on) 스토리렛 중 가장 구체적인 하나가 발생한다. 없으면 lines만 나온다.
+# 그 활동에 걸린(on) 스토리렛 중 하나가 발생한다:
+#   조건 있는 일회성 이벤트 > pool 이벤트(서로 무작위) > 조건 없는 일상 묘사
+# 피로가 50을 넘으면 훈련 효율이 떨어진다 (식: 1 - max(0, fatigue - 50) / 100).
 
 # ---------------------------------------------------------------- 서장 (입학 전 한 달)
 - id: 폐광
   name: 마을 뒤 폐광 탐색
+  desc: 원작에서 아렌이 영약을 얻는 곳
   window: "0.2"
   effects: ["fatigue += 20 * (1 + mod.fatigue)"]
   lines: ["폐광 입구는 조용하다. 오늘은 더 볼 게 없다."]
 
 - id: 고서점
   name: 도시 고서점
+  desc: 오래된 책이 쌓인 가게
   window: "0.2"
   effects: ["fatigue += 5"]
   lines: ["먼지 냄새. 주인은 졸고 있다."]
 
 - id: 뒷골목
   name: 뒷골목 정보상
+  desc: 은화 10닢이 든다
   window: "0.2"
   when: "money >= 10"
   lines: ["오늘은 정보상이 보이지 않는다."]
 
 - id: 새벽연무장
   name: 새벽 연무장 구경
+  desc: 아침에만 갈 수 있다
   window: "0.2"
   slots: [오전]
   lines: ["아무도 없는 연무장. 이슬이 차갑다."]
 
 - id: 집안정리
   name: 집안 정리
+  desc: 이 몸의 사정을 살핀다
   window: "0.2"
   effects: ["stress -= 5"]
   lines: ["방을 정리했다. 이 몸의 원래 주인은 꽤 깔끔한 사람이었던 것 같다."]
@@ -38,61 +45,107 @@
   effects: ["stat.근력 += 2", "stat.체질 += 2", "fatigue += 15 * (1 + mod.fatigue)"]
 
 # ---------------------------------------------------------------- 1학년
-- id: 도서관
-  name: 도서관
-  window: { from: "1.3", to: "1.6" }
-  effects: ["stat.지성 += 2", "fatigue += 8 * (1 + mod.fatigue)"]
-
 - id: 훈련장
   name: 훈련장
-  window: { from: "1.3", to: "1.6" }
-  effects: ["stat.근력 += 2", "stat.민첩 += 1", "stat.체질 += 1", "fatigue += 15 * (1 + mod.fatigue)"]
+  desc: 카이든, 브루노, 아렌이 자주 온다
+  window: { from: "1.3", to: "1.7" }
+  effects:
+    - "stat.근력 += 2.5 * (1 - max(0, fatigue - 50) / 100)"
+    - "stat.민첩 += 1.5 * (1 - max(0, fatigue - 50) / 100)"
+    - "stat.체질 += 1 * (1 - max(0, fatigue - 50) / 100)"
+    - "fatigue += 15 * (1 + mod.fatigue)"
+
+- id: 도서관
+  name: 도서관
+  desc: 사서 노인과 미라벨이 있다
+  window: { from: "1.3", to: "1.7" }
+  effects: ["stat.지성 += 2.5 * (1 - max(0, fatigue - 50) / 100)", "fatigue += 8 * (1 + mod.fatigue)"]
 
 - id: 마법실습
   name: 마법 실습실
-  window: { from: "1.3", to: "1.6" }
-  effects: ["stat.마력제어 += 2", "stat.마력량 += 1", "fatigue += 12 * (1 + mod.fatigue)"]
+  desc: 엘베라 교수의 실습실
+  window: { from: "1.3", to: "1.7" }
+  effects:
+    - "stat.마력제어 += 2.5 * (1 - max(0, fatigue - 50) / 100)"
+    - "stat.마력량 += 1.5 * (1 - max(0, fatigue - 50) / 100)"
+    - "fatigue += 12 * (1 + mod.fatigue)"
+
+- id: 성당
+  name: 성당
+  desc: 시스터 루나가 있다. 마음이 가라앉는다
+  window: { from: "1.3", to: "1.7" }
+  effects: ["stat.의지 += 2 * (1 - max(0, fatigue - 50) / 100)", "stress -= 10", "fatigue += 5"]
 
 - id: 식당
   name: 학생 식당
-  window: { from: "1.3", to: "1.6" }
-  effects: ["stat.매력 += 1", "fatigue -= 5", "money -= 2 * (1 + talent.대식가)"]
+  desc: 소문이 모인다. 피로가 조금 풀린다
+  window: { from: "1.3", to: "1.7" }
+  effects: ["stat.매력 += 1", "fatigue -= 8", "money -= 2 * (1 + talent.대식가)"]
+
+- id: 산책
+  name: 교정 산책
+  desc: 뒷산과 호숫가. 누가 있을지 모른다
+  window: { from: "1.3", to: "1.7" }
+  effects: ["stress -= 15", "fatigue -= 5", "stat.매력 += 0.5"]
+
+- id: 아르바이트
+  name: 식당 아르바이트
+  desc: 은화를 번다. 꽤 고되다
+  window: { from: "1.3", to: "1.7" }
+  slots: [방과후, 주말]
+  effects: ["money += 12", "fatigue += 14 * (1 + mod.fatigue)", "stat.체질 += 0.5"]
+
+- id: 도시외출
+  name: 주말 도시 외출
+  desc: 시장, 고서점, 뒷골목. 주말에만
+  window: { from: "1.3", to: "1.7" }
+  slots: [주말]
+  effects: ["stress -= 10", "fatigue += 5"]
 
 - id: 온실
   name: 원예부 온실
-  window: { from: "1.4", to: "1.6" }
+  desc: 리아나가 있다
+  window: { from: "1.4", to: "1.7" }
   when: "club == '원예부'"
-  effects: ["stat.지성 += 1", "stress -= 5"]
+  effects: ["stat.지성 += 1", "stat.마력제어 += 1", "stress -= 5"]
   lines: ["화분에 물을 줬다. 오늘은 조용하다."]
 
 - id: 검술부
   name: 검술부 연습
-  window: { from: "1.4", to: "1.6" }
+  desc: 카이든이 있다
+  window: { from: "1.4", to: "1.7" }
   when: "club == '검술부'"
-  effects: ["stat.근력 += 2", "stat.민첩 += 1", "fatigue += 15 * (1 + mod.fatigue)"]
+  effects:
+    - "stat.근력 += 2.5 * (1 - max(0, fatigue - 50) / 100)"
+    - "stat.민첩 += 2 * (1 - max(0, fatigue - 50) / 100)"
+    - "fatigue += 15 * (1 + mod.fatigue)"
   lines: ["목검이 부딪히는 소리. 땀이 흐른다."]
 
 - id: 신문부
   name: 신문부 취재
-  window: { from: "1.4", to: "1.6" }
+  desc: 정보와 소문이 모인다
+  window: { from: "1.4", to: "1.7" }
   when: "club == '신문부'"
-  effects: ["stat.매력 += 1", "stat.지성 += 1"]
+  effects: ["stat.매력 += 1.5", "stat.지성 += 1"]
   lines: ["오늘은 특종이 없다."]
 
 - id: 밤의연무장
   name: 밤의 연무장
-  window: { from: "1.3", to: "1.6" }
+  desc: 핀이 몰래 연습하는 곳
+  window: { from: "1.3", to: "1.7" }
   slots: [밤]
   when: "found.finn"
-  effects: ["stat.근력 += 1", "stat.민첩 += 1", "fatigue += 10 * (1 + mod.fatigue)"]
+  effects: ["stat.근력 += 1.5", "stat.민첩 += 1.5", "fatigue += 10 * (1 + mod.fatigue)"]
   lines: ["핀은 오늘 오지 않았다."]
 
 # ---------------------------------------------------------------- 공통
 - id: 휴식
   name: 휴식
-  effects: ["fatigue -= 30", "stress -= 10"]
+  desc: 피로와 스트레스를 크게 덜어낸다
+  effects: ["fatigue -= 35", "stress -= 10"]
   lines:
     - 나레이션:
         - "푹 쉬었다."
         - { when: "talent.게으름", text: "푹 쉬었다. 너무 푹 쉬어서 해가 중천이다." }
         - { when: "talent.병약", text: "누워서 기침을 삼켰다. 조금 나아진 것 같다." }
+        - { when: "time.year == 1 and met.bruno and origin != '악역도련님'", text: "누워 있는데 브루노가 몰래 사과 하나를 머리맡에 두고 갔다." }

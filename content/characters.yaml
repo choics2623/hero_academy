@@ -1,17 +1,131 @@
-- { id: aren, name: 아렌, desc: 원작 주인공. 성검에 선택받은 평민 }
-- { id: liana, name: 리아나, desc: 하프엘프. 원작 2학년 여름 사망 }
-- { id: mirabel, name: 미라벨, desc: 몰락 귀족 마법 천재 }
-- { id: kaiden, name: 카이든, desc: 3황자 }
-- { id: kael, name: 카엘, desc: 마족 전학생 }
-- { id: bruno, name: 브루노, desc: 대장장이 아들 }
-- { id: finn, name: 핀, desc: 청소부 소년. 미구현 데이터 }
-- { id: dorothy, name: 도로시, desc: 식당 딸 }
-- { id: sera, name: 세라, desc: 반 배정 시험 탈락생 }
-- { id: noel, name: 노엘, desc: 만년 꼴찌 선배 }
-- { id: garen, name: 가렌, desc: 검술 교관 }
-- { id: elvera, name: 엘베라, desc: 마법학 교수 }
-- { id: bistol, name: 비스톨, desc: 연금술 교수 }
-- { id: luna, name: 시스터 루나, desc: 신학 교수 }
-- { id: librarian, name: 사서, desc: 도서관 사서 노인 }
-- { id: edric, name: 에드릭, desc: 원작 1권에서 죽는 악역 도련님 }
-- { id: grim, name: 그림, desc: 뒷골목 정보상 }
+# 캐릭터. met = 인연 화면에 나타나는 조건 (기본: affinity.<id> > 0 or met.<id>)
+# memo = 인연 화면의 한 줄 메모. 가장 구체적인 것이 보인다.
+
+- id: aren
+  name: 아렌
+  desc: 원작 주인공. 성검에 선택받은 평민
+  memo:
+    - "성검에 선택받은 평민. 아직 자기 힘을 모른다."
+    - { when: "aren.temper >= 1", text: "나를 믿기 시작했다. 원작보다 표정이 밝다." }
+    - { when: "aren.temper <= -1", text: "원작처럼 이를 악물고 혼자 버티는 중." }
+    - { when: "tourney.winner == 'me'", text: "무투대회 결승에서 나에게 졌다. 눈빛이 달라졌다." }
+
+- id: liana
+  name: 리아나
+  desc: 하프엘프. 원작 2학년 여름 사망
+  memo:
+    - "원예부의 하프엘프. 숲 이야기를 좋아한다."
+    - { when: "know.moonherb", text: "어릴 때 월광초 달인 약을 먹었다고 한다." }
+    - { when: "fs.F05.noticed", text: "계단에서 가슴을 짚던 모습이 마음에 걸린다." }
+    - { when: "secret.liana", text: "내가 심장 이야기를 꺼낸 뒤로 조금 경계한다." }
+    - { when: "fired.enc_walk_stars", text: "같이 별을 봤다. 엄마 이야기를 해줬다." }
+
+- id: mirabel
+  name: 미라벨
+  desc: 몰락 귀족 마법 천재
+  memo:
+    - "몰락한 아델하이트가의 마법 천재. 콧대가 높다."
+    - { when: "rival.mirabel", text: "실기 라이벌. 지는 걸 죽기보다 싫어한다." }
+    - { when: "trust.mirabel >= 15", text: "가문 이야기를 할 때만 목소리가 낮아진다." }
+
+- id: kaiden
+  name: 카이든
+  desc: 3황자
+  memo:
+    - "3황자. 오만해 보이지만 검은 정직하다."
+    - { when: "know.kaiden_shoulder", text: "왼쪽 어깨를 감싸는 버릇이 있다." }
+    - { when: "know.kaiden_palace", text: "황궁 이야기를 할 때만 표정이 굳는다." }
+
+- id: bruno
+  name: 브루노
+  desc: 대장장이 아들
+  memo:
+    - "덩치 큰 대장장이 아들. 힘이 장사다."
+    - { when: "fired.enc_canteen_bruno >= 2", text: "할아버지의 망치를 자랑으로 여긴다." }
+
+- id: finn
+  name: 핀
+  desc: 청소부 소년. 미구현 데이터
+  memo:
+    - "청소부 소년. 빗자루 끝이 검처럼 움직인다."
+    - { when: "fs.F07.noticed", text: "피를 보면 손이 떨린다." }
+    - { when: "finn.mentor == 'garen'", text: "가렌 교관에게 소개했다. 밤마다 둘이 연무장에 있다." }
+
+- id: dorothy
+  name: 도로시
+  desc: 식당 딸
+  met: "found.dorothy or affinity.dorothy > 0"
+  memo:
+    - "식당 아주머니의 딸. 늘 냄비에 뭔가를 끓인다."
+    - { when: "found.dorothy", text: "그 냄비 속은 요리가 아니라 연금약이었다." }
+
+- id: sera
+  name: 세라
+  desc: 반 배정 시험 탈락생
+  memo:
+    - "은발의 신학과 신입생."
+    - { when: "fate.sera == 'saved'", text: "시험장에서 부축해준 걸 기억한다." }
+    - { when: "fate.sera == 'saved_quiet'", text: "누가 도와줬는지 모른 채 학교에 남았다." }
+    - { when: "fate.sera == 'dropped'", text: "시험에 떨어져 고향으로 돌아갔다." }
+
+- id: noel
+  name: 노엘
+  desc: 만년 꼴찌 선배
+  memo:
+    - "만년 꼴찌 4학년 선배. 늘 술 냄새가 난다."
+    - { when: "fs.F09.noticed", text: "술잔에 낯선 왕가의 문장이 새겨져 있었다." }
+
+- id: garen
+  name: 가렌
+  desc: 검술 교관
+  memo:
+    - "검술 교관. 말수가 적다."
+    - { when: "affinity.garen >= 20", text: "가끔 내 검을 봐준다. 칭찬은 한 번도 안 했다." }
+
+- id: elvera
+  name: 엘베라
+  desc: 마법학 교수
+  memo:
+    - "500살 엘프 마법학 교수."
+    - { when: "fs.F11.noticed", text: "마왕의 이름을 부를 때 존칭을 붙일 뻔했다." }
+
+- id: bistol
+  name: 비스톨
+  desc: 연금술 교수
+  memo:
+    - "연금술 교수. 늘 피곤해 보인다."
+    - { when: "fs.F06.noticed", text: "연구실에 일곱 살쯤 된 소녀의 초상화가 있다." }
+
+- id: luna
+  name: 시스터 루나
+  desc: 신학 교수
+  memo:
+    - "성당을 지키는 신학 교수. 웃는 얼굴로 날카로운 말을 한다."
+
+- id: librarian
+  name: 사서
+  desc: 도서관 사서 노인
+  memo:
+    - "말수가 적은 도서관 사서 노인."
+    - { when: "fs.F02.noticed", text: "입학식 날 성검을 보며 '또 시작이구나'라고 했다." }
+
+- id: edric
+  name: 에드릭
+  desc: 원작 1권에서 죽는 악역 도련님
+  met: "origin != '악역도련님' and (affinity.edric > 0 or met.edric)"
+  memo:
+    - "벨모어가의 망나니."
+    - { when: "fate.edric == 'saved'", text: "미궁에서 구해준 뒤로 나를 졸졸 따라다닌다." }
+    - { when: "fate.edric == 'saved_by_teacher'", text: "교관에게 끌려 나와 살았다. 누가 알렸는지 모른다." }
+
+- id: grim
+  name: 그림
+  desc: 뒷골목 정보상
+  memo:
+    - "뒷골목 정보상. 정보는 공짜가 아니다."
+    - { when: "intel >= 2", text: "단골 대접을 해준다." }
+
+- id: kael
+  name: 카엘
+  desc: 마족 전학생 (2학기)
+  met: "false"

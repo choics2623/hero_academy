@@ -68,10 +68,17 @@ describe('실제 콘텐츠', () => {
     expect(lint(c).filter((f) => f.level === 'error')).toEqual([]);
   });
 
-  it('시뮬레이션 200회 오류 없음, 모든 이벤트 발생', () => {
-    const r = simulate(c, { runs: 200, seed: 9 });
+  it('시뮬레이션 300회 오류 없음, 이벤트 대부분 발생', () => {
+    const r = simulate(c, { runs: 300, seed: 9 });
     expect(r.errors).toEqual([]);
-    expect([...r.eventFires.values()].every((n) => n > 0)).toBe(true);
+    const never = [...r.eventFires].filter(([, n]) => n === 0).map(([id]) => id);
+    // 집중 육성이 필요한 재능 개화 정도만 무작위 플레이에서 빠질 수 있다
+    expect(never.length).toBeLessThanOrEqual(2);
+  });
+
+  it('집중 육성하면 무투대회에서 우승할 수 있다', () => {
+    const r = seek(c, { name: '나', origin: '엑스트라', perks: ['고인물의기억'], talents: [{ id: '강골' }, { id: '천생신력' }] }, "tourney.winner == 'me'", { beam: 32 });
+    expect(r.found).toBe(true);
   });
 
   it('세라를 구하는 경로가 존재한다', () => {

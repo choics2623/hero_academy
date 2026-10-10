@@ -1,0 +1,611 @@
+# 만남 풀: 활동을 할 때마다 이 중 하나가 무작위로 일어난다 (pool: true).
+# cooldown = 한 번 일어나면 몇 주 쉬는가, chance = 후보가 될 확률.
+# 조건 있는 일회성 이벤트(priority 1 이상)가 있으면 그쪽이 먼저다.
+
+# ================================================================ 훈련장
+- id: enc_train_bruno
+  title: 브루노와 팔씨름
+  on: 훈련장
+  pool: true
+  repeat: 3
+  cooldown: 2
+  when: "met.bruno or affinity.bruno > 0"
+  lines:
+    - 브루노: "어이! 한 판 하자. 지는 사람이 저녁 사기!"
+  check: { label: 팔씨름, value: "stat.근력 + luck", dc: 30 }
+  success:
+    lines: ["브루노의 팔이 천천히 넘어갔다. 브루노가 눈을 끔뻑인다.", 브루노: "…너 뭐 먹고 사냐?"]
+    effects: ["affinity.bruno += 6", "stat.근력 += 1"]
+  fail:
+    lines: ["책상이 먼저 부서질 뻔했다. 저녁은 내가 샀다.", 브루노: "다음에 또 하자!"]
+    effects: ["affinity.bruno += 4", "money -= 3"]
+
+- id: enc_train_kaiden
+  title: 혼자 남은 카이든
+  on: 훈련장
+  pool: true
+  repeat: 2
+  cooldown: 3
+  when: "time.month >= 4"
+  lines:
+    - "해 질 녘 훈련장. 카이든이 혼자 같은 동작을 수백 번 반복하고 있다."
+  choices:
+    - text: 말을 건다
+      effects: ["affinity.kaiden += 5", "trust.kaiden += 3"]
+      lines:
+        - 카이든: "황자가 노력하는 게 그렇게 신기한가."
+        - 나레이션:
+            - "그는 대답 대신 다시 검을 휘둘렀다."
+            - { when: "trust.kaiden >= 10", text: "잠시 뒤, 그가 낮게 덧붙였다. \"형님들은 내가 실패하길 바라거든.\"" }
+    - text: 멀리서 동작을 관찰한다 (지성)
+      check: { label: 동작 관찰, value: "stat.지성 + stat.민첩 / 2 + luck", dc: 28 }
+      success:
+        lines: ["왼쪽 어깨를 쓸 때마다 반 박자씩 늦는다. 오른쪽 아래가 빈다."]
+        effects: ["know.kaiden_shoulder = 1", "stat.민첩 += 1"]
+      fail:
+        lines: ["완벽해 보인다. 빈틈이 보이지 않는다."]
+
+- id: enc_train_garen
+  title: 가렌의 자세 교정
+  on: 훈련장
+  pool: true
+  repeat: 3
+  cooldown: 2
+  when: "met.garen"
+  effects: ["affinity.garen += 5", "stat.근력 += 1", "stat.민첩 += 1"]
+  lines:
+    - "가렌 교관이 말없이 다가와 내 팔꿈치를 툭 쳐서 내렸다."
+    - 가렌:
+        - "힘으로 휘두르지 마라. 허리로."
+        - { when: "stat.근력 >= 30", text: "…제법이군. 이제 허리만 고치면 된다." }
+        - { when: "stat.근력 >= 30 and fired.enc_train_garen >= 3", text: "다음 주부터 새벽에도 나와라. 따로 봐주지." }
+
+- id: enc_train_aren
+  title: 늦게까지 남은 아렌
+  on: 훈련장
+  pool: true
+  repeat: 3
+  cooldown: 2
+  when: "fired.y1_entrance"
+  lines:
+    - "아렌이 혼자 남아 목검을 휘두르고 있다. 성검을 쥘 때와는 딴판으로 어설프다."
+    - 아렌: "성검은 저절로 움직이는데… 나는 왜 이 모양일까."
+  choices:
+    - text: 같이 연습한다
+      effects: ["affinity.aren += 6", "aren.kind += 0.5", "stat.근력 += 1"]
+      lines: [아렌: "고마워. 혼자 하면 자꾸 성검 생각만 나거든."]
+    - text: "\"성검에 기대지 말고 기본기부터\"라고 조언한다"
+      requires: "stat.지성 >= 16 or note.note_tourney.known"
+      effects: ["affinity.aren += 4", "aren.boost += 1"]
+      lines:
+        - 아렌: "…기본기. 맞아. 그렇게 할게."
+        - 속마음: "(원작의 아렌은 3학년이 되어서야 이걸 깨닫는다.)"
+    - text: 그냥 지나간다
+      effects: ["aren.cold += 0.5"]
+      lines: ["뒤에서 목검 부딪히는 소리가 오래도록 들렸다."]
+
+- id: enc_train_injury
+  title: 무리한 대가
+  on: 훈련장
+  pool: true
+  repeat: true
+  cooldown: 3
+  chance: 0.6
+  when: "fatigue >= 60"
+  lines: ["피로가 쌓인 다리가 꼬였다."]
+  check: { label: 부상 회피, value: "stat.체질 + stat.민첩 / 2 - 30 * mod.injury + luck", dc: 26 }
+  success:
+    lines: ["넘어지기 직전에 버텼다. 오늘은 여기까지 하자."]
+  fail:
+    lines:
+      - 나레이션:
+          - "발목을 접질렀다. 며칠은 절뚝거리겠다."
+          - { when: "talent.무통증", text: "발목이 이상한 각도로 꺾였는데 아프지 않다. 그게 더 무섭다." }
+    effects: ["fatigue += 15", "stress += 10 * (1 + mod.stress)"]
+
+- id: enc_train_senior
+  title: 선배의 대련 신청
+  on: 훈련장
+  pool: true
+  repeat: 2
+  cooldown: 3
+  when: "stat.근력 >= 25"
+  lines:
+    - 선배: "1학년 중에 힘 좀 쓴다는 게 너냐? 한 판 붙자."
+  check: { label: 선배와 대련, value: "stat.근력 + stat.민첩 / 2 + luck", dc: 42 }
+  success:
+    lines: ["선배의 목검이 바닥을 굴렀다. 주변에 구경꾼이 몰려들었다."]
+    effects: ["reputation += 8", "stat.근력 += 2"]
+  fail:
+    lines: ["세 합 만에 목검을 놓쳤다. 선배가 어깨를 두드린다.", 선배: "나쁘지 않아. 2학년 되면 다시 붙자."]
+    effects: ["stat.민첩 += 1"]
+
+# ================================================================ 도서관
+- id: enc_lib_librarian
+  title: 사서 노인
+  on: 도서관
+  pool: true
+  repeat: 3
+  cooldown: 2
+  effects: ["affinity.librarian += 4"]
+  branch:
+    - when: "fired.enc_lib_librarian >= 3"
+      lines:
+        - 사서: "칼데라 고개를 넘으면 은빛 숲이 나오지. 거기 여관 주인이 술을 잘 담가."
+        - 속마음: "(칼데라 고개… 천 년 전 지명이다. 지금은 잿빛 장벽 너머의 땅인데.)"
+      plants:
+        - { id: F15, notice: { value: "stat.지성 + 15 * talent.완전기억 + 10 * perk.고인물의기억", dc: 30 } }
+    - when: "fired.enc_lib_librarian >= 2"
+      lines:
+        - 사서: "자네 눈은… 처음 이 학교에 온 사람 눈이 아니군."
+        - 속마음: "(…들켰나?)"
+    - lines:
+        - 사서: "책은 사람보다 오래 산다네. 사람이 책보다 오래 살면, 그건 저주지."
+
+- id: enc_lib_mirabel
+  title: 도서관의 미라벨
+  on: 도서관
+  pool: true
+  repeat: 3
+  cooldown: 2
+  when: "time.month >= 4"
+  lines:
+    - "고급 마법서를 산더미처럼 쌓아둔 자리. 미라벨이다."
+    - 미라벨:
+        - "뭘 봐. 이 책 네 수준엔 안 맞을 텐데."
+        - { when: "rival.mirabel", text: "또 너야? …이 술식, 넌 어떻게 풀었는데." }
+  check: { label: 술식 토론, value: "stat.지성 + stat.마력제어 / 2 + luck", dc: 34 }
+  success:
+    lines: [미라벨: "…그런 해석도 있네. 인정하긴 싫지만."]
+    effects: ["affinity.mirabel += 6", "trust.mirabel += 4", "stat.지성 += 1"]
+  fail:
+    lines: [미라벨: "역시. 다음엔 예습하고 와."]
+    effects: ["affinity.mirabel += 2"]
+
+- id: enc_lib_study
+  title: 몰입
+  on: 도서관
+  pool: true
+  repeat: true
+  cooldown: 1
+  lines:
+    - 나레이션:
+        - "문득 고개를 드니 창밖이 어둡다. 꽤 많이 읽었다."
+        - { when: "talent.완전기억", text: "오늘 읽은 책 세 권이 머릿속 서가에 그대로 꽂혔다." }
+        - { when: "talent.집중력", text: "시간 가는 줄 몰랐다. 노트가 빼곡하다." }
+  effects: ["stat.지성 += 1"]
+
+- id: enc_lib_bistol
+  title: 비스톨 교수의 대출 목록
+  on: 도서관
+  pool: true
+  when: "time.month >= 4"
+  lines:
+    - "대출 창구에서 비스톨 교수와 마주쳤다. 그가 황급히 책을 품에 감춘다."
+    - "책등에 적힌 제목이 언뜻 보였다. 『사자(死者) 소생 이론 — 금기의 역사』."
+    - 비스톨: "…연구 자료일 뿐이네."
+  effects: ["met.bistol = 1"]
+  plants:
+    - { id: F17, notice: { value: "stat.지성 + 10 * talent.직감", dc: 24 } }
+
+- id: enc_lib_forbidden
+  title: 금서 열람증
+  on: 도서관
+  pool: true
+  when: "stat.지성 >= 30"
+  lines:
+    - 사서: "자네, 매일 오는군. …이걸 주지. 금서 서가 열람증일세."
+    - "금서 서가에는 제국 초기 연대기가 있었다. 초대 용사의 이름이 적힌 쪽만 찢겨 있다."
+  effects: ["know.library_access = 1", "stat.지성 += 2", "affinity.librarian += 6"]
+
+# ================================================================ 마법 실습실
+- id: enc_magic_elvera
+  title: 엘베라 교수의 개인 지도
+  on: 마법실습
+  pool: true
+  repeat: 3
+  cooldown: 2
+  when: "met.elvera"
+  effects: ["affinity.elvera += 5", "stat.마력제어 += 1"]
+  lines:
+    - 엘베라:
+        - "마력은 물이에요. 움켜쥐면 새어 나가죠."
+        - { when: "talent.마나탱크", text: "그릇이 크네요. 이렇게 큰 그릇은… 오래전 한 사람 이후 처음이에요." }
+        - { when: "talent.마력폭주체질", text: "감정이 흔들리면 마력도 흔들려요. 숨부터 고르세요." }
+        - { when: "fired.enc_magic_elvera >= 3", text: "그분도 처음엔 이렇게 서툴렀는데. …아니에요, 옛날 얘기예요." }
+
+- id: enc_magic_mirabel_duel
+  title: 실기 대결
+  on: 마법실습
+  pool: true
+  repeat: 2
+  cooldown: 3
+  when: "rival.mirabel or affinity.mirabel >= 10"
+  lines:
+    - 미라벨: "표적 열 개. 먼저 다 맞히는 쪽이 이기는 거야."
+  check: { label: 마법 대결, value: "stat.마력제어 + stat.마력량 / 2 + luck", dc: 40 }
+  success:
+    lines: ["마지막 표적이 동시에 터졌다. …아니, 내 쪽이 반 박자 빨랐다.", 미라벨: "……한 번 더."]
+    effects: ["affinity.mirabel += 8", "trust.mirabel += 5", "reputation += 5"]
+  fail:
+    lines: [미라벨: "아델하이트를 이기려면 백 년은 이르지."]
+    effects: ["affinity.mirabel += 3", "stress += 5"]
+
+- id: enc_magic_backfire
+  title: 마력 폭주
+  on: 마법실습
+  pool: true
+  repeat: true
+  cooldown: 3
+  chance: 0.7
+  when: "talent.마력폭주체질"
+  lines: ["손끝의 불꽃이 갑자기 부풀어 오른다."]
+  check: { label: 폭주 억제, value: "stat.의지 + stat.마력제어 / 2 + luck", dc: 28 }
+  success:
+    lines: ["이를 악물고 눌러 담았다. 불꽃이 얌전해졌다. 조금 감이 온다."]
+    effects: ["stat.마력제어 += 2"]
+  fail:
+    lines: ["펑. 실습실 커튼이 반쯤 탔다. 엘베라 교수가 웃음을 참는다."]
+    effects: ["fatigue += 10", "stress += 10"]
+
+- id: enc_magic_aren
+  title: 마법이 서툰 아렌
+  on: 마법실습
+  pool: true
+  when: "time.month >= 4"
+  lines:
+    - "아렌이 불꽃 하나 못 띄우고 끙끙대고 있다."
+    - 아렌: "성검이 마력을 다 빨아가는 것 같아."
+  choices:
+    - text: 요령을 알려준다
+      requires: "stat.마력제어 >= 18"
+      effects: ["affinity.aren += 8", "aren.kind += 0.5", "aren.boost += 1"]
+      lines: ["아렌의 손끝에 작은 불꽃이 맺혔다.", 아렌: "됐다! 됐어! 너 진짜 대단하다."]
+    - text: 응원만 한다
+      effects: ["affinity.aren += 3"]
+
+# ================================================================ 성당
+- id: enc_chapel_luna
+  title: 시스터 루나
+  on: 성당
+  pool: true
+  repeat: 3
+  cooldown: 2
+  effects: ["affinity.luna += 5", "met.luna = 1"]
+  branch:
+    - when: "fired.enc_chapel_luna >= 2"
+      lines:
+        - 시스터 루나: "성검이 용사를 고른다고들 하죠. 글쎄요. 성검은 고르지 않아요. 교회가 고르죠."
+        - 시스터 루나: "…방금 건 못 들은 걸로 해요."
+      plants:
+        - { id: F19, notice: { value: "stat.지성 + stat.의지 / 2", dc: 26 } }
+    - lines:
+        - 시스터 루나: "기도하러 왔어요? 아니면 도망치러?"
+        - 시스터 루나: "둘 다 괜찮아요. 여긴 그러라고 있는 곳이니까."
+
+- id: enc_chapel_sera
+  title: 성당의 세라
+  on: 성당
+  pool: true
+  repeat: 3
+  cooldown: 2
+  when: "fate.sera == 'saved' or fate.sera == 'saved_quiet'"
+  effects: ["affinity.sera += 6"]
+  branch:
+    - when: "fired.enc_chapel_sera >= 3"
+      lines:
+        - "세라가 기도를 마치고 일어서는데, 손등에 희미한 빛 무늬가 떠올랐다 사라진다."
+        - 세라: "아, 이거? 어릴 때부터 가끔 이래. 아무한테도 말하지 마."
+        - 속마음: "(성흔. 원작의 성녀보다 강한 빛.)"
+      effects: ["know.sera_stigma = 1"]
+    - when: "fate.sera == 'saved'"
+      lines: [세라: "시험 때 고마웠어. 나, 여기 남아도 되는 사람인지 아직 모르겠지만."]
+    - lines: [세라: "재시험 기회를 누가 만들어줬는지 몰라. 언젠가 꼭 감사 인사를 하고 싶은데."]
+
+- id: enc_chapel_dropped
+  title: 떠난 사람의 자리
+  on: 성당
+  pool: true
+  when: "fate.sera == 'dropped'"
+  lines:
+    - "성당 맨 뒷자리에 작은 쪽지가 끼워져 있다."
+    - "── 여기서 신학을 배우고 싶었어요. 세라."
+    - 속마음: "(원작대로 흘러가게 둔 대가다.)"
+  effects: ["stress += 10"]
+
+- id: enc_chapel_quiet
+  title: 고요
+  on: 성당
+  pool: true
+  repeat: true
+  cooldown: 1
+  lines:
+    - 나레이션:
+        - "아무도 없는 성당. 스테인드글라스 빛이 바닥에 고인다."
+        - { when: "talent.마왕의흔적", text: "성수반 근처에 가자 가슴이 욱신거렸다. 서둘러 자리를 떴다." }
+        - { when: "talent.성흔", text: "제단 앞에 서자 손등이 따뜻해진다." }
+
+# ================================================================ 식당
+- id: enc_canteen_bruno
+  title: 브루노의 고향 이야기
+  on: 식당
+  pool: true
+  repeat: 2
+  cooldown: 2
+  when: "met.bruno or affinity.bruno > 0"
+  effects: ["affinity.bruno += 5"]
+  branch:
+    - when: "fired.enc_canteen_bruno >= 2"
+      lines:
+        - 브루노: "우리 할아버지 망치는 말이야, 할아버지의 할아버지 때부터 내려온 거래. 성검을 고친 적도 있대!"
+        - 브루노: "다들 허풍이라고 하지만."
+      plants:
+        - { id: F18, notice: { value: "stat.지성 + 10 * perk.고인물의기억", dc: 22 } }
+    - lines: [브루노: "졸업하면 고향 대장간 이어받을 거야. 너 검 하나는 공짜로 쳐줄게!"]
+
+- id: enc_canteen_dorothy
+  title: 배식대 뒤의 냄비
+  on: 식당
+  pool: true
+  repeat: 2
+  cooldown: 2
+  lines:
+    - "배식대 뒤에서 앞치마를 두른 소녀가 정체불명의 냄비를 젓고 있다. 보라색 연기."
+  branch:
+    - when: "talent.마력감응 or perk.데이터마이너"
+      lines:
+        - when: "talent.마력감응"
+          나레이션: "냄비에서 마력이 일렁인다. 저건 요리가 아니라 연금약이다."
+        - when: "perk.데이터마이너"
+          속마음: "(DLC 데이터에 있던 연금술 서번트… 도로시?)"
+        - 도로시: "아, 이거요? 시든 화분 살리는 약이요. 엄마한텐 비밀이에요!"
+      effects: ["found.dorothy = 1", "affinity.dorothy += 5"]
+    - lines:
+        - 도로시: "아, 이거 먹는 거 아니에요!"
+      effects: ["affinity.dorothy += 2"]
+
+- id: enc_canteen_rumor
+  title: 식당의 소문
+  on: 식당
+  pool: true
+  repeat: true
+  cooldown: 2
+  lines:
+    - 학생들:
+        - "올해 무투대회는 카이든 황자가 우승이래. 3학년도 못 이긴다던데."
+        - { when: "fate.edric == 'dead'", text: "벨모어 도련님 말이야… 사고가 아니라는 소문이 있어." }
+        - { when: "fate.edric == 'saved'", text: "벨모어 도련님이 미궁에서 누구한테 구해졌대. 요즘 사람이 달라졌다더라." }
+        - { when: "fate.sera == 'dropped'", text: "시험장에서 쓰러졌던 은발 애, 결국 고향 갔대." }
+        - { when: "exam.rank == 'top'", text: "중간고사 상위권에 D반이 있었대. 이름이 {{player.name}}였나?" }
+        - { when: "reputation >= 20", text: "저기 {{player.name}} 아냐? 요즘 자주 들리는 이름." }
+
+- id: enc_canteen_edric
+  title: 쭈뼛대는 에드릭
+  on: 식당
+  pool: true
+  repeat: 2
+  cooldown: 2
+  when: "origin != '악역도련님' and (fate.edric == 'saved' or fate.edric == 'saved_by_teacher')"
+  effects: ["affinity.edric += 6"]
+  lines:
+    - 에드릭:
+        - "…여기 앉아도 되냐. 다른 데 자리가 없어서. 진짜로."
+        - { when: "fate.edric == 'saved'", text: "그때… 고마웠다. 두 번은 말 안 한다." }
+
+# ================================================================ 교정 산책
+- id: enc_walk_liana
+  title: 뒷산의 활 연습
+  on: 산책
+  pool: true
+  repeat: 2
+  cooldown: 2
+  when: "affinity.liana > 0"
+  lines:
+    - "뒷산 공터. 리아나가 나무 표적에 활을 쏘고 있다."
+    - 리아나: "해볼래? 숨을 내쉬면서 놓는 거야."
+  check: { label: 활쏘기, value: "stat.민첩 + stat.의지 / 2 + luck", dc: 30 }
+  success:
+    lines: ["화살이 표적 한가운데 박혔다.", 리아나: "와, 초보 맞아?"]
+    effects: ["affinity.liana += 7", "stat.민첩 += 1"]
+  fail:
+    lines: ["화살이 엉뚱한 나무에 박혔다. 리아나가 배를 잡고 웃는다."]
+    effects: ["affinity.liana += 5"]
+
+- id: enc_walk_cat
+  title: 호숫가의 고양이
+  on: 산책
+  pool: true
+  repeat: 2
+  cooldown: 3
+  lines:
+    - 나레이션:
+        - "호숫가에서 얼룩 고양이가 하품을 한다. 쓰다듬게 해줬다."
+        - { when: "talent.자연친화력", text: "얼룩 고양이가 무릎 위로 올라와 잠들었다. 일어날 수가 없다." }
+        - { when: "talent.혐오스러운분위기", text: "얼룩 고양이가 나를 보더니 털을 세우고 호수로 뛰어들었다. …고양이가 수영을 한다." }
+        - { when: "talent.짐승의혈통", text: "고양이가 나를 보고 정중하게 고개를 숙였다. 기분 탓인가." }
+  effects: ["stress -= 5"]
+
+- id: enc_walk_quarrel
+  title: 또 싸우는 두 사람
+  on: 산책
+  pool: true
+  when: "fired.y1_duel"
+  lines:
+    - "분수대 앞. 카이든과 아렌이 또 으르렁대고 있다."
+    - 카이든: "결투 결과에 불만이 있나 보군."
+    - 아렌: "불만은 없어. 다음엔 안 진다는 것뿐이야."
+  choices:
+    - text: 아렌 편을 든다
+      effects: ["affinity.aren += 5", "affinity.kaiden -= 2", "aren.kind += 0.5"]
+      lines: [아렌: "…또 너구나. 고마워."]
+    - text: 카이든 편을 든다
+      effects: ["affinity.kaiden += 5", "affinity.aren -= 2"]
+      lines: [카이든: "평민 중에도 말이 통하는 자가 있군."]
+    - text: "\"무투대회에서 붙으면 되잖아\""
+      effects: ["affinity.aren += 2", "affinity.kaiden += 2"]
+      lines: ["둘이 동시에 나를 쳐다봤다. 그리고 동시에 고개를 돌렸다."]
+
+- id: enc_walk_noel
+  title: 벤치의 술주정뱅이 선배
+  on: 산책
+  pool: true
+  repeat: 2
+  cooldown: 3
+  slots: [밤]
+  effects: ["affinity.noel += 6", "met.noel = 1"]
+  branch:
+    - when: "fired.enc_walk_noel >= 2"
+      lines:
+        - 노엘: "또 너냐. 한 잔 할래? …아, 1학년이지."
+        - "그가 내민 은잔 바닥에 낯선 문장이 새겨져 있다. 왕관을 쓴 까마귀."
+      plants:
+        - { id: F09, notice: { value: "stat.지성 + 10 * perk.데이터마이너", dc: 24 } }
+    - lines:
+        - "호숫가 벤치에 4학년 선배가 술병을 안고 누워 있다."
+        - 노엘: "별이 예쁘지? 졸업 못 한 지 2년째인데 별은 여전히 예뻐."
+
+- id: enc_walk_stars
+  title: 별 보기
+  on: 산책
+  priority: 1
+  slots: [밤]
+  when: "affinity.liana >= 25"
+  lines:
+    - "호숫가 언덕. 리아나가 먼저 와 있었다."
+    - 리아나: "숲에서는 별이 더 많이 보였어. 엄마랑 매일 밤 셌거든."
+    - 리아나: "엄마도 심장이 약했어. …나도 닮았대."
+    - when: "note.note_liana.known"
+      속마음: "(이 아이를 2학년 여름에 잃을 수는 없다.)"
+  effects: ["affinity.liana += 8", "trust.liana += 8"]
+
+# ================================================================ 식당 아르바이트
+- id: enc_job_rush
+  title: 점심 러시
+  on: 아르바이트
+  pool: true
+  repeat: true
+  cooldown: 1
+  lines: ["배식 줄이 식당 밖까지 늘어섰다."]
+  check: { label: 주문 처리, value: "stat.민첩 + stat.체질 / 2 + luck", dc: 28 }
+  success:
+    lines: ["접시가 춤을 췄다. 식당 아주머니가 은화 몇 닢을 더 쥐여줬다."]
+    effects: ["money += 6"]
+  fail:
+    lines: ["스튜를 엎었다. 오늘 일당에서 깎였다."]
+    effects: ["money -= 4", "stress += 5"]
+
+- id: enc_job_dorothy
+  title: 도로시의 실험
+  on: 아르바이트
+  pool: true
+  repeat: 3
+  cooldown: 1
+  effects: ["affinity.dorothy += 6"]
+  branch:
+    - when: "found.dorothy and fired.enc_job_dorothy >= 2"
+      lines:
+        - 도로시: "봐요! 말라 죽은 화분에 제 약을 줬더니 새싹이 났어요!"
+        - 속마음: "(시든 걸 되살리는 약… 세계수에도 통할까?)"
+      plants:
+        - { id: F16, notice: { value: "stat.지성 + 15 * talent.마력감응", dc: 24 } }
+    - when: "not found.dorothy"
+      lines:
+        - 도로시: "새로 온 알바죠? 저 도로시예요. 이 냄비는 건드리지 마세요."
+        - "냄비에서 보라색 거품이 올라온다."
+      effects: ["found.dorothy = 1"]
+    - lines: [도로시: "설거지 끝나면 재료 손질 좀 도와줄래요? 약초 다듬는 건 제가 할게요."]
+
+- id: enc_job_bistol
+  title: 혼자 저녁을 먹는 교수
+  on: 아르바이트
+  pool: true
+  when: "time.month >= 4"
+  lines:
+    - "문 닫을 시간에 비스톨 교수가 들어와 구석에 앉았다."
+    - "그는 스튜 두 그릇을 시켰다. 한 그릇에는 손도 대지 않고, 작은 숟가락을 옆에 놓아둔다."
+  effects: ["met.bistol = 1"]
+  plants:
+    - { id: F06, notice: { value: "stat.지성 + 10 * talent.직감", dc: 22 } }
+
+# ================================================================ 주말 도시 외출
+- id: enc_city_grim
+  title: 단골 정보상
+  on: 도시외출
+  pool: true
+  repeat: 3
+  cooldown: 2
+  when: "money >= 10"
+  effects: ["money -= 10", "intel += 1", "affinity.grim += 5"]
+  branch:
+    - when: "not know.kaiden_shoulder and time.month >= 5"
+      lines: [그림: "무투대회? 카이든 황자, 왼쪽 어깨가 성치 않다더군. 어릴 때 말에서 떨어졌대."]
+      effects: ["know.kaiden_shoulder = 1"]
+    - when: "not know.cult_early"
+      lines: [그림: "아카데미 미궁 3층. 밤마다 로브 입은 놈들이 드나든다는 얘기가 있어."]
+      effects: ["know.cult_early = 1"]
+    - lines:
+        - 그림: "황궁 뒷문 검은 마차, 아직도 다녀. 이번엔 문장이 보였다는 놈이 있는데… 그건 비싸."
+      plants:
+        - { id: F10, notice: { value: "stat.지성 + 10 * note.note_grim.known", dc: 20 } }
+
+- id: enc_city_market
+  title: 주말 시장
+  on: 도시외출
+  pool: true
+  repeat: true
+  cooldown: 1
+  lines: ["노점이 늘어선 시장. 향신료 냄새와 호객 소리."]
+  choices:
+    - text: 강장제를 산다 (은화 15, 피로 회복)
+      requires: "money >= 15"
+      effects: ["money -= 15", "fatigue -= 35"]
+      lines: [상인: "이거 한 병이면 사흘 밤샘도 거뜬하지!"]
+    - text: 꿀과자를 산다 (은화 5, 스트레스 해소)
+      requires: "money >= 5"
+      effects: ["money -= 5", "stress -= 20"]
+      lines: ["달다. 세상이 조금 괜찮아 보인다."]
+    - text: 구경만 한다
+      effects: ["stat.매력 += 0.5"]
+
+- id: enc_city_bookshop
+  title: 고서점, 다시
+  on: 도시외출
+  pool: true
+  when: "book.seen and not gift.manual and not book.left"
+  lines:
+    - "고서점의 『마력 순환 소고』는 아직 그 자리에 있다."
+    - 서점 주인: "그 책? 요즘 찾는 사람이 늘어서 말이야. 은화 예순 닢."
+  choices:
+    - text: 산다 (은화 60)
+      requires: "money >= 60"
+      hint: 아렌은 이 기연을 얻지 못하게 된다
+      effects: ["money -= 60", "gift.manual = 'me'", "skill.마력순환 = 1", "stat.마력제어 += 5"]
+      lines: [시스템: "⚠ 원작 이탈 — 아렌은 이 비급을 얻지 못한다."]
+    - text: 그냥 둔다
+      effects: ["book.left = 1"]
+
+- id: enc_city_herbalist
+  title: 약재상
+  on: 도시외출
+  pool: true
+  priority: 1
+  when: "know.moonherb and not know.moonherb_where"
+  lines:
+    - 약재상: "월광초? 허, 그건 돈 주고 못 사. 가을 보름밤에 실바니엘 국경 숲에서만 피거든."
+    - 약재상: "하루만 지나도 시들어. 직접 따서 그날 달여야 해."
+    - 속마음: "(1학년 10월 보름. 첫 실전 토벌 바로 다음 날이다.)"
+  effects: ["know.moonherb_where = 1"]
+
+- id: enc_city_noel
+  title: 술집의 외상
+  on: 도시외출
+  pool: true
+  when: "met.noel and money >= 20"
+  lines:
+    - "술집 앞. 노엘 선배가 주인에게 멱살을 잡혀 있다."
+    - 노엘: "외상 좀 그어주면 어때서! 나중에 왕이 되면 다 갚는다니까!"
+  choices:
+    - text: 외상을 대신 갚아준다 (은화 20)
+      effects: ["money -= 20", "affinity.noel += 12", "trust.noel += 10"]
+      lines: [노엘: "…너 진짜 이상한 1학년이다. 이 빚은 기억해두지."]
+    - text: 못 본 척한다

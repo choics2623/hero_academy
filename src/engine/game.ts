@@ -11,7 +11,7 @@
 import { applyBuild, checkBuild, type Build } from './creation';
 import type { Activity, Choice, Content, EventDef, Note, Outcome } from './content';
 import { evaluate, test, toNum, truthy } from './expr';
-import { pickVariant, renderLines, type RenderedLine } from './text';
+import { pickVariant, renderLines, renderTemplate, type RenderedLine } from './text';
 import { World, type WorldState } from './world';
 
 export type Action = { type: 'activity'; id: string } | { type: 'choice'; index: number } | { type: 'continue' };
@@ -140,6 +140,8 @@ export class Game {
 
   eligible(e: EventDef): boolean {
     if (toNum(this.state.vars[`fired.${e.id}`]) >= e.repeat) return false;
+    const last = this.state.vars[`last.${e.id}`];
+    if (e.cooldown && last !== undefined && this.now() - toNum(last) < e.cooldown * 16) return false;
     return this.inTime(e) && test(e.when, this.world);
   }
 
@@ -156,6 +158,7 @@ export class Game {
     let bestScore = -Infinity;
     for (const e of this.content.events.values()) {
       if (!filter(e) || !this.eligible(e)) continue;
+      if (e.chance < 1 && this.world.random() >= e.chance) continue;
       const score = e.priority * 1000 + e.spec;
       if (score > bestScore) {
         best = [e];
@@ -197,6 +200,7 @@ export class Game {
     if (++this.guard > 500) throw new Error(`이벤트 연쇄가 너무 깊음 (무한 루프?): ${ev.id}`);
     this.state.slotFired.push(ev.id);
     this.world.add(`fired.${ev.id}`, 1);
+    this.world.set(`last.${ev.id}`, this.now());
     this.observer?.onEvent?.(ev.id);
     const r = this.enter(ev);
     this.showScene({ eventId: ev.id, title: ev.title, then }, r);
@@ -236,8 +240,15 @@ export class Game {
     let next = o.next;
     const subs: Outcome[] = [];
     if (o.check) {
-      const ok = this.roll(o.check.value, o.check.dc);
+      const r = this.rollDetail(o.check.value, o.check.dc);
+      const ok = r.ok;
       w.set('check.last', ok ? 1 : 0);
+      if (o.check.label) {
+        lines.push({
+          speaker: '판정',
+          text: `${o.check.label} · ${Math.floor(r.value)} + 주사위 ${r.d20} = ${Math.floor(r.value) + r.d20} / 목표 ${o.check.dc} · ${ok ? '성공' : '실패'}`,
+        });
+      }
       const s = ok ? o.success : o.fail;
       if (s) subs.push(s);
     }
@@ -256,8 +267,13 @@ export class Game {
 
   /** 판정: 값 + d20 >= 난이도 */
   private roll(value: { ast: Parameters<typeof evaluate>[0] }, dc: number): boolean {
+    return this.rollDetail(value, dc).ok;
+  }
+
+  private rollDetail(value: { ast: Parameters<typeof evaluate>[0] }, dc: number) {
     const d20 = 1 + Math.floor(this.world.random() * 20);
-    return toNum(evaluate(value.ast, this.world)) + d20 >= dc;
+    const v = toNum(evaluate(value.ast, this.world));
+    return { ok: Math.floor(v) + d20 >= dc, value: v, d20 };
   }
 
   private proceed() {
@@ -393,6 +409,53 @@ export class Game {
     });
     out.push({ label: '원작 붕괴도', value: `${this.world.collapse()}%` });
     return out;
+  }
+
+  /** 보이는 목표들. status: active / done / failed */
+  goals(): { id: string; title: string; status: 'active' | 'done' | 'failed'; hint: string }[] {
+    const out: { id: string; title: string; status: 'active' | 'done' | 'failed'; hint: string }[] = [];
+    for (const g of this.content.goals.values()) {
+      if (!test(g.when, this.world)) continue;
+      const done = g.done ? test(g.done, this.world) : false;
+      const failed = !done && g.failed ? test(g.failed, this.world) : false;
+      const hint = renderLines(g.hints, this.world).map((l) => l.text).join(' ');
+      out.push({ id: g.id, title: renderTemplate(g.title, this.world), status: done ? 'done' : failed ? 'failed' : 'active', hint });
+    }
+    return out;
+  }
+
+  /** 다가오는 학사 일정 (announce가 있는 강제 이벤트) */
+  upcoming(limit = 4): { label: string; time: string; weeks: number }[] {
+    const now = this.now();
+    const out: { label: string; time: string; weeks: number; ord: number }[] = [];
+    for (const e of this.content.events.values()) {
+      if (!e.announce || !e.window || e.window.from < now || this.state.vars[`fired.${e.id}`]) continue;
+      out.push({
+        label: e.announce,
+        time: this.content.calendar.labelOrd(e.window.from),
+        weeks: Math.floor(e.window.from / 16) - Math.floor(now / 16),
+        ord: e.window.from,
+      });
+    }
+    return out.sort((a, b) => a.ord - b.ord).slice(0, limit);
+  }
+
+  /** 만난 사람들 */
+  relationships(): { id: string; name: string; affinity: number; rank: number; trust: number; memo: string }[] {
+    const out: { id: string; name: string; affinity: number; rank: number; trust: number; memo: string }[] = [];
+    for (const ch of this.content.characters.values()) {
+      if (!test(ch.met, this.world)) continue;
+      const affinity = Math.floor(toNum(this.world.get(`affinity.${ch.id}`)));
+      out.push({
+        id: ch.id,
+        name: ch.name,
+        affinity,
+        rank: Math.floor(affinity / 10),
+        trust: toNum(this.world.get(`trust.${ch.id}`)),
+        memo: renderLines(ch.memo, this.world).map((l) => l.text).join(' '),
+      });
+    }
+    return out.sort((a, b) => b.affinity - a.affinity);
   }
 
   notes(): (Note & ReturnType<World['noteStatus']>)[] {

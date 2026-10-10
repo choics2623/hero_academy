@@ -21,6 +21,8 @@ export interface Line {
 export interface Check {
   value: Expr;
   dc: number;
+  /** 화면에 보일 판정 이름 (예: "근력 판정"). 없으면 판정 결과를 숨긴다 */
+  label?: string;
 }
 
 export interface Plant {
@@ -62,7 +64,13 @@ export interface EventDef extends Outcome {
   weight: number;
   repeat: number;
   free: boolean;
-  /** 선택 시 점수 = priority*1000 + spec */
+  /** 이 확률로만 후보가 된다 (0~1) */
+  chance: number;
+  /** 한 번 발생하면 이 주(週) 수만큼 쉰다 */
+  cooldown: number;
+  /** 학사 일정에 표시할 이름 */
+  announce?: string;
+  /** 선택 시 점수 = priority*1000 + spec. pool 이벤트는 spec 0.5로 고정 (서로 무작위 경쟁) */
   spec: number;
 }
 
@@ -120,6 +128,8 @@ export interface Talent {
   effects: Effect[];
   options?: string[];
   locked?: Expr;
+  /** 진화로만 얻는 재능 (캐릭터 생성 화면에 나오지 않음) */
+  evolved: boolean;
 }
 
 export interface Origin {
@@ -143,6 +153,19 @@ export interface Character {
   id: string;
   name: string;
   desc?: string;
+  /** 만난 적이 있는가. 기본: affinity.<id> > 0 or met.<id> */
+  met: Expr;
+  /** 인연 화면의 한 줄 메모 (변형 대사) */
+  memo: Line[];
+}
+
+export interface Goal {
+  id: string;
+  title: string;
+  when?: Expr;
+  done?: Expr;
+  failed?: Expr;
+  hints: Line[];
 }
 
 export interface Rules {
@@ -172,6 +195,7 @@ export interface Content {
   origins: Map<string, Origin>;
   perks: Map<string, Perk>;
   characters: Map<string, Character>;
+  goals: Map<string, Goal>;
   derived: Map<string, Expr>;
 }
 
@@ -204,6 +228,7 @@ const OUTCOME_KEYS = new Set([
 ]);
 const EVENT_KEYS = new Set([
   ...OUTCOME_KEYS, 'id', 'title', 'on', 'window', 'at', 'slots', 'priority', 'weight', 'repeat', 'free',
+  'chance', 'cooldown', 'announce', 'pool',
 ]);
 const CHOICE_KEYS = new Set([...OUTCOME_KEYS, 'text', 'requires', 'hint']);
 
@@ -301,7 +326,7 @@ class Builder {
       return undefined;
     }
     const value = this.expr(where, src.value);
-    return value ? { value, dc: src.dc } : undefined;
+    return value ? { value, dc: src.dc, label: typeof src.label === 'string' ? src.label : undefined } : undefined;
   }
 
   private outcome(where: string, path: string, o: Obj, allowed: Set<string>): Outcome {
@@ -357,7 +382,7 @@ class Builder {
     const base = this.outcome(where, id, o, EVENT_KEYS);
     const window = this.windowOf(where, o);
     const slots = o.slots === undefined ? undefined : asList(o.slots).map(String);
-    const spec = (base.when?.spec ?? 0) + (window ? 1 : 0) + (slots ? 1 : 0);
+    const spec = o.pool === true ? 0.5 : (base.when?.spec ?? 0) + (window ? 1 : 0) + (slots ? 1 : 0);
     const repeat = o.repeat === true ? Infinity : typeof o.repeat === 'number' ? o.repeat : 1;
     return {
       ...base,
@@ -371,6 +396,9 @@ class Builder {
       weight: typeof o.weight === 'number' ? o.weight : 1,
       repeat,
       free: o.free === true,
+      chance: typeof o.chance === 'number' ? o.chance : 1,
+      cooldown: typeof o.cooldown === 'number' ? o.cooldown : 0,
+      announce: o.announce as string | undefined,
       spec,
     };
   }
@@ -491,7 +519,8 @@ class Builder {
           excludes: asList(t.excludes).map(String),
           effects: this.effects(where, t.effects),
           options: t.options === undefined ? undefined : asList(t.options).map(String),
-          locked: this.expr(where, t.locked),
+          locked: this.expr(where, t.evolved === true ? 'true' : t.locked),
+          evolved: t.evolved === true,
         };
       }),
     );
@@ -527,9 +556,33 @@ class Builder {
 
     const characters = byId(
       'characters.yaml',
-      asList(this.file('characters.yaml')).map((c) =>
-        isObj(c) && typeof c.id === 'string' ? { id: c.id, name: String(c.name ?? c.id), desc: c.desc as string } : undefined,
-      ),
+      asList(this.file('characters.yaml')).map((c) => {
+        if (!isObj(c) || typeof c.id !== 'string') return undefined;
+        const where = `characters.yaml#${c.id}`;
+        return {
+          id: c.id,
+          name: String(c.name ?? c.id),
+          desc: c.desc as string,
+          met: this.expr(where, c.met ?? `affinity.${c.id} > 0 or met.${c.id}`)!,
+          memo: this.lines(where, c.memo === undefined ? [] : [{ 메모: c.memo }]),
+        };
+      }),
+    );
+
+    const goals = byId(
+      'goals.yaml',
+      asList(this.file('goals.yaml')).map((g) => {
+        if (!isObj(g) || typeof g.id !== 'string') return undefined;
+        const where = `goals.yaml#${g.id}`;
+        return {
+          id: g.id,
+          title: String(g.title ?? g.id),
+          when: this.expr(where, g.when),
+          done: this.expr(where, g.done),
+          failed: this.expr(where, g.failed),
+          hints: this.lines(where, g.hint === undefined ? [] : [{ 힌트: g.hint }]),
+        };
+      }),
     );
 
     const derived = new Map<string, Expr>();
@@ -555,6 +608,7 @@ class Builder {
       origins,
       perks,
       characters,
+      goals,
       derived,
     };
   }

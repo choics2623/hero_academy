@@ -1,0 +1,245 @@
+# 동아리 만남 풀, 능력치 이정표, 재능 개화, 학교생활 소소한 사건
+
+# ================================================================ 동아리
+- id: enc_green_work
+  title: 온실 정리
+  on: 온실
+  pool: true
+  repeat: true
+  cooldown: 1
+  effects: ["affinity.liana += 3"]
+  lines:
+    - 나레이션:
+        - "리아나와 나란히 앉아 화분 흙을 갈았다. 말없이도 편하다."
+        - { when: "talent.자연친화력", text: "내가 만진 화분만 유독 잎이 반짝인다. 리아나가 샘을 낸다." }
+        - { when: "affinity.liana >= 30", text: "리아나가 엘프어로 콧노래를 부른다. 무슨 뜻이냐고 물으니 비밀이란다." }
+
+- id: enc_sword_spar
+  title: 검술부 대련
+  on: 검술부
+  pool: true
+  repeat: true
+  cooldown: 1
+  lines: ["부원끼리 돌아가며 대련을 한다."]
+  check: { label: 부원 대련, value: "stat.근력 + stat.민첩 / 2 + luck", dc: 32 }
+  success:
+    lines: ["세 판 중 두 판을 이겼다."]
+    effects: ["stat.민첩 += 1", "reputation += 2"]
+  fail:
+    lines: ["멍이 하나 늘었다. 그래도 몸이 기억한다."]
+    effects: ["stat.체질 += 1"]
+
+- id: kaiden_palace
+  title: 카이든의 형들
+  on: 검술부
+  priority: 1
+  when: "fired.kaiden_sword and trust.kaiden >= 8 and time.month >= 5"
+  lines:
+    - "연습이 끝난 뒤, 카이든이 땀을 닦으며 먼저 말을 꺼냈다."
+    - 카이든: "황궁에선 다들 내가 실패하길 기다려. 큰형도, 작은형도."
+    - 카이든: "그래서 무투대회는 꼭 이겨야 한다. …이걸 왜 너한테 말하고 있지."
+    - when: "note.note_tourney.known"
+      속마음: "(원작에서 카이든은 우승한다. 그리고 6년 뒤 반역자 누명을 쓴다.)"
+  effects: ["affinity.kaiden += 8", "trust.kaiden += 6", "know.kaiden_palace = 1"]
+
+- id: enc_news_scoop
+  title: 취재
+  on: 신문부
+  pool: true
+  repeat: true
+  cooldown: 2
+  lines: ["무투대회 특집 취재. 우승 후보들을 인터뷰하러 다녔다."]
+  check: { label: 인터뷰, value: "stat.매력 + stat.지성 / 2 + luck", dc: 30 }
+  success:
+    lines: ["특종을 건졌다. 부장이 기사 제목에 내 이름을 넣어줬다."]
+    effects: ["reputation += 5", "intel += 1"]
+  fail:
+    lines: ["인터뷰를 세 번 거절당했다."]
+    effects: ["stress += 5"]
+
+- id: finn_garen
+  title: 핀과 가렌
+  on: 밤의연무장
+  priority: 2
+  when: "affinity.finn >= 20 and affinity.garen >= 15"
+  lines:
+    - "핀을 데리고 가렌 교관을 찾아갔다."
+    - 가렌: "청소부 아이를? …검을 쥐어봐라."
+    - "핀이 목검을 쥐는 순간, 가렌의 눈빛이 바뀌었다."
+    - 가렌: "누가 가르쳤지? 아무도? …매일 밤 이 시간에 와라."
+    - 속마음: "(원작에 없던 사제 관계가 생겼다.)"
+  effects: ["finn.mentor = 'garen'", "affinity.finn += 10", "affinity.garen += 8", "world.collapse_bonus += 3"]
+
+# ================================================================ 능력치 이정표 (강제·무료 이벤트)
+- id: ms_str_25
+  title: 가벼워진 목검
+  on: auto
+  free: true
+  priority: 3
+  when: "time.year == 1 and stat.근력 >= 25"
+  lines:
+    - "목검이 가볍다. 입학했을 때와는 다른 손이다."
+    - 시스템: "근력 D등급 달성 — 훈련장에서 선배들이 대련을 걸어오기 시작한다."
+
+- id: ms_str_45
+  title: 교관의 호출
+  on: auto
+  free: true
+  priority: 3
+  when: "time.year == 1 and stat.근력 >= 45"
+  lines:
+    - 가렌: "너. 내일부터 상급반 대련에 들어가라."
+    - 시스템: "근력 C등급 달성 — 가렌 교관이 이름을 기억한다."
+  effects: ["affinity.garen += 8", "reputation += 5"]
+
+- id: ms_int_30
+  title: 머리가 맑아졌다
+  on: auto
+  free: true
+  priority: 3
+  when: "time.year == 1 and stat.지성 >= 30"
+  lines:
+    - "수업 내용이 한 번에 들어온다. 교수가 질문하기 전에 답이 떠오른다."
+    - 시스템: "지성 D등급 달성 — 도서관 사서가 금서 열람을 허락할지도 모른다."
+
+- id: ms_ctrl_25
+  title: 마력이 손에 붙는다
+  on: auto
+  free: true
+  priority: 3
+  when: "time.year == 1 and stat.마력제어 >= 25"
+  lines:
+    - "불꽃이 생각한 모양대로 맺힌다. 실습실 바닥에 그을음이 더는 생기지 않는다."
+    - 시스템: "마력제어 D등급 달성 — 엘베라 교수가 눈여겨본다."
+  effects: ["affinity.elvera += 5", "met.elvera = 1"]
+
+- id: ms_cha_22
+  title: 말을 걸어오는 사람들
+  on: auto
+  free: true
+  priority: 3
+  when: "time.year == 1 and stat.매력 >= 22"
+  lines:
+    - 나레이션:
+        - "복도에서 모르는 동기들이 먼저 인사를 건넨다."
+        - { when: "talent.혐오스러운분위기", text: "복도에서 동기 하나가 먼저 인사를 건넸다. 그리고 내 얼굴을 보고 사과했다. 그래도 인사는 인사다." }
+    - 시스템: "매력 D등급 달성 — 첫인상이 나아졌다."
+
+- id: ms_will_25
+  title: 덜 무서워졌다
+  on: auto
+  free: true
+  priority: 3
+  when: "time.year == 1 and stat.의지 >= 25"
+  lines:
+    - "미궁 계단을 내려다봐도 다리가 떨리지 않는다."
+    - 시스템: "의지 D등급 달성"
+
+# ================================================================ 재능 개화 / 진화
+- id: bloom_mana
+  title: 재능 개화 — 마나 탱크
+  on: auto
+  free: true
+  priority: 6
+  when: "talent.마나탱크 == 1 and stat.마력량 >= 48"
+  lines:
+    - "자다가 깼다. 몸 안에서 마력이 강물처럼 돌고 있다."
+    - 시스템: "재능 개화: 마나 탱크 → 「마나 순환」 (마력량 +6, 마력량 성장 +20%)"
+  effects: ["talent.마나탱크 = 2", "stat.마력량 += 6", "growth.마력량 += 0.2"]
+
+- id: bloom_sense
+  title: 재능 개화 — 마력 감응
+  on: auto
+  free: true
+  priority: 6
+  when: "talent.마력감응 == 1 and found.finn and found.dorothy"
+  lines:
+    - "식당에서 도로시를, 연무장에서 핀을 본 날 밤. 감각이 한 겹 더 열렸다."
+    - "이제 사람마다 품은 재능의 '모양'이 어렴풋이 보인다."
+    - 시스템: "재능 개화: 마력 감응 → 「재능 투시」"
+  effects: ["talent.마력감응 = 2"]
+
+- id: bloom_bulgul
+  title: 재능 진화 — 병약 → 불굴
+  on: auto
+  free: true
+  priority: 6
+  when: "talent.병약 and sick.count >= 2 and stat.체질 >= 28"
+  lines:
+    - "또 앓아누웠다가 일어난 아침. 이상하게 몸이 가볍다."
+    - "몇 번을 쓰러져도 다시 일어났던 몸이, 그 사실을 기억하고 있다."
+    - 시스템: "재능 진화: 병약 → 「불굴」 (체질 성장 +20%, 더 이상 앓아눕지 않는다)"
+  effects: ["talent.병약 = 0", "talent.불굴 = 1", "growth.체질 += 0.5"]
+
+- id: bloom_courage
+  title: 재능 진화 — 겁쟁이 → 용기
+  on: auto
+  free: true
+  priority: 6
+  when: "talent.겁쟁이 and (fate.edric == 'saved' or tourney.round >= 2)"
+  lines:
+    - "무서웠다. 그런데 도망치지 않았다."
+    - 시스템: "재능 진화: 겁쟁이 → 「용기」 (의지 +10)"
+  effects: ["talent.겁쟁이 = 0", "talent.용기 = 1", "stat.의지 += 10"]
+
+# ================================================================ 학교생활 (무작위·무료)
+- id: life_rain
+  title: 소나기
+  on: auto
+  free: true
+  chance: 0.06
+  repeat: 3
+  cooldown: 4
+  when: "time.year == 1"
+  lines:
+    - 나레이션:
+        - "갑자기 소나기가 쏟아졌다. 처마 밑에서 비가 그치길 기다렸다."
+        - { when: "affinity.liana >= 15", text: "갑자기 소나기. 처마 밑으로 뛰어든 리아나와 어깨가 닿았다. 둘 다 아무 말도 하지 않았다." }
+        - { when: "affinity.bruno >= 20", text: "갑자기 소나기. 브루노가 망토를 펼쳐 우산처럼 씌워줬다. 브루노는 다 젖었다." }
+
+- id: life_letter
+  title: 편지
+  on: auto
+  free: true
+  chance: 0.08
+  repeat: 2
+  cooldown: 6
+  when: "time.year == 1"
+  branch:
+    - when: "origin == '평민장학생'"
+      lines: ["집에서 편지가 왔다. 서툰 글씨로 '밥 잘 먹어라'. 은화 다섯 닢이 동봉돼 있다."]
+      effects: ["money += 5", "stress -= 10"]
+    - when: "origin == '몰락귀족'"
+      lines: ["독촉장이 기숙사까지 따라왔다."]
+      effects: ["stress += 10"]
+    - when: "origin == '악역도련님'"
+      lines: ["아버지의 편지. '벨모어의 이름에 먹칠하지 마라.' 한 줄이 전부다."]
+      effects: ["stress += 5"]
+    - when: "origin == '숲고아'"
+      lines: ["창틀에 숲의 새가 앉았다. 부리에 물고 온 깃털 하나를 두고 날아갔다."]
+      effects: ["stress -= 10"]
+    - lines: ["편지함은 오늘도 비어 있다. 이 몸에게 편지를 보낼 사람은 없다."]
+
+- id: life_snore
+  title: 룸메이트의 코골이
+  on: auto
+  free: true
+  chance: 0.05
+  repeat: 2
+  cooldown: 4
+  slots: [밤]
+  when: "time.year == 1 and affinity.bruno >= 10 and origin != '악역도련님' and origin != '몰락귀족'"
+  lines: ["브루노의 코골이가 벽을 울린다. 대장간 풀무 소리 같다. 잠은 다 잤다."]
+  effects: ["fatigue += 5"]
+
+- id: life_exam_notice
+  title: 무투대회 공고
+  on: auto
+  free: true
+  at: "1.6.2.방과후"
+  priority: 4
+  lines:
+    - "게시판에 공고가 붙었다. ─ 1학년 무투대회: 7월 2주차 예선, 3주차 본선."
+    - 학생들: "우승은 카이든 황자겠지. 성검 쓰는 평민은 어떨까?"
+    - when: "note.note_tourney.known"
+      속마음: "(원작 우승은 카이든. 결승 상대는 아렌.)"

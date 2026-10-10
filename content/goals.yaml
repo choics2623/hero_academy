@@ -1,0 +1,79 @@
+# 목표: 지금 무엇을 해야 하는지 보여준다.
+# when = 목록에 보이는 조건, done = 달성, failed = 실패. hint는 가장 구체적인 변형이 보인다.
+
+- id: g_sera
+  title: 세라를 탈락에서 구한다
+  when: "note.note_sera.known"
+  done: "fate.sera == 'saved' or fate.sera == 'saved_quiet'"
+  failed: "fate.sera == 'dropped'"
+  hint:
+    - "1학년 3월 1주차 밤, 반 배정 시험에서 세라가 쓰러진다. 직접 부축하거나, 매력 12 이상(또는 귀공자의 품격)이면 감독관에게 알릴 수 있다."
+
+- id: g_edric
+  title: "{{if origin == '악역도련님'}}내 사망 플래그를 꺾는다{{else}}에드릭의 죽음을 막는다{{/if}}"
+  when: "note.note_edric.known"
+  done: "fate.edric and fate.edric != 'dead'"
+  failed: "fate.edric == 'dead'"
+  hint:
+    - "5월 2주차 미궁 실습. 근력·민첩을 키워 따라가거나, 식당에서 에드릭과 말을 터두거나(매력 13), 매력 14로 교관에게 알릴 수 있다. 신문부나 그림에게 3층 소문을 들어두면 유리하다."
+    - { when: "origin == '악역도련님'", text: "5월 2주차 미궁. 서장에서 하인들에게 두 번 사과하면 경고를 받는다. 아니면 의지·지성으로 함정을 알아채야 한다." }
+
+- id: g_manual
+  title: 고서점 비급의 주인을 정한다
+  when: "note.note_manual.known"
+  done: "gift.manual or book.left"
+  hint:
+    - "고서점에 두 번 가면 결정할 수 있다. 은화 40이 필요하다 (폐광의 붉은 뿌리를 팔면 30). 매력 14면 아렌에게 일찍 가도록 부탁할 수 있다. 1학년이 되면 값이 오른다."
+
+- id: g_finn
+  title: 청소부 소년의 재능을 확인한다
+  when: "note.note_finn.known or talent.마력감응 or fired.finn_dawn"
+  done: "found.finn"
+  hint:
+    - "입학 전, 새벽 연무장(오전)에 가 보자. 데이터마이너나 마력 감응이 있으면 한눈에 알아본다. 아니면 두 번째 방문에서 지성·민첩으로 눈치채야 한다."
+
+- id: g_liana
+  title: 리아나의 심장 — 치료법의 단서를 찾는다
+  when: "note.note_liana.known"
+  done: "know.moonherb_where"
+  hint:
+    - "원예부에 들어가 리아나와 친해지면 고향 이야기를 들을 수 있다."
+    - { when: "know.moonherb", text: "월광초라는 약초다. 주말에 도시 약재상에 물어보자." }
+
+- id: g_cult
+  title: 미궁 3층의 문양을 조사한다
+  when: "know.cult_early or fs.F03.noticed or fs.F04.seen"
+  done: "know.sacrifice"
+  hint:
+    - "도서관 금서 서가에 비슷한 기록이 있을지도 모른다. (피의 원을 직접 봤다면 6월에 찾을 수 있다)"
+
+- id: g_midterm
+  title: 중간고사 (6월 1주차)
+  when: "time.year == 1 and time.month >= 5"
+  done: "exam.rank"
+  hint:
+    - "필기는 지성. 실기는 검술(근력·민첩), 마법(마력제어·마력량), 신학(의지·매력) 중 하나를 고른다. 둘 다 붙으면 장학금."
+    - { when: "exam.rank == 'top'", text: "상위권! 장학금을 받았다." }
+
+- id: g_tourney
+  title: 1학년 무투대회 (7월 2~3주차)
+  when: "time.year == 1 and time.month >= 5"
+  done: "tourney.result"
+  hint:
+    - "예선 30 · 8강 40~50 · 4강 50~60 · 결승 60 이상 (능력치 + 주사위 1~20). 정면 승부는 근력, 빈틈 공략은 민첩·지성, 마법 견제는 마력제어, 심리전은 매력·의지."
+    - { when: "know.kaiden_shoulder or note.note_kaiden_style.known", text: "예선 30 · 8강 40~50 · 4강 50~60 · 결승 60 이상. 카이든은 왼쪽 어깨가 약하다 — 빈틈 공략이 잘 통한다." }
+    - { when: "tourney.result", text: "{{if tourney.result == 'win'}}우승했다.{{elif tourney.result == 'final'}}준우승.{{else}}끝났다.{{/if}}" }
+
+- id: g_bond
+  title: 누군가와 인연 3단계 맺기
+  when: "time.year == 1"
+  done: "affinity.liana >= 30 or affinity.aren >= 30 or affinity.kaiden >= 30 or affinity.bruno >= 30 or affinity.finn >= 30 or affinity.mirabel >= 30 or affinity.sera >= 30 or affinity.garen >= 30 or affinity.elvera >= 30 or affinity.edric >= 30 or affinity.noel >= 30 or affinity.dorothy >= 30"
+  hint:
+    - "같은 사람을 여러 번 만나야 한다. 동아리, 훈련장, 산책, 성당 — 활동마다 만나는 사람이 다르다."
+
+- id: g_dorothy
+  title: 식당 아이의 이상한 냄비
+  when: "talent.마력감응 or perk.데이터마이너"
+  done: "found.dorothy"
+  hint:
+    - "식당이나 식당 아르바이트에서 마주칠 수 있다."

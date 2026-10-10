@@ -26,7 +26,7 @@ const NAMESPACES: { prefix: string; kind: string; has: (c: Content, id: string) 
 ];
 
 /** 쓰이기만 하고 안 읽혀도 괜찮은 변수 (수치형 자원) */
-const QUIET_PREFIXES = ['stat.', 'growth.', 'mod.', 'fired.', 'count.', 'fs.', 'note.', 'check.', 'crossroad.', 'talent.', 'perk.', 'time.'];
+const QUIET_PREFIXES = ['last.', 'met.', 'stat.', 'growth.', 'mod.', 'fired.', 'count.', 'fs.', 'note.', 'check.', 'crossroad.', 'talent.', 'perk.', 'time.'];
 
 export function lint(c: Content, g: Graph = buildGraph(c)): Finding[] {
   const out: Finding[] = [];
@@ -85,6 +85,8 @@ export function lint(c: Content, g: Graph = buildGraph(c)): Finding[] {
       continue;
     }
     if (isVirtual(c, name) || g.writers.has(name)) continue;
+    // 캐릭터의 기본 '만남' 조건(affinity.X > 0 or met.X)은 둘 중 하나만 쓰여도 정상
+    if (rs.every((r) => r.source.startsWith('인연:')) && /^(met|affinity)\./.test(name)) continue;
     add('warn', 'REF_NEVER_WRITTEN', where, `'${name}'을(를) 쓰는 곳이 없음 (오타?) — ${rs.length}곳에서 읽음`);
   }
   for (const [name, ws] of g.writers) {

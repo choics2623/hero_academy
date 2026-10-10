@@ -159,6 +159,25 @@ export function buildGraph(c: Content): Graph {
     read(`노트:${n.id}`, n.validWhile);
   }
 
+  const readLines = (source: string, lines: { when?: Expr; variants: { when?: Expr; text: string }[] }[]) => {
+    for (const l of lines) {
+      read(source, l.when);
+      for (const v of l.variants) {
+        read(source, v.when);
+        for (const t of templateExprs(v.text)) read(source, compile(t));
+      }
+    }
+  };
+  for (const g of c.goals.values()) {
+    for (const e of [g.when, g.done, g.failed]) read(`목표:${g.id}`, e);
+    readLines(`목표:${g.id}`, g.hints);
+    for (const t of templateExprs(g.title)) read(`목표:${g.id}`, compile(t));
+  }
+  for (const ch of c.characters.values()) {
+    read(`인연:${ch.id}`, ch.met);
+    readLines(`인연:${ch.id}`, ch.memo);
+  }
+
   for (const ev of c.events.values()) {
     const window = eventWindow.get(ev.id);
     write({ source: `이벤트:${ev.id}`, eventId: ev.id, target: `fired.${ev.id}`, op: 'implicit', conds: ev.when ? [ev.when] : [], window });

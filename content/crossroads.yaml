@@ -30,3 +30,12 @@
   weight: 5
   about: [aren]
   labels: { aren: 2학년 겨울 아렌이 얻음, me: 내가 먼저 가짐, aren_early: 아렌이 일찍 얻도록 부탁함 }
+
+- id: tourney
+  title: 1학년 무투대회 우승자
+  key: tourney.winner
+  canon: kaiden
+  deadline: "1.7.3"
+  weight: 6
+  about: [aren, kaiden]
+  labels: { kaiden: 카이든 우승, me: 내가 우승, aren: 아렌 우승 }
