@@ -57,3 +57,102 @@
 - { id: carriage_road, title: 도시로 가는 길, desc: "마차 길, 들판, 멀리 성벽 도시" }
 - { id: kitchen, title: 식당 주방, desc: "큰 화덕, 걸린 냄비, 채소, 도로시의 실험 냄비" }
 - { id: city_gate, title: 도시 성문, desc: "높은 성문, 경비병, 오가는 마차와 사람들" }
+
+# ---------------------------------------------------------------- 이벤트 CG (src/art/cg.ts)
+# 배경 삽화(bg) + 인물 흉상(cast) + 효과(fx). 따로 그린 그림은 없고, 셋을 겹쳐서 그린다.
+# 흉상은 64px 폭으로 160px 화면 아래쪽에 붙는다. x는 흉상 가운데 (0 왼쪽 끝 ~ 1 오른쪽 끝).
+
+# 서장
+- { id: cg_last_ending, title: 서른일곱 번째 배드 엔딩, bg: doom_vision, fx: [embers, vignette] }
+- { id: cg_diary, title: 찢긴 일기장, bg: home_room, tod: dawn, cast: [{ who: 나, mood: 진지, x: 0.68 }], fx: [dust] }
+- { id: cg_manual, title: 마력 순환 소고, bg: bookshop, cast: [{ who: 나, mood: 웃음, x: 0.34 }], fx: [dust, sparkles] }
+- { id: cg_finn_broom, title: 빗자루의 궤적, bg: training_ground, tod: dawn, cast: [{ who: finn, mood: 당황, x: 0.64 }], fx: [rays] }
+
+# 1학년 봄
+- { id: cg_holy_sword, title: 성검의 선택, bg: great_hall, cast: [{ who: aren, mood: 놀람, x: 0.3 }, { who: librarian, mood: 진지, x: 0.86, flip: true }], fx: [rays] }
+- { id: cg_sera_exam, title: 쓰러지는 세라, bg: exam_field, cast: [{ who: sera, mood: 슬픔, x: 0.34 }, { who: 나, mood: 진지, x: 0.68, flip: true }], fx: [dust] }
+- { id: cg_kaiden_glove, title: 던져진 장갑, bg: campus, cast: [{ who: kaiden, mood: 화남, x: 0.28 }, { who: aren, mood: 진지, x: 0.72, flip: true }], fx: [dust] }
+- { id: cg_aren_alone, title: 아무도 손을 내밀지 않았다, bg: campus, tod: dusk, cast: [{ who: aren, mood: 슬픔, x: 0.5 }], fx: [vignette] }
+- { id: cg_liana_greenhouse, title: 시든 화분과 리아나, bg: greenhouse, cast: [{ who: liana, mood: 슬픔, x: 0.64 }], fx: [dust] }
+- { id: cg_blood_circle, title: 피의 원, bg: blood_circle, cast: [{ who: edric, mood: 놀람, x: 0.72, flip: true }], fx: [embers] }
+- { id: cg_edric_saved, title: 왜 날 구해, bg: blood_circle, cast: [{ who: edric, mood: 놀람, x: 0.4 }, { who: 나, mood: 진지, x: 0.62, flip: true }], fx: [dust] }
+- { id: cg_edric_scar, title: 원 한가운데에서, bg: blood_circle, cast: [{ who: 나, mood: 슬픔, x: 0.5 }], fx: [vignette] }
+- { id: cg_liana_stairs, title: 계단 중간에서, bg: campus, tod: dusk, cast: [{ who: liana, mood: 웃음, x: 0.62 }], fx: [vignette] }
+- { id: cg_forbidden_book, title: 고대 제물 의식 연구, bg: library, tod: dusk, cast: [{ who: librarian, mood: 진지, x: 0.72 }], fx: [vignette] }
+
+# 만남과 성장
+- { id: cg_sera_stigma, title: 손등의 빛, bg: chapel, cast: [{ who: sera, mood: 진지, x: 0.38 }], fx: [sparkles] }
+- { id: cg_sera_note, title: 떠난 사람의 자리, bg: chapel, tod: dusk, fx: [dust, vignette] }
+- { id: cg_liana_stars, title: 엄마랑 세던 별, bg: starry_hill, tod: dusk, cast: [{ who: liana, mood: 슬픔, x: 0.66 }], fx: [sparkles] }
+- { id: cg_finn_mentor, title: 검을 쥔 청소부, bg: training_ground, tod: night, cast: [{ who: garen, mood: 놀람, x: 0.3 }, { who: finn, mood: 진지, x: 0.72, flip: true }] }
+- { id: cg_bloom_mana, title: 강물처럼 도는 마력, bg: dorm_room, tod: night, cast: [{ who: 나, mood: 놀람, x: 0.64 }], fx: [sparkles] }
+
+# 인연
+- { id: cg_liana_song, title: 숲의 노래, bg: greenhouse, cast: [{ who: liana, mood: 당황, x: 0.64 }], fx: [bloom] }
+- { id: cg_liana_pinky, title: 가을 보름의 약속, bg: greenhouse, tod: dusk, cast: [{ who: 나, mood: 웃음, x: 0.3 }, { who: liana, mood: 웃음, x: 0.7 }], fx: [sparkles] }
+- { id: cg_liana_heart, title: 밤의 호숫가, bg: lake, tod: night, cast: [{ who: liana, mood: 슬픔, x: 0.6 }], fx: [fireflies] }
+- { id: cg_aren_shepherd, title: 양치기의 성검, bg: canteen, tod: dusk, cast: [{ who: aren, mood: 슬픔, x: 0.64 }] }
+- { id: cg_aren_rooftop, title: 지붕 위의 약속, bg: rooftop, tod: night, cast: [{ who: aren, mood: 진지, x: 0.64 }], fx: [sparkles] }
+- { id: cg_kaiden_shoulder, title: 떨어뜨려진 어깨, bg: training_ground, tod: dusk, cast: [{ who: kaiden, mood: 진지, x: 0.64 }], fx: [vignette] }
+- { id: cg_mirabel_library, title: 폐관 직전의 도서관, bg: library, tod: night, cast: [{ who: mirabel, mood: 슬픔, x: 0.34 }], fx: [dust] }
+- { id: cg_mirabel_chant, title: 영창 분할, bg: magic_lab, cast: [{ who: mirabel, mood: 당황, x: 0.64 }], fx: [sparkles] }
+- { id: cg_mirabel_ring, title: 금 간 문장 반지, bg: library, tod: dusk, cast: [{ who: mirabel, mood: 슬픔, x: 0.62 }], fx: [vignette] }
+- { id: cg_bruno_forge, title: 공방의 불, bg: forge, tod: night, cast: [{ who: bruno, mood: 웃음, x: 0.64 }], fx: [embers] }
+- { id: cg_finn_tears, title: 문틈으로 본 것, bg: training_ground, tod: night, cast: [{ who: finn, mood: 슬픔, x: 0.6 }], fx: [vignette] }
+- { id: cg_sera_prayer, title: 엄마의 기도, bg: chapel, tod: dusk, cast: [{ who: sera, mood: 웃음, x: 0.62 }], fx: [rays] }
+- { id: cg_edric_mother, title: 엄마의 목소리, bg: canteen, tod: night, cast: [{ who: edric, mood: 슬픔, x: 0.62 }], fx: [vignette] }
+- { id: cg_garen_past, title: 20년 전, bg: training_ground, tod: dawn, cast: [{ who: garen, mood: 슬픔, x: 0.64 }], fx: [rays] }
+- { id: cg_elvera_ignis, title: 떨어진 분필, bg: magic_lab, cast: [{ who: elvera, mood: 놀람, x: 0.62 }], fx: [vignette] }
+- { id: cg_noel_runes, title: 모래 위의 룬, bg: lake, tod: dusk, cast: [{ who: noel, mood: 진지, x: 0.64 }], fx: [sparkles] }
+
+# 수업과 교수
+- { id: cg_crystal_crack, title: 금 간 수정구, bg: magic_lab, cast: [{ who: elvera, mood: 놀람, x: 0.5 }], fx: [speedlines] }
+- { id: cg_crystal_mark, title: 검붉은 실 한 가닥, bg: magic_lab, cast: [{ who: elvera, mood: 놀람, x: 0.66 }], fx: [embers, vignette] }
+- { id: cg_aren_caldera, title: 칼데라 고개의 바람, bg: classroom, cast: [{ who: aren, mood: 진지, x: 0.64 }], fx: [snow] }
+- { id: cg_bistol_bowls, title: 두 그릇, bg: canteen, tod: night, cast: [{ who: bistol, mood: 슬픔, x: 0.62 }], fx: [vignette] }
+- { id: cg_bistol_frame, title: 되돌리는 연금술, bg: alchemy_lab, tod: night, cast: [{ who: bistol, x: 0.64 }], fx: [dust] }
+- { id: cg_luna_saint, title: 성인 아니면 이단, bg: campus, tod: dusk, cast: [{ who: luna, mood: 웃음, x: 0.62 }], fx: [vignette] }
+- { id: cg_librarian_blue, title: 파란 책, bg: library, cast: [{ who: librarian, mood: 진지, x: 0.66 }], fx: [dust] }
+- { id: cg_elvera_flame, title: 태우지 않는 불, bg: magic_lab, tod: dusk, cast: [{ who: elvera, x: 0.62 }], fx: [embers] }
+- { id: cg_garen_marks, title: 다섯 개의 칼자국, bg: back_hill, tod: dawn, cast: [{ who: garen, mood: 진지, x: 0.32 }], fx: [vignette] }
+- { id: cg_prof_lounge, title: 문틈의 목소리, bg: dorm_hall, tod: dusk, cast: [{ who: elvera, mood: 진지, x: 0.3 }, { who: garen, mood: 슬픔, x: 0.72, flip: true }], fx: [vignette] }
+- { id: cg_sword_rain, title: 빗속의 연습, bg: training_ground, cast: [{ who: kaiden, mood: 진지, x: 0.64 }], fx: [rain] }
+
+# 봄 축제
+- { id: cg_liana_wish, title: 소원 등, bg: lake, tod: dusk, cast: [{ who: liana, mood: 웃음, x: 0.62 }], fx: [lanterns, sparkles] }
+- { id: cg_fest_aren, title: 용사님, bg: festival, tod: dusk, cast: [{ who: aren, mood: 당황, x: 0.62 }], fx: [petals] }
+- { id: cg_fest_bruno, title: 힘자랑 종, bg: festival, cast: [{ who: bruno, mood: 웃음, x: 0.36 }], fx: [sparkles] }
+- { id: cg_fest_mirabel, title: 붉은 장미 불꽃, bg: lake, tod: dusk, cast: [{ who: mirabel, mood: 놀람, x: 0.62 }], fx: [fireworks] }
+- { id: cg_fest_kaiden, title: 황궁에서 도망친 날, bg: festival, tod: dusk, cast: [{ who: kaiden, mood: 웃음, x: 0.62 }], fx: [sparkles] }
+- { id: cg_fest_sera, title: 성가대, bg: festival, tod: dusk, cast: [{ who: sera, x: 0.62 }], fx: [sparkles] }
+- { id: cg_fest_dorothy, title: 무지개 레모네이드, bg: festival, cast: [{ who: dorothy, mood: 당황, x: 0.62 }], fx: [bloom] }
+- { id: cg_fest_edric, title: 엄마의 등불, bg: lake, tod: dusk, cast: [{ who: edric, mood: 당황, x: 0.62 }], fx: [lanterns] }
+- { id: cg_fest_clocktower, title: 아무도 모르는 자리, bg: clock_tower, tod: dusk, cast: [{ who: finn, x: 0.62 }], fx: [lanterns] }
+- { id: cg_fest_noel, title: 망한 나라의 노래, bg: festival, tod: night, cast: [{ who: noel, mood: 웃음, x: 0.64 }] }
+- { id: cg_fest_fireworks, title: 호수 위의 불꽃, bg: lake, tod: night, fx: [fireworks, sparkles] }
+
+# 무투대회와 종업식
+- { id: cg_t_mirabel, title: 8강 — 아델하이트의 천재, bg: arena, cast: [{ who: mirabel, mood: 진지, x: 0.64 }], fx: [sparkles] }
+- { id: cg_t_bruno, title: 8강 — 대장장이의 아들, bg: arena, cast: [{ who: bruno, mood: 웃음, x: 0.5 }], fx: [speedlines] }
+- { id: cg_t_kaiden, title: 4강 — 제국의 3황자, bg: arena, cast: [{ who: kaiden, mood: 진지, x: 0.64 }], fx: [vignette] }
+- { id: cg_t_final, title: 결승 — 성검의 평민, bg: arena, tod: night, cast: [{ who: aren, mood: 진지, x: 0.5 }], fx: [speedlines] }
+- { id: cg_t_victory, title: 우승, bg: arena, tod: night, cast: [{ who: aren, mood: 웃음, x: 0.28 }, { who: 나, mood: 웃음, x: 0.68, flip: true }], fx: [sparkles] }
+- { id: cg_t_runnerup, title: 준우승, bg: arena, tod: night, cast: [{ who: aren, mood: 웃음, x: 0.6 }], fx: [fireflies] }
+- { id: cg_t_watch, title: 원작 그대로의 결승, bg: arena, tod: night, cast: [{ who: kaiden, mood: 진지, x: 0.3 }, { who: aren, mood: 슬픔, x: 0.72, flip: true }], fx: [vignette] }
+- { id: cg_t_medal, title: 우승 메달, bg: arena, tod: dusk, cast: [{ who: 나, mood: 웃음, x: 0.42 }], fx: [sparkles, vignette] }
+- { id: cg_y1_closing, title: 1학기 종업식, bg: great_hall, cast: [{ who: 나, mood: 웃음, x: 0.5 }], fx: [rays] }
+
+# 출신 · 고인물 · 기숙사 · 사이드 퀘스트
+- { id: cg_liana_forest, title: 고향 숲 냄새, bg: forest, cast: [{ who: liana, mood: 웃음, x: 0.62 }], fx: [rays] }
+- { id: cg_vet_37, title: 서른일곱 번째 엔딩의 마지막 컷, bg: doom_vision, cast: [{ who: 나, mood: 진지, x: 0.66 }], fx: [vignette] }
+- { id: cg_bruno_fist, title: 이번엔 내가 옆에 있으니까, bg: dorm_room, tod: night, cast: [{ who: bruno, mood: 웃음, x: 0.36 }] }
+- { id: cg_snack_raid, title: 공범의 꿀빵, bg: kitchen, tod: night, cast: [{ who: bruno, mood: 웃음, x: 0.28 }, { who: dorothy, mood: 웃음, x: 0.72 }] }
+- { id: cg_noel_ghost, title: 세탁실의 유령, bg: laundry, tod: night, cast: [{ who: noel, mood: 당황, x: 0.62 }] }
+- { id: cg_homesick, title: 텅 빈 주말, bg: dorm_room, cast: [{ who: 나, mood: 슬픔, x: 0.32 }], fx: [dust] }
+- { id: cg_liana_storm, title: 폭풍 속의 온실, bg: greenhouse, tod: night, cast: [{ who: liana, mood: 놀람, x: 0.62 }], fx: [rain] }
+- { id: cg_timeline, title: 10년짜리 연표, bg: rooftop, tod: night, cast: [{ who: 나, mood: 진지, x: 0.62 }], fx: [vignette] }
+- { id: cg_librarian_chair, title: 빈 의자에게, bg: library, tod: night, cast: [{ who: librarian, mood: 웃음, x: 0.72 }], fx: [dust] }
+- { id: cg_finn_name, title: 모래 위의 이름, bg: lake, tod: dusk, cast: [{ who: finn, mood: 놀람, x: 0.62 }], fx: [sparkles] }
+- { id: cg_dorothy_label, title: 공동 개발자, bg: kitchen, cast: [{ who: dorothy, mood: 웃음, x: 0.62 }], fx: [sparkles] }
+- { id: cg_kittens, title: 네 마리, bg: lake, tod: dusk, cast: [{ who: 나, mood: 웃음, x: 0.5 }], fx: [fireflies] }
+- { id: cg_aren_dream, title: 붉은 하늘의 꿈, bg: doom_vision, cast: [{ who: aren, mood: 진지, x: 0.5 }], fx: [embers] }

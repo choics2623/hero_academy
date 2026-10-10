@@ -38,6 +38,7 @@
             - 브루노@웃음: "사투리? 너네 고향 말 진짜 이상하다. 하하."
             - "브루노는 금방 다시 코를 골았다. 나는 한참 천장만 봤다."
         - text: "\"꿈에서 아주 긴 게임을 했어. 몇 번을 해도 지는 게임\""
+          art: cg_bruno_fist
           effects: ["affinity.bruno += 4", "trust.bruno += 4"]
           lines:
             - 브루노: "몇 번을 해도 지는 게임? 그걸 왜 계속해."
@@ -178,17 +179,20 @@
           - "주방. 빵 바구니. 그리고 아직 온기가 남은 스튜 냄비."
         branch:
           - when: "found.dorothy"
+            art: cg_snack_raid
             lines:
               - "냄비 앞에 먼저 온 사람이 있었다. 앞치마 차림의 도로시가 국자를 든 채 굳어 있다."
               - 도로시@당황: "…저, 저는 실험 중이었어요. 야식 아니에요. 진짜로."
               - 도로시@웃음: "…좋아요, 공범끼리 비밀. 엄마가 내일 팔려던 꿀빵인데, 하나씩만이에요!"
               - "주방 바닥에 셋이 쪼그려 앉아 꿀빵을 먹었다. 살면서 먹은 것 중 제일 맛있었다."
             effects: ["stress -= 8", "affinity.bruno += 4", "affinity.dorothy += 4"]
-          - lines:
+          - art: kitchen
+            lines:
               - "주방 바닥에 쪼그려 앉아 식은 빵을 스튜에 찍어 먹었다. 브루노가 소리 죽여 웃다가 사레가 들렸다."
               - "살면서 먹은 것 중 제일 맛있었다."
             effects: ["stress -= 8", "affinity.bruno += 4"]
       fail:
+        art: dorm_hall
         lines:
           - "셋째 계단이 삐걱— 울었다."
           - 선배: "거기 둘. 이 시간에 복도에서 뭐 하나. 이름."
@@ -222,6 +226,7 @@
     - text: 직접 확인하러 간다
       check: { label: 담력, value: "stat.의지 - 5 * talent.겁쟁이 + 5 * talent.강철멘탈 + luck", dc: 22 }
       success:
+        art: cg_noel_ghost
         lines:
           - "세탁실 문을 열었다. 달빛 아래, 빨랫감 더미 위에 사람이 누워 있다."
           - "가슴 위에 빈 술병 세 개. 뒤척일 때마다 서로 부딪혀 달그락거린다. 쇠사슬 소리의 정체다."
@@ -243,6 +248,7 @@
 
 - id: dorm_homesick
   title: 텅 빈 주말
+  art: cg_homesick
   on: 휴식
   pool: true
   window: { from: "1.3.2", to: "1.7" }
@@ -283,6 +289,7 @@
 
 - id: dorm_crying
   title: 계단참의 울음소리
+  art: dorm_hall
   on: 휴식
   pool: true
   window: { from: "1.4", to: "1.7" }
@@ -419,6 +426,7 @@
         - "그 큰 등이 천둥 칠 때마다 움찔한다. 아래 칸으로 내려가 등을 맞대고 앉았다."
         - 브루노: "…고맙다. 이거 아무한테도 말하지 마라. 특히 카이든."
     - text: 온실로 뛰어간다 (화분이 걱정된다)
+      art: cg_liana_storm
       when: "club == '원예부' or affinity.liana >= 15"
       effects: ["affinity.liana += 5", "fatigue += 10"]
       lines:
@@ -437,7 +445,7 @@
 
 - id: dorm_timeline
   title: 잠 못 드는 밤의 연표
-  art: rooftop
+  art: cg_timeline
   on: 휴식
   pool: true
   window: { from: "1.5", to: "1.7" }
@@ -523,7 +531,7 @@
 
 - id: lib_night_2
   title: 밤의 서가
-  art: library
+  art: cg_librarian_chair
   on: 도서관
   window: { from: "1.3.2", to: "1.7" }
   slots: [밤]
@@ -665,6 +673,7 @@
 
 - id: finn_letters_2
   title: 호숫가의 글자 수업
+  art: lake
   on: 산책
   window: { from: "1.3.2", to: "1.7" }
   when: "finn.letters == 1 and time.month * 4 + time.week > finn.letters_wk"
@@ -676,6 +685,7 @@
       나레이션: "그런데 획을 긋는 손목만은 이상할 만큼 곧다. 밤의 연무장에서 보던 검 끝처럼, 망설임이 없다."
   check: { label: 글자 가르치기, value: "stat.지성 + stat.매력 / 2 + 5 * talent.사람좋은얼굴 + luck", dc: 26 }
   success:
+    art: cg_finn_name
     lines:
       - "해가 기울 무렵, 핀이 혼자서 한 단어를 썼다. 아무도 불러 주지 않으면 아무도 몰랐을 단어."
       - "── 핀."
@@ -766,6 +776,7 @@
 
 - id: dorothy_trial_2
   title: 비율의 문제
+  art: kitchen
   on: [식당, 아르바이트]
   window: { from: "1.3.2", to: "1.7" }
   when: "dorothy.trial == 1 and time.month * 4 + time.week > dorothy.trial_wk"
@@ -792,6 +803,7 @@
 
 - id: dorothy_trial_3
   title: 공동 개발자
+  art: cg_dorothy_label
   on: [식당, 아르바이트]
   window: { from: "1.3.2", to: "1.7" }
   when: "dorothy.trial == 2 and time.month * 4 + time.week > dorothy.trial_wk"
@@ -822,6 +834,7 @@
 
 - id: cat_1
   title: 얼룩 고양이의 선물
+  art: lake
   on: 산책
   pool: true
   window: { from: "1.3.2", to: "1.7" }
@@ -848,6 +861,7 @@
 
 - id: cat_2
   title: 밤의 보트 창고
+  art: lake
   on: 산책
   window: { from: "1.3.2", to: "1.7" }
   slots: [밤]
@@ -889,6 +903,7 @@
 
 - id: cat_3
   title: 보트 창고 아래
+  art: lake
   on: 산책
   window: { from: "1.3.2", to: "1.7" }
   when: "cat.step == 2 and time.month * 4 + time.week > cat.wk"
@@ -939,6 +954,7 @@
 
 - id: cat_3_kittens
   title: 네 마리
+  art: cg_kittens
   lines:
     - "새끼 한 마리가 내 바짓단을 물고 놓지 않는다. 어미는 그걸 보고도 말리지 않는다."
     - "어미가 나를 한 번, 새끼를 한 번 보고는 천천히 눈을 감았다. 맡긴다는 뜻 같았다."
@@ -1009,6 +1025,7 @@
 
 - id: news_case_3
   title: K의 사정
+  art: training_ground
   on: [훈련장, 검술부]
   window: { from: "1.4.3", to: "1.7.1" }
   when: "news.case == 2"
@@ -1227,6 +1244,7 @@
 
 - id: amb_walk_aren
   title: 처음 보는데 익숙한
+  art: forest
   on: 산책
   pool: true
   window: { from: "1.3.2", to: "1.7" }
@@ -1250,6 +1268,7 @@
         - 아렌@웃음: "진짜? 다행이다. 나만 이상한 줄 알았어."
         - 속마음: "(거짓말은 아니다. 이 세계 전부가, 나한테는 처음 보는데 익숙하니까.)"
     - text: "\"꿈에서 또 뭘 봤어?\""
+      art: cg_aren_dream
       effects: ["affinity.aren += 3", "trust.aren += 3"]
       lines:
         - 아렌: "음… 하늘이 빨갰어. 엄청 넓은 데서 누가 울고 있었고. 나는 칼을 들고 서 있었는데, 손이 안 움직였어."
@@ -1262,6 +1281,7 @@
 
 - id: amb_walk_finn
   title: 꽃잎과 빗자루
+  art: garden_path
   on: 산책
   pool: true
   repeat: 2

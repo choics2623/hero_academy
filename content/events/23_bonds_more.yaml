@@ -3,6 +3,7 @@
 # ================================================================ 브루노
 - id: bond_bruno_1
   title: 브루노 — 공방의 불
+  art: forge
   on: [식당, 훈련장, 아르바이트]
   priority: 2
   when: "time.year == 1 and affinity.bruno >= 15"
@@ -14,6 +15,7 @@
     - text: 집게를 잡는다 (근력)
       check: { label: 집게 잡기, value: "stat.근력 + stat.체질 / 2 + luck", dc: 24 }
       success:
+        art: cg_bruno_forge
         lines:
           - "망치 소리가 공방을 울렸다. 불꽃이 튈 때마다 브루노가 신나게 웃는다."
           - 브루노@웃음: "다 됐다! 참나무 심에 쇠 테를 두른 연습용 목검이야. 네 손에 맞춰서 깎았어."
@@ -30,6 +32,7 @@
 
 - id: bond_bruno_2
   title: 브루노 — 망치는 허리로
+  art: dorm_hall
   on: [식당, 훈련장, 아르바이트]
   priority: 2
   when: "time.year == 1 and affinity.bruno >= 25 and fired.bond_bruno_1"
@@ -106,6 +109,7 @@
 
 - id: bond_finn_3
   title: 핀 — 피
+  art: cg_finn_tears
   on: 밤의연무장
   priority: 2
   when: "time.year == 1 and affinity.finn >= 35 and fired.bond_finn_2"
@@ -132,6 +136,7 @@
 # ================================================================ 세라 (시험에서 구한 경우)
 - id: bond_sera_1
   title: 세라 — 엄마의 기도
+  art: cg_sera_prayer
   on: 성당
   priority: 2
   when: "time.year == 1 and affinity.sera >= 22 and (fate.sera == 'saved' or fate.sera == 'saved_quiet')"
@@ -171,6 +176,7 @@
 # ================================================================ 에드릭 (미궁에서 살아남은 경우)
 - id: bond_edric_1
   title: 에드릭 — 엄마의 목소리
+  art: cg_edric_mother
   on: [식당, 훈련장]
   priority: 2
   when: "time.year == 1 and origin != '악역도련님' and affinity.edric >= 25 and (fate.edric == 'saved' or fate.edric == 'saved_by_teacher')"
@@ -217,6 +223,7 @@
 
 - id: bond_garen_2
   title: 가렌 — 20년 전
+  art: cg_garen_past
   on: 훈련장
   priority: 2
   when: "time.year == 1 and affinity.garen >= 32 and fired.bond_garen_1"
@@ -261,6 +268,7 @@
       effects: ["affinity.elvera += 3"]
       lines: [엘베라@슬픔: "…그렇죠. 다들 그렇게 대답해요."]
     - text: "\"누군가의 오랜 친구\""
+      art: cg_elvera_ignis
       when: "fs.F11.noticed"
       effects: ["elvera.shaken = 1", "trust.elvera += 10", "affinity.elvera += 6"]
       lines:
@@ -274,6 +282,7 @@
 # ================================================================ 노엘
 - id: bond_noel_1
   title: 노엘 — 모래 위의 룬
+  art: cg_noel_runes
   on: [산책, 도시외출]
   priority: 2
   when: "time.year == 1 and affinity.noel >= 18"
@@ -288,6 +297,7 @@
 # ================================================================ 도로시
 - id: bond_dorothy_1
   title: 도로시 — 시제품
+  art: kitchen
   on: [식당, 아르바이트]
   priority: 2
   when: "time.year == 1 and affinity.dorothy >= 15 and found.dorothy"

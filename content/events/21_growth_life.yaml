@@ -16,6 +16,7 @@
 
 - id: enc_sword_spar
   title: 검술부 대련
+  art: sword_club
   on: 검술부
   pool: true
   repeat: true
@@ -31,6 +32,7 @@
 
 - id: kaiden_palace
   title: 카이든의 형들
+  art: sword_club
   on: 검술부
   priority: 1
   when: "fired.kaiden_sword and trust.kaiden >= 8 and time.month >= 5"
@@ -59,6 +61,7 @@
 
 - id: finn_garen
   title: 핀과 가렌
+  art: cg_finn_mentor
   on: 밤의연무장
   priority: 2
   when: "affinity.finn >= 20 and affinity.garen >= 15"
@@ -73,6 +76,7 @@
 # ================================================================ 능력치 이정표 (강제·무료 이벤트)
 - id: ms_str_25
   title: 가벼워진 목검
+  art: training_ground
   on: auto
   free: true
   priority: 3
@@ -83,6 +87,7 @@
 
 - id: ms_str_45
   title: 교관의 호출
+  art: training_ground
   on: auto
   free: true
   priority: 3
@@ -94,6 +99,7 @@
 
 - id: ms_int_30
   title: 머리가 맑아졌다
+  art: classroom
   on: auto
   free: true
   priority: 3
@@ -104,6 +110,7 @@
 
 - id: ms_ctrl_25
   title: 마력이 손에 붙는다
+  art: magic_lab
   on: auto
   free: true
   priority: 3
@@ -115,6 +122,7 @@
 
 - id: ms_cha_22
   title: 말을 걸어오는 사람들
+  art: campus
   on: auto
   free: true
   priority: 3
@@ -127,6 +135,7 @@
 
 - id: ms_will_25
   title: 덜 무서워졌다
+  art: labyrinth
   on: auto
   free: true
   priority: 3
@@ -138,6 +147,7 @@
 # ================================================================ 재능 개화 / 진화
 - id: bloom_mana
   title: 재능 개화 — 마나 탱크
+  art: cg_bloom_mana
   on: auto
   free: true
   priority: 6
@@ -149,6 +159,7 @@
 
 - id: bloom_sense
   title: 재능 개화 — 마력 감응
+  art: dorm_room
   on: auto
   free: true
   priority: 6
@@ -161,6 +172,7 @@
 
 - id: bloom_bulgul
   title: 재능 진화 — 병약 → 불굴
+  art: dorm_room
   on: auto
   free: true
   priority: 6
@@ -185,6 +197,7 @@
 # ================================================================ 학교생활 (무작위·무료)
 - id: life_rain
   title: 소나기
+  art: rain_courtyard
   on: auto
   free: true
   chance: 0.06
@@ -199,6 +212,7 @@
 
 - id: life_letter
   title: 편지
+  art: dorm_room
   on: auto
   free: true
   chance: 0.08
@@ -222,6 +236,7 @@
 
 - id: life_snore
   title: 룸메이트의 코골이
+  art: dorm_room
   on: auto
   free: true
   chance: 0.05
@@ -234,6 +249,7 @@
 
 - id: life_exam_notice
   title: 무투대회 공고
+  art: campus
   on: auto
   free: true
   at: "1.6.2.방과후"

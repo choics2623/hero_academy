@@ -51,7 +51,6 @@
 # ---------------------------------------------------------------- 본선 8강
 - id: t_quarter
   title: 무투대회 본선 8강
-  art: arena
   on: auto
   at: "1.7.2.밤"
   priority: 10
@@ -59,6 +58,7 @@
   when: "tourney.round == 1"
   branch:
     - when: "rival.mirabel"
+      art: cg_t_mirabel
       lines:
         - 진행자: "8강! 아델하이트의 천재, 미라벨!"
         - 미라벨@진지: "드디어 공식적으로 짓밟을 수 있겠네."
@@ -71,7 +71,8 @@
         lose:
           lines: ["회오리에 휩쓸려 장외로 날아갔다. 8강 탈락.", 미라벨: "…그래도 여기까지 온 건 칭찬해 줄게."]
           effects: ["tourney.result = 'quarter'", "affinity.mirabel += 3"]
-    - lines:
+    - art: cg_t_bruno
+      lines:
         - 진행자: "8강! 대장장이의 아들, 브루노!"
         - 브루노@웃음: "친구라도 봐주는 거 없다!"
         - 속마음: "(힘은 브루노가 위다. 발을 구르면 전력이 온다. 그때는 받지 말고 끊어야 한다.)"
@@ -87,7 +88,7 @@
 # ---------------------------------------------------------------- 4강
 - id: t_semi
   title: 무투대회 4강
-  art: arena
+  art: cg_t_kaiden
   on: auto
   at: "1.7.3.방과후"
   priority: 10
@@ -111,7 +112,7 @@
 # ---------------------------------------------------------------- 결승 (내가 올라간 경우)
 - id: t_final
   title: 무투대회 결승
-  art: arena
+  art: cg_t_final
   on: auto
   at: "1.7.3.밤"
   priority: 10
@@ -129,12 +130,14 @@
   battle:
     enemy: t_aren
     win:
+      art: cg_t_victory
       lines:
         - "성검의 빛이 사그라들었다. 아렌이 무릎을 꿇은 채 웃는다."
         - 아렌@웃음: "…졌다. 진짜로 졌어. 고마워, 봐주지 않아서."
         - 진행자@놀람: "우승! D반, {{player.name}}!"
       effects: ["tourney.winner = 'me'", "tourney.result = 'win'"]
     lose:
+      art: cg_t_runnerup
       lines:
         - "빛이 터졌다. 정신을 차렸을 땐 하늘이 보였다. 준우승."
         - 아렌@웃음: "{{player.name}}, 일어날 수 있어? …너 아니었으면 나 여기까지 못 왔어."
@@ -143,7 +146,7 @@
 # ---------------------------------------------------------------- 결승 관전 (원작대로 카이든 vs 아렌)
 - id: t_final_watch
   title: 무투대회 결승 — 관중석에서
-  art: arena
+  art: cg_t_watch
   on: auto
   at: "1.7.3.밤"
   priority: 10
@@ -174,25 +177,29 @@
   when: "tourney.entered"
   branch:
     - when: "tourney.result == 'win'"
+      art: cg_t_medal
       lines:
         - "우승 메달이 생각보다 무겁다. 축하하러 온 사람들 사이로, 낯선 로브 차림의 사내가 나를 오래 바라보다 사라졌다."
         - 시스템: "⚠ 원작 이탈 — 1학년 무투대회 우승자가 바뀌었다. 누군가 나를 주시하기 시작했다."
       effects: ["reputation += 20", "sp += 3", "cult.watch = 1"]
     - when: "tourney.result == 'final'"
+      art: arena
       lines:
         - "준우승. 아렌이 먼저 다가와 손을 내밀었다."
         - 아렌: "너 아니었으면 결승까지 못 왔을 거야."
       effects: ["reputation += 12", "sp += 2", "affinity.aren += 5"]
     - when: "tourney.result == 'semi'"
+      art: arena
       lines: ["4강. D반 역사상 최고 성적이라고 담임이 말했다."]
       effects: ["reputation += 8", "sp += 1"]
-    - lines: ["일찍 떨어졌다. 그래도 몸이 기억하는 게 있다. 다음엔 다를 것이다."]
+    - art: arena
+      lines: ["일찍 떨어졌다. 그래도 몸이 기억하는 게 있다. 다음엔 다를 것이다."]
       effects: ["stat.의지 += 2"]
 
 # ---------------------------------------------------------------- 종업식
 - id: y1_closing
   title: 1학기 종업식
-  art: great_hall
+  art: cg_y1_closing
   on: auto
   at: "1.7.4.주말"
   priority: 10
