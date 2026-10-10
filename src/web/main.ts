@@ -217,7 +217,7 @@ function renderCreate() {
   // 소개
   const intro = el('section', 'intro');
   const hero = el('figure', 'hero');
-  hero.append(sceneImg('title', 'night', '', '금 간 밤하늘 아래의 에테르 아카데미'));
+  hero.append(sceneImg('title', 'night', '', '금 간 밤하늘 아래의 루미에르 아카데미'));
   intro.append(hero);
   intro.append(el('h1', undefined, '멸망까지 10년'));
   const lede = el('p', 'lede');

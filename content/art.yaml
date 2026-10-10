@@ -23,7 +23,7 @@
 - { id: rooftop, title: 본관 옥상, desc: "난간, 노을, 멀리 도시" }
 
 # ---------------------------------------------------------------- 사건
-- { id: title, title: 에테르 아카데미, desc: "언덕 위 아카데미, 금 간 밤하늘" }
+- { id: title, title: 루미에르 아카데미, desc: "언덕 위 아카데미, 금 간 밤하늘" }
 - { id: doom_vision, title: 멸망의 기억, desc: "붉은 하늘, 무너진 도시, 검은 태양" }
 - { id: academy_gate, title: 아카데미 정문, desc: "거대한 철문, 벚꽃, 신입생들" }
 - { id: great_hall, title: 입학식 대강당, desc: "깃발, 샹들리에, 빛나는 성검" }
