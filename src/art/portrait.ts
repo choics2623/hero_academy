@@ -93,12 +93,12 @@ const FACE: [number, number, number][] = [
   [21, 13, 18],
 ];
 const faceRow = new Map(FACE.map(([y, a, b]) => [y, [a, b] as const]));
-const inFace = (x: number, y: number) => {
+export const inFace = (x: number, y: number) => {
   const r = faceRow.get(y);
   return !!r && x >= r[0] && x <= r[1];
 };
 
-function skinRamp(l: Look): Ramp {
+export function skinRamp(l: Look): Ramp {
   return RAMP[l.skin];
 }
 
@@ -203,6 +203,26 @@ function background(p: Pix, [dark, light]: [number, number]) {
 // ---- 몸
 
 function body(l: Look): Pix {
+  const { neck, torso, cloth } = bodyParts(l);
+  const sk = skinRamp(l);
+  const p = new Pix(SIZE, SIZE);
+  p.blit(neck);
+  torso.outline(cloth[3]);
+  p.blit(torso);
+  p.outline(C.ink);
+  // 목 테두리는 피부 외곽선
+  const big = l.acc?.includes('big');
+  const nx0 = big ? 12 : 13;
+  const nx1 = big ? 19 : 18;
+  for (let y = 20; y <= 23; y++) {
+    if (p.get(nx0 - 1, y) === C.ink) p.set(nx0 - 1, y, sk[3]);
+    if (p.get(nx1 + 1, y) === C.ink) p.set(nx1 + 1, y, sk[3]);
+  }
+  return p;
+}
+
+/** 목과 상체 (외곽선 없음) */
+export function bodyParts(l: Look): { neck: Pix; torso: Pix; cloth: Ramp } {
   const p = new Pix(SIZE, SIZE);
   const sk = skinRamp(l);
   const big = l.acc?.includes('big');
@@ -226,16 +246,7 @@ function body(l: Look): Pix {
     }
   }
   outfitDetail(torso, l, cloth, rows);
-  torso.outline(cloth[3]);
-  // 아래 테두리는 그림 밖으로 이어진다
-  p.blit(torso);
-  p.outline(C.ink);
-  // 목 테두리는 피부 외곽선
-  for (let y = 20; y <= 23; y++) {
-    if (p.get(nx0 - 1, y) === C.ink) p.set(nx0 - 1, y, sk[3]);
-    if (p.get(nx1 + 1, y) === C.ink) p.set(nx1 + 1, y, sk[3]);
-  }
-  return p;
+  return { neck: p, torso, cloth };
 }
 
 function defaultCloth(o: Outfit): RampName {
@@ -369,7 +380,7 @@ function darker(c: number): number {
 
 // ---- 얼굴
 
-function head(l: Look): Pix {
+export function head(l: Look, ol = true): Pix {
   const p = new Pix(SIZE, SIZE);
   const sk = skinRamp(l);
   for (const [y, a, b] of FACE) {
@@ -388,7 +399,7 @@ function head(l: Look): Pix {
   }
   p.set(8, 14, sk[2]);
   p.set(23, 14, sk[3]);
-  p.outline(sk[3]);
+  if (ol) p.outline(sk[3]);
   return p;
 }
 
@@ -529,7 +540,7 @@ function face(p: Pix, l: Look, m: Mood, acc: Set<Acc>, gentle = false) {
 
 // ---- 머리카락
 
-function hairMask(l: Look): { front: Pix; back: Pix | null } | null {
+function hairMask(l: Look, ol = true): { front: Pix; back: Pix | null } | null {
   const d = HAIR[l.hair];
   if (d.none) return null;
   const r = RAMP[l.hairColor];
@@ -583,7 +594,7 @@ function hairMask(l: Look): { front: Pix; back: Pix | null } | null {
         back.set(x, y, x >= 20 ? r[2] : r[1]);
       }
     }
-    back.outline(r[3]);
+    if (ol) back.outline(r[3]);
   }
   if (d.tail) {
     back = back ?? new Pix(SIZE, SIZE);
@@ -593,7 +604,7 @@ function hairMask(l: Look): { front: Pix; back: Pix | null } | null {
       const w = y > 20 ? 1 : 2;
       for (let i = -w; i <= w; i++) back.set(x + i, y, i > 0 ? r[2] : r[1]);
     }
-    back.outline(r[3]);
+    if (ol) back.outline(r[3]);
   }
   return { front, back };
 }
@@ -643,6 +654,24 @@ function backHair(l: Look): Pix | null {
   return m.back;
 }
 
+/** 뒷머리 (외곽선 없음) */
+export function backHairRaw(l: Look): Pix | null {
+  return hairMask(l, false)?.back ?? null;
+}
+
+/** 앞머리 (명암만, 외곽선 없음) */
+export function frontHairRaw(l: Look): Pix | null {
+  const m = hairMask(l, false);
+  if (!m) return null;
+  shadeHair(m.front, l);
+  return m.front;
+}
+
+/** x=9..22 열의 앞머리 끝 y (32 기준) */
+export function bangsOf(l: Look): number[] {
+  return HAIR[l.hair].bangs;
+}
+
 function frontHair(l: Look): Pix | null {
   const m = hairMask(l);
   if (!m) return null;
@@ -654,7 +683,7 @@ function frontHair(l: Look): Pix | null {
 
 // ---- 머리에 쓰는 것
 
-function headwearBack(l: Look): Pix {
+export function headwearBack(l: Look, ol = true): Pix {
   const p = new Pix(SIZE, SIZE);
   const hood = l.acc?.includes('hood');
   const cl = RAMP[hood ? (l.cloth ?? 'blackCloth') : 'blackCloth'];
@@ -668,11 +697,11 @@ function headwearBack(l: Look): Pix {
       p.set(x, y, x >= 21 ? cl[2] : cl[1]);
     }
   }
-  p.outline(cl[3]);
+  if (ol) p.outline(cl[3]);
   return p;
 }
 
-function headwearFront(l: Look, under: Pix): Pix {
+export function headwearFront(l: Look, under: Pix, ol = true): Pix {
   const p = new Pix(SIZE, SIZE);
   const hood = l.acc?.includes('hood');
   const cl = RAMP[hood ? (l.cloth ?? 'blackCloth') : 'blackCloth'];
@@ -706,11 +735,11 @@ function headwearFront(l: Look, under: Pix): Pix {
     }
     for (const x of [12, 19]) p.set(x, 14, C.gold1);
   }
-  p.outline(cl[3]);
+  if (ol) p.outline(cl[3]);
   return p;
 }
 
-function bandana(p: Pix) {
+export function bandana(p: Pix) {
   for (let y = 1; y <= 7; y++) {
     for (let x = 7; x <= 24; x++) {
       const dx = (x + 0.5 - 15.5) / 9;
@@ -725,7 +754,7 @@ function bandana(p: Pix) {
   p.set(26, 5, C.red2);
 }
 
-function elfEars(l: Look, long: boolean): Pix {
+export function elfEars(l: Look, long: boolean, ol = true): Pix {
   const p = new Pix(SIZE, SIZE);
   const sk = skinRamp(l);
   const pts: [number, number][] = long
@@ -736,7 +765,7 @@ function elfEars(l: Look, long: boolean): Pix {
     p.set(31 - x, y, sk[2]);
   }
   p.set(long ? 6 : 7, long ? 12 : 13, sk[2]);
-  p.outline(sk[3]);
+  if (ol) p.outline(sk[3]);
   // 얼굴 쪽 외곽선은 지운다 (머리카락 위에만 그려지도록)
   for (let y = 0; y < SIZE; y++) for (let x = 9; x <= 22; x++) p.set(x, y, CLEAR);
   return p;

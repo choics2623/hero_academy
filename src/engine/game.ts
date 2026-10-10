@@ -26,6 +26,8 @@ export interface ChoiceView {
   text: string;
   enabled: boolean;
   hint?: string;
+  /** 이 선택지가 바로 판정을 굴리면: 판정 이름과 성공 확률(0~1) */
+  check?: { label?: string; chance: number };
 }
 
 export interface View {
@@ -484,11 +486,30 @@ export class Game {
       lines: sc?.lines ?? [],
       choices: (sc?.choices ?? []).map((c) => {
         const def = owner!.choices[c.index];
-        return { index: c.index, text: def.text, enabled: c.enabled, hint: def.hint };
+        const v: ChoiceView = { index: c.index, text: def.text, enabled: c.enabled, hint: def.hint };
+        if (def.check) {
+          const need = def.check.dc - Math.floor(toNum(evaluate(def.check.value.ast, this.world)));
+          v.check = { label: def.check.label, chance: Math.max(0, Math.min(20, 21 - Math.max(1, need))) / 20 };
+        }
+        return v;
       }),
       activities: this.state.phase === 'activity' ? this.activities().map((a) => ({ id: a.id, name: a.name, desc: a.desc })) : [],
       battle: this.state.battle ? battleView(this.content, this.world, this.state.battle) : undefined,
     };
+  }
+
+  /** 활동을 고르면 바로 바뀌는 수치 (지금 상태로 계산한 값) */
+  preview(activityId: string): { key: string; delta: number }[] {
+    const a = this.content.activities.get(activityId);
+    if (!a) return [];
+    const out: { key: string; delta: number }[] = [];
+    for (const e of a.effects) {
+      if (e.op === '=') continue;
+      let delta = toNum(evaluate(e.value.ast, this.world)) * (e.op === '-=' ? -1 : 1);
+      if (delta > 0 && e.target.startsWith('stat.')) delta *= Math.max(0, 1 + toNum(this.world.get(`growth.${e.target.slice(5)}`)));
+      out.push({ key: e.target, delta });
+    }
+    return out;
   }
 
   status(): { label: string; value: string }[] {

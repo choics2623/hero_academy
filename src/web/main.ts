@@ -8,10 +8,12 @@ import type { RenderedLine } from '../engine/text';
 import { World } from '../engine/world';
 import {
   ACTIVITY_ICON, CAST, DEFAULT_PLAYER, INTENT_ICON, PLAYER_EYES, PLAYER_HAIR, PLAYER_HAIR_COLOR, PLAYER_SKIN, STAT_ICON,
-  extraLook, playerLook, todOf, type Look,
+  bustResolver, bustSheet, drawCG, drawScene, enemySheet, extraLook, playerLook, todOf, type Look, type Tod,
 } from '../art';
-import { animateBar, attachRipple, floatText, loadSoundPref, reduceMotion, replay, rollDice, setSound, sfx, soundOn, toast } from './fx';
-import { enemyImg, iconImg, portraitImg, sceneImg } from './visuals';
+import { artUrl } from './art';
+import { animateBar, attachRipple, loadSoundPref, reduceMotion, replay, setSound, sfx, soundOn, toast } from './fx';
+import { Dialog, Stage } from './stage';
+import { iconImg, portraitImg, sceneImg } from './visuals';
 
 declare global {
   interface Window {
@@ -56,9 +58,6 @@ let monthSnap: Record<string, number> = {};
 let introduced = new Set<string>();
 let lastActivity = '';
 let busy = false;
-/** 직전 턴의 전투 연출 정보 */
-let turnFx: { lines: BattleLine[]; prev?: { hp: number; ehp: number; sp: number; mp: number }; ended?: 'win' | 'lose' } | null = null;
-let fresh: HTMLElement[] = [];
 
 // ------------------------------------------------------------ helpers
 
@@ -472,11 +471,24 @@ function renderCreate() {
   if (focusKey) (root.querySelector(`[data-key="${CSS.escape(focusKey)}"]`) as HTMLElement | null)?.focus();
 }
 
-// ------------------------------------------------------------ game
+// ------------------------------------------------------------ game: 무대 위에서 한 장씩 넘긴다
+
+let stage: Stage;
+let dialog: Dialog;
+/** 아직 무대에서 보여주지 않은 기록 */
+let queue: LogItem[] = [];
+let playing = false;
+let waiter: (() => void) | null = null;
+let autoPlay = false;
+let cgActive = false;
+let prevBars: { hp: number; ehp: number; sp: number; mp: number } | undefined;
+
+const sleep = (ms: number) => new Promise<void>((r) => window.setTimeout(r, reduceMotion() ? Math.min(ms, 40) : ms));
 
 function showCreate() {
   ambienceKey = '';
   $('ambience').replaceChildren();
+  closeLog();
   $('screen-game').hidden = true;
   $('screen-create').hidden = false;
   for (const id of ['clock', 'meter', 'panel-toggle', 'restart']) $(id).hidden = true;
@@ -487,9 +499,18 @@ function showGame() {
   $('screen-create').hidden = true;
   $('screen-game').hidden = false;
   for (const id of ['clock', 'meter', 'panel-toggle', 'restart']) $(id).hidden = false;
-  $('log').replaceChildren();
-  rendered = 0;
-  renderGame(true);
+  stage = new Stage($('stage'));
+  dialog = new Dialog($('dialog'));
+  rendered = log.length;
+  queue = [];
+  // 이어하기: 지금 장면을 처음부터 다시 보여준다
+  if (game!.state.phase === 'scene') {
+    let i = log.length - 1;
+    while (i >= 0 && !(log[i].k === 'scene' && !(log[i] as { cont?: boolean }).cont)) i--;
+    if (i >= 0) queue = log.slice(i).filter((x) => x.k === 'scene');
+  }
+  renderHeader();
+  play();
 }
 
 function startGame() {
@@ -514,7 +535,681 @@ function resume(s: Save) {
   showGame();
 }
 
-// ---- 변화량 기록: 행동마다 "근력 +2.5 · 피로 +15", 주마다 결산
+function afterAct() {
+  queue.push(...log.slice(rendered));
+  rendered = log.length;
+  renderHeader();
+  play();
+}
+
+/** 다음으로 넘기기 (무대·대사창 클릭, 스페이스, 엔터) */
+function advance() {
+  if (!game || $('screen-game').hidden) return;
+  if (dialog?.isTyping) {
+    dialog.complete();
+    return;
+  }
+  if (waiter) {
+    sfx('click');
+    waiter();
+    return;
+  }
+  if (!playing && game.state.phase === 'scene' && !game.state.scene?.choices.length) {
+    sfx('click');
+    act({ type: 'continue' }, '');
+  }
+}
+
+function waitAdvance(autoMs?: number): Promise<void> {
+  dialog.ready(true);
+  return new Promise((resolve) => {
+    let t = 0;
+    const done = () => {
+      window.clearTimeout(t);
+      if (waiter === done) waiter = null;
+      dialog.ready(false);
+      resolve();
+    };
+    waiter = done;
+    const ms = autoMs ?? (autoPlay ? 1900 : 0);
+    if (ms) t = window.setTimeout(done, ms);
+  });
+}
+
+async function play() {
+  if (playing) return;
+  playing = true;
+  const c = $('controls');
+  c.replaceChildren();
+  c.classList.add('wait');
+  try {
+    while (queue.length) await runItem(queue.shift()!);
+  } catch (e) {
+    console.error(e);
+  } finally {
+    playing = false;
+    c.classList.remove('wait');
+    renderControls();
+    renderPanel();
+  }
+}
+
+async function runItem(it: LogItem) {
+  if (it.k === 'act') return runChips(it);
+  if (it.k === 'week') return runWeek(it);
+  if (it.k === 'month') return runMonth(it);
+  if (it.k === 'scene') return runScene(it);
+  if (it.k === 'battle') return it.start ? runBattleStart(it) : runBattleTurn(it);
+}
+
+// ---- 배경
+
+function lookKey() {
+  return `${JSON.stringify(build.look ?? DEFAULT_PLAYER)}:${build.origin}`;
+}
+
+function bgUrl(id: string, tod: string): { key: string; url: string; cg: boolean } {
+  const def = content.art.get(id);
+  if (def?.bg) {
+    const t = def.tod ?? tod;
+    return {
+      key: `cg:${id}:${t}`,
+      url: artUrl(`cg:${id}:${t}:${lookKey()}`, () => drawCG(def, t as Tod, bustResolver({ look: build.look, origin: build.origin }))),
+      cg: !!def.cast?.length,
+    };
+  }
+  return { key: `${id}:${tod}`, url: artUrl(`scene:${id}:${tod}`, () => drawScene(id, tod)), cg: false };
+}
+
+function setBg(id: string, tod: string, mode: 'fade' | 'flash' | 'cut' = 'fade') {
+  const b = bgUrl(id, tod);
+  stage.setBackground(b.key, b.url, mode);
+  cgActive = b.cg;
+  stage.setActorsHidden(cgActive);
+}
+
+function idleBg(): string {
+  return game!.state.time.y === 0 ? 'home_room' : 'campus';
+}
+
+function sheetUrl(key: string, look: Look, mood: string): string {
+  return artUrl(`sheet:${key}:${mood}`, () => bustSheet(look, mood));
+}
+
+// ---- 장면
+
+type Page =
+  | { t: 'art'; id: string }
+  | { t: 'check'; text: string }
+  | { t: 'pin'; text: string }
+  | { t: 'say'; speaker: string; mood?: string; lines: string[] }
+  | { t: 'narr' | 'inner' | 'sys'; lines: string[] };
+
+const chars = (xs: string[]) => xs.reduce((a, x) => a + x.length, 0);
+
+/** 대사를 한 화면씩 묶는다: 같은 사람의 짧은 말, 이어지는 지문은 합친다 */
+function paginate(lines: RenderedLine[]): Page[] {
+  const out: Page[] = [];
+  for (const l of lines) {
+    const prev = out[out.length - 1];
+    if (l.speaker === '삽화') out.push({ t: 'art', id: l.text });
+    else if (l.speaker === '판정') out.push({ t: 'check', text: l.text });
+    else if (l.speaker === '📌') out.push({ t: 'pin', text: l.text });
+    else if (l.speaker === '시스템') out.push({ t: 'sys', lines: [l.text] });
+    else if (l.speaker === '속마음') {
+      if (prev?.t === 'inner' && prev.lines.length < 2 && chars(prev.lines) + l.text.length < 110) prev.lines.push(l.text);
+      else out.push({ t: 'inner', lines: [l.text] });
+    } else if (!l.speaker) {
+      if (prev?.t === 'narr' && prev.lines.length < 3 && chars(prev.lines) + l.text.length < 140) prev.lines.push(l.text);
+      else out.push({ t: 'narr', lines: [l.text] });
+    } else if (prev?.t === 'say' && prev.speaker === l.speaker && (prev.mood ?? '') === (l.mood ?? '') && prev.lines.length < 2 && chars(prev.lines) + l.text.length < 100) {
+      prev.lines.push(l.text);
+    } else out.push({ t: 'say', speaker: l.speaker, mood: l.mood, lines: [l.text] });
+  }
+  return out;
+}
+
+async function runScene(it: Extract<LogItem, { k: 'scene' }>) {
+  const tod = it.tod ?? 'day';
+  if (!it.cont && !it.flavor) {
+    stage.clearActors();
+    const first = it.lines.find((l) => l.speaker === '삽화')?.text;
+    const bg = first ?? it.strip;
+    if (bg) setBg(bg, tod);
+    else if (!stage.bgKey) setBg(idleBg(), tod);
+    else {
+      cgActive = false;
+      stage.setActorsHidden(false);
+    }
+    stage.title(it.when, it.title);
+    if (it.title) await sleep(300);
+  }
+  const intros = new Set(it.intros ?? []);
+  for (const pg of paginate(it.lines)) {
+    if (pg.t === 'art') {
+      const b = bgUrl(pg.id, tod);
+      if (b.key === stage.bgKey) continue;
+      setBg(pg.id, tod, 'flash');
+      await sleep(420);
+    } else if (pg.t === 'check') await runCheck(pg.text);
+    else if (pg.t === 'pin') pinToast(pg.text);
+    else await runPage(pg, intros);
+  }
+}
+
+async function runPage(pg: Exclude<Page, { t: 'art' | 'check' | 'pin' }>, intros: Set<string>) {
+  let name: string | undefined;
+  let face: HTMLElement | undefined;
+  let talkKey: string | null = null;
+  if (pg.t === 'say') {
+    if (pg.speaker === '나') {
+      name = build.name;
+      face = portraitImg(lookOf('나')!.key, myLook(), pg.mood ?? '', 1, 'dl-pt');
+      stage.focus(null);
+    } else {
+      name = pg.speaker;
+      const f = lookOf(pg.speaker);
+      if (!f) {
+        face = iconImg('people', 2);
+        stage.focus(null);
+      } else if (cgActive) {
+        face = portraitImg(f.key, f.look, pg.mood ?? '', 1, 'dl-pt');
+        stage.focus(null);
+      } else {
+        const mood = pg.mood ?? '';
+        stage.showActor({ key: f.key, sheet: sheetUrl(f.key, f.look, mood), name: pg.speaker }, mood, intros.has(pg.speaker));
+        stage.focus(f.key);
+        talkKey = f.key;
+      }
+      if (intros.has(pg.speaker)) {
+        intros.delete(pg.speaker);
+        introBanner(pg.speaker);
+      }
+    }
+  } else stage.focus(null);
+  if (talkKey) stage.talk(talkKey, true);
+  const lines = pg.t === 'say' ? pg.lines.map((x) => `“${x}”`) : pg.lines;
+  await dialog.show({ kind: pg.t, name, face, lines, onTick: () => sfx('blip') });
+  if (talkKey) stage.talk(talkKey, false);
+  if (pg.t === 'sys') sysEffects(pg.lines.join(' '));
+  await waitAdvance();
+}
+
+function introBanner(name: string) {
+  const id = byName.get(name);
+  const ch = id ? content.characters.get(id) : undefined;
+  if (!ch) return;
+  const b = el('div', 'st-intro');
+  b.append(el('span', 'ik', '인물 등장'), el('b', undefined, ch.name));
+  if (ch.desc) b.append(el('span', 'id', ch.desc));
+  stage.fxEl.append(b);
+  sfx('rank');
+  window.setTimeout(() => b.classList.add('out'), 3000);
+  window.setTimeout(() => b.remove(), 3500);
+}
+
+function pinToast(text: string) {
+  const [kind, rest] = text.split(' — ');
+  toast(`${kind} · ${rest ?? ''}`, 'pin', iconImg(kind.includes('회수') ? 'target' : 'eye', 1));
+  sfx('learn');
+}
+
+function sysEffects(t: string) {
+  if (t.includes('원작 이탈')) {
+    stage.root.classList.remove('glitch');
+    void stage.root.offsetWidth;
+    stage.root.classList.add('glitch');
+    replay($('meter'), 'pulse');
+    sfx('glitch');
+  }
+  if (/기술 습득|아이템 획득|재능 개화|재능 진화/.test(t)) {
+    stage.flash('gold');
+    stage.burst(50, 40, '#ffd36b', 14);
+    toast(t.replace(/ \(.*\)$/, ''), 'learn');
+    sfx('learn');
+  }
+}
+
+async function runCheck(text: string) {
+  const ok = text.endsWith('성공');
+  const m = /^(.*?) · (-?\d+) \+ 주사위 (\d+) = (-?\d+) \/ 목표 (\d+)/.exec(text);
+  stage.focus(null);
+  if (!m) {
+    await dialog.show({ kind: 'check', lines: [text], speed: 0 });
+    await waitAdvance();
+    return;
+  }
+  const [, label, value, die, sum, dc] = m;
+  const shown = dialog.show({ kind: 'check', name: `${label} 판정`, lines: [`능력 ${value} + 주사위 ${die} = ${sum}   ·   목표 ${dc}`], speed: 0 });
+  await stage.dice(Number(die), ok, label);
+  await shown;
+  await waitAdvance();
+}
+
+// ---- 수치, 주, 달
+
+function chipFor(d: string): { icon?: string; text: string; tone: 'up' | 'down' | 'bond' } | null {
+  const m = /^(.+?) ([+-]?[\d.]+)$/.exec(d);
+  if (!m) return null;
+  const [, label, v] = m;
+  const n = Number(v);
+  if (label.endsWith(' 호감')) return { icon: 'heart', text: `${label} ${n > 0 ? '+' : ''}${v.replace(/^\+/, '')}`, tone: n > 0 ? 'bond' : 'down' };
+  if (STAT_ICON[label]) return { icon: STAT_ICON[label], text: `${label} ${n > 0 ? '+' : ''}${v.replace(/^\+/, '')}`, tone: n > 0 ? 'up' : 'down' };
+  const icon = ({ 피로: 'zzz', 스트레스: 'cloud', 은화: 'coin' } as Record<string, string>)[label];
+  const bad = label === '피로' || label === '스트레스';
+  return { icon, text: d, tone: n > 0 !== bad ? 'up' : 'down' };
+}
+
+async function runChips(it: Extract<LogItem, { k: 'act' }>) {
+  const items = (it.deltas ?? []).map(chipFor).filter((x): x is NonNullable<typeof x> => !!x);
+  if (items.length) stage.chips(items);
+  for (const r of it.ranks ?? []) {
+    const name = /^(.+) 인연/.exec(r)?.[1] ?? '';
+    const face = lookOf(name);
+    toast(`★ ${r}`, 'rank', face ? portraitImg(face.key, face.look, '웃음', 1, 'mini') : undefined);
+    sfx('rank');
+  }
+  await sleep(items.length ? 120 : 0);
+}
+
+async function runWeek(it: Extract<LogItem, { k: 'week' }>) {
+  const box = el('div', 'wk');
+  box.append(el('span', 'wk-t', it.title));
+  if (it.items.length) {
+    const chips = el('div', 'wk-chips');
+    for (const x of it.items) {
+      const c = chipFor(x);
+      const s = el('span', `st-chip ${c?.tone ?? 'up'}`);
+      if (c?.icon) s.append(iconImg(c.icon, 1));
+      s.append(x);
+      chips.append(s);
+    }
+    box.append(chips);
+  }
+  if (it.season) box.append(el('p', 'wk-s', it.season));
+  stage.card(box, 'week');
+  sfx('whoosh');
+  await waitAdvance(autoPlay ? 1600 : 2600);
+  stage.hideCard();
+  await sleep(150);
+}
+
+async function runMonth(it: Extract<LogItem, { k: 'month' }>) {
+  stage.clearActors();
+  setBg(it.art, 'day');
+  const box = el('div', 'mo');
+  box.append(el('span', 'mo-k', 'CHAPTER'), el('h2', undefined, it.title), el('p', 'mo-s', it.season));
+  for (const x of it.items) box.append(el('p', 'mo-r', x));
+  stage.card(box, 'month');
+  sfx('learn');
+  await waitAdvance(autoPlay ? 2200 : 3600);
+  stage.hideCard();
+  await sleep(200);
+}
+
+// ---- 전투
+
+function enemySheetUrl(id: string, name: string) {
+  return artUrl(`esheet:${id}`, () => enemySheet(id, name));
+}
+
+function battleActors() {
+  const b = game!.state.battle;
+  if (!b) return;
+  const name = content.enemies.get(b.enemy)!.name;
+  if (!stage.hasActor('enemy') || !stage.hasActor('me-b')) {
+    stage.clearActors();
+    stage.setActorsHidden(false);
+    cgActive = false;
+    stage.showActor({ key: 'me-b', sheet: sheetUrl(`me:${lookKey()}`, myLook(), '진지'), name: build.name }, '진지');
+    stage.showActor({ key: 'enemy', sheet: enemySheetUrl(b.enemy, name), name }, '');
+  }
+  const low = b.hp / b.maxHp < 0.3;
+  stage.showActor({ key: 'me-b', sheet: sheetUrl(`me:${lookKey()}`, myLook(), low ? '슬픔' : '진지'), name: build.name }, low ? '슬픔' : '진지');
+  stage.focus(null);
+}
+
+async function runBattleStart(it: Extract<LogItem, { k: 'battle' }>) {
+  const where = battleBackdrop();
+  if (where) setBg(where.id, where.tod);
+  battleActors();
+  stage.root.classList.add('battle');
+  const box = el('div', 'bt');
+  box.append(el('span', 'bt-k', 'BATTLE'), el('b', undefined, it.enemy));
+  stage.card(box, 'battle-card');
+  stage.flash('red');
+  stage.shake('big');
+  sfx('stamp');
+  await dialog.show({ kind: 'battle', lines: it.lines.map((l) => l.text), speed: 10 });
+  await sleep(900);
+  stage.hideCard();
+}
+
+async function runBattleTurn(it: Extract<LogItem, { k: 'battle' }>) {
+  battleActors();
+  const rows: HTMLElement[] = [];
+  const shown = dialog.show({ kind: 'battle', lines: [], speed: 0 });
+  await shown;
+  const text = $('dialog').querySelector('.dl-text')!;
+  const ex = 72;
+  const mx = 26;
+  for (const l of it.lines) {
+    const row = el('p', `bl ${l.who}${l.crit ? ' crit' : ''}`, l.text);
+    if (l.dmg) row.append(el('b', l.to === 'me' ? 'dmg me' : 'dmg', ` −${l.dmg}`));
+    if (l.heal) row.append(el('b', 'dmg heal', ` +${l.heal}`));
+    text.append(row);
+    rows.push(row);
+    if (l.dmg && l.to === 'enemy') {
+      const magic = /마법|폭발|영창/.test(l.text);
+      if (l.who === 'me') stage.hit('me-b', 'lunge-r');
+      await sleep(110);
+      stage.slash(ex, 42, magic ? 'magic' : 'slash');
+      sfx(l.crit ? 'crit' : 'slash');
+      await sleep(70); // 타격 정지
+      stage.hit('enemy', 'hurt');
+      stage.pop(`−${l.dmg}`, ex + (Math.random() * 8 - 4), 26, l.crit ? 'crit' : l.who === 'ally' ? 'ally' : '');
+      stage.burst(ex, 44, l.crit ? '#ffd36b' : '#ffffff', l.crit ? 16 : 8);
+      if (l.crit) {
+        stage.shake('big');
+        stage.flash('white');
+        stage.pop('CRITICAL', ex, 14, 'tag');
+      } else stage.shake('small');
+      sfx('hit');
+      await sleep(l.crit ? 380 : 260);
+    } else if (l.dmg && l.to === 'me') {
+      stage.hit('enemy', 'lunge-l');
+      await sleep(110);
+      stage.slash(mx, 44, 'claw');
+      sfx('hurt');
+      await sleep(60);
+      stage.hit('me-b', 'hurt');
+      stage.flash('red');
+      stage.shake(l.dmg >= 8 || l.crit ? 'big' : 'small');
+      stage.pop(`−${l.dmg}`, mx, 28, 'me');
+      await sleep(320);
+    } else if (l.heal) {
+      stage.pop(`+${l.heal}`, mx, 28, 'heal');
+      stage.burst(mx, 44, '#5fd39c', 12);
+      sfx('heal');
+      await sleep(260);
+    } else if (/튕겨냈다/.test(l.text)) {
+      stage.flash('blue');
+      stage.burst(mx + 8, 44, '#62c3ff', 14);
+      stage.pop('패링!', mx, 22, 'guard');
+      stage.hit('enemy', 'stagger');
+      sfx('guard');
+      await sleep(320);
+    } else if (/^피했다/.test(l.text)) {
+      stage.hit('me-b', 'dodge');
+      stage.pop('회피!', mx, 22, 'guard');
+      sfx('whoosh');
+      await sleep(300);
+    } else if (/보인다/.test(l.text)) {
+      stage.flash('blue');
+      stage.pop('간파!', ex, 18, 'read');
+      sfx('learn');
+      await sleep(260);
+    } else if (/흩어졌다|무너졌다/.test(l.text)) {
+      stage.pop('빈틈!', ex, 18, 'gold');
+      stage.hit('enemy', 'stagger');
+      sfx('stamp');
+      await sleep(260);
+    } else if (l.who === 'enemy' && /자세|방벽|힘을 모|숨|영창|버틴|세웠|녹아/.test(l.text)) {
+      stage.hit('enemy', 'r-lean');
+      await sleep(200);
+    } else await sleep(160);
+  }
+  if (it.result) {
+    await sleep(200);
+    if (it.result === 'win') {
+      stage.hit('enemy', 'defeat');
+      stage.flash('white');
+      sfx('win');
+    } else {
+      stage.root.classList.add('defeated');
+      sfx('lose');
+    }
+    const box = el('div', `res ${it.result}`, it.result === 'win' ? '승리' : '패배');
+    stage.card(box, 'result-card');
+    await waitAdvance(autoPlay ? 1500 : 2400);
+    stage.hideCard();
+    stage.root.classList.remove('battle', 'defeated');
+    stage.clearActors();
+    stage.hudEl.replaceChildren();
+  }
+}
+
+// ---- 조작부
+
+function renderHeader() {
+  const g = game!;
+  const v = g.view();
+  $('time').textContent = v.phase === 'ended' ? '1학년 1학기 끝' : v.time;
+  const tod = todOf(cal.slotName(g.state.time));
+  $('time').prepend(iconImg(tod === 'night' ? 'moon' : tod === 'dawn' ? 'dawn' : 'sun', 1, 'tod-ic'));
+  $('doom').textContent = doomText();
+  const collapse = g.world.collapse();
+  ($('collapse-fill') as HTMLElement).style.width = `${collapse}%`;
+  $('collapse-val').textContent = `${collapse}%`;
+  setAmbience(g.state.time.m, g.state.time.w, tod);
+}
+
+function previewChips(id: string): HTMLElement {
+  const row = el('span', 'pv');
+  for (const { key, delta } of game!.preview(id)) {
+    if (Math.abs(delta) < 0.05) continue;
+    const label = key.startsWith('stat.') ? key.slice(5) : key;
+    const icon = key.startsWith('stat.') ? STAT_ICON[label] : ({ fatigue: 'zzz', stress: 'cloud', money: 'coin' } as Record<string, string>)[key];
+    if (!icon) continue;
+    const bad = key === 'fatigue' || key === 'stress';
+    const good = delta > 0 !== bad;
+    const c = el('span', `pv-c ${good ? 'up' : 'down'}`);
+    c.title = `${key.startsWith('stat.') ? label : ({ fatigue: '피로', stress: '스트레스', money: '은화' } as Record<string, string>)[key]} ${delta > 0 ? '+' : ''}${Math.round(delta * 10) / 10}`;
+    c.append(iconImg(icon, 1), `${delta > 0 ? '+' : ''}${Math.abs(delta) >= 10 ? Math.round(delta) : Math.round(delta * 10) / 10}`);
+    row.append(c);
+  }
+  return row;
+}
+
+function renderControls() {
+  const g = game!;
+  const v = g.view();
+  const c = $('controls');
+  c.replaceChildren();
+  renderHeader();
+  if (v.phase !== 'battle') {
+    stage.hudEl.replaceChildren();
+    stage.root.classList.remove('battle');
+  }
+  if (v.phase === 'ended') {
+    stage.clearActors();
+    setBg('rooftop', 'dusk');
+    dialog.show({ kind: 'prompt', name: '종업식', lines: ['1학년 1학기가 끝났다. 여름방학이다.'], speed: 0 });
+    const box = el('div', 'ending');
+    box.append(el('h3', undefined, '1학년 1학기 끝 — 프로토타입은 여기까지'));
+    box.append(el('p', undefined, `원작 붕괴도 ${g.world.collapse()}%. 지금까지 바꾼 운명은 이렇다.`));
+    const ul = el('ul');
+    for (const cr of content.crossroads.values()) {
+      const val = g.state.vars[cr.key];
+      const txt = val === undefined ? '아직 정해지지 않음' : `${cr.labels[String(val)] ?? String(val)} (${val === cr.canon ? '원작대로' : '원작 이탈'})`;
+      ul.append(el('li', undefined, `${cr.title}: ${txt}`));
+    }
+    box.append(ul);
+    const top = g.relationships().filter((r) => CAST[r.id] && r.affinity > 0).sort((a, b) => b.affinity - a.affinity).slice(0, 4);
+    if (top.length) {
+      box.append(el('p', undefined, '이번 학기에 가장 가까워진 사람들.'));
+      const row = el('div', 'bond-row');
+      for (const r of top) {
+        const f = el('figure', 'bond');
+        f.append(portraitImg(r.id, CAST[r.id], '웃음', 2), el('figcaption', undefined, `${r.name} · 인연 ${r.rank}`));
+        row.append(f);
+      }
+      box.append(row);
+    }
+    box.append(el('p', undefined, '다른 출신이나 재능으로 다시 하면 다른 장면과 선택지가 열린다.'));
+    const again = button('primary', '다른 몸으로 다시 시작', () => {
+      clearSave();
+      game = null;
+      showCreate();
+    });
+    again.style.width = 'auto';
+    again.style.justifySelf = 'start';
+    box.append(again);
+    c.append(box);
+    return;
+  }
+  if (v.phase === 'battle' && v.battle) {
+    renderBattle(c, v.battle);
+    return;
+  }
+  if (v.phase === 'activity') {
+    const tod = todOf(cal.slotName(g.state.time));
+    stage.clearActors();
+    setBg(idleBg(), tod);
+    const next = g.upcoming(1)[0];
+    const sub = next ? [`다음 일정 · ${next.label} (${next.weeks <= 0 ? '이번 주' : `${next.weeks}주 뒤`})`] : [];
+    dialog.show({ kind: 'prompt', name: cal.slotName(g.state.time), lines: ['무엇을 할까?', ...sub], speed: 0 });
+    const grid = el('div', 'activities');
+    v.activities.forEach((a, i) => {
+      const b: HTMLButtonElement = button('activity', '', () => pick(b, () => act({ type: 'activity', id: a.id }, a.name)));
+      b.dataset.idx = String(i + 1);
+      b.append(iconImg(ACTIVITY_ICON[a.id] ?? 'star', 2, 'aic'));
+      const txt = el('span', 'atext');
+      const nm = el('b', undefined, a.name);
+      if (i < 9) nm.prepend(el('span', 'k', String(i + 1)));
+      txt.append(nm);
+      if (a.desc) txt.append(el('span', 'ad', a.desc));
+      txt.append(previewChips(a.id));
+      b.append(txt);
+      grid.append(b);
+    });
+    c.append(grid);
+    return;
+  }
+  if (v.choices.length) {
+    const list = el('div', 'choices');
+    v.choices.forEach((ch, i) => {
+      const b: HTMLButtonElement = button('choice', '', () => pick(b, () => act({ type: 'choice', index: ch.index }, ch.text)));
+      b.dataset.idx = String(i + 1);
+      b.disabled = !ch.enabled;
+      const body = el('span', 'ct');
+      body.append(ch.text);
+      if (!ch.enabled) body.append(el('span', 'lock', '조건이 부족하다'));
+      if (ch.hint) body.append(el('span', 'hint', `⚠ ${ch.hint}`));
+      b.append(el('span', 'k', String(i + 1)), body);
+      if (ch.check) {
+        const pct = Math.round(ch.check.chance * 100);
+        const tag = el('span', `odds ${pct >= 70 ? 'hi' : pct >= 40 ? 'mid' : 'lo'}`);
+        tag.append(iconImg('dice', 1), `${ch.check.label ?? '판정'} ${pct}%`);
+        b.append(tag);
+      }
+      list.append(b);
+    });
+    c.append(list);
+    dialog.ready(false);
+    return;
+  }
+  const pending = g.state.scene?.battle;
+  const nb = button(pending ? 'continue fight' : 'continue', pending ? '⚔ 전투 시작' : '다음 ▶', () => {
+    sfx(pending ? 'stamp' : 'click');
+    act({ type: 'continue' }, '');
+  });
+  c.append(nb);
+  dialog.ready(true);
+}
+
+function renderBattle(c: HTMLElement, bt: BattleView) {
+  stage.root.classList.add('battle');
+  battleActors();
+  const prev = prevBars;
+  prevBars = undefined;
+  const hud = stage.hudEl;
+  hud.replaceChildren();
+  const enemyId = game!.state.battle?.enemy ?? '';
+  // 적 체력
+  const foe = el('div', `hud-foe${bt.enemy.enraged ? ' enraged' : ''}`);
+  const fh = el('div', 'hn');
+  fh.append(el('b', undefined, bt.enemy.name), el('span', 'num', `${bt.enemy.hp}/${bt.enemy.maxHp}`));
+  foe.append(fh, bar('hp foe', prev?.ehp, bt.enemy.hp / bt.enemy.maxHp));
+  hud.append(foe);
+  // 다음 행동
+  const danger = bt.intent.clarity === 'exact' && ['강타', '차지', '마법'].includes(bt.intent.label);
+  const it = el('div', `hud-intent intent ${bt.intent.clarity}${danger ? ' danger' : ''}`);
+  const lab = el('b');
+  lab.append(iconImg(INTENT_ICON[bt.intent.label] ?? INTENT_ICON['?'], 2, 'iic'), bt.intent.label);
+  it.append(el('span', 'il', bt.intent.charged ? '다음 행동 · 힘을 모았다' : '다음 행동'), lab, el('span', 'it', bt.intent.text));
+  hud.append(it);
+  // 내 상태
+  const me = el('div', 'hud-me');
+  const mh = el('div', 'hn');
+  mh.append(el('b', undefined, build.name), el('span', 'num', `${bt.me.hp}/${bt.me.maxHp}`));
+  me.append(mh, bar('hp mine', prev?.hp, bt.me.hp / bt.me.maxHp));
+  const res = el('div', 'res');
+  const sp = el('span', 'rl');
+  sp.append(`기력 ${bt.me.sp}/${bt.me.maxSp}`, bar('sp', prev?.sp, bt.me.sp / Math.max(1, bt.me.maxSp)));
+  res.append(sp);
+  if (bt.me.maxMp > 0) {
+    const mp = el('span', 'rl');
+    mp.append(`마나 ${bt.me.mp}/${bt.me.maxMp}`, bar('mp', prev?.mp, bt.me.mp / Math.max(1, bt.me.maxMp)));
+    res.append(mp);
+  }
+  me.append(res);
+  hud.append(me);
+  const tags = el('div', 'hud-tags');
+  tags.append(el('span', 'chip turn', `턴 ${bt.turn + 1}/${bt.turns}`));
+  if (bt.ally) {
+    const chip = el('span', 'chip ally');
+    const face = lookOf(bt.ally);
+    if (face) chip.append(portraitImg(face.key, face.look, '진지', 1, 'mini'));
+    chip.append(`동료 · ${bt.ally}`);
+    tags.append(chip);
+  }
+  for (const s of bt.status) tags.append(el('span', 'chip', s));
+  hud.append(tags);
+  void enemyId;
+
+  if (!dialog.isTyping && !$('dialog').querySelector('.bl')) {
+    dialog.show({ kind: 'battle', name: '전투', lines: ['적의 다음 행동을 보고 맞받아칠 기술을 고르자.'], speed: 0 });
+  }
+
+  const grid = el('div', 'skills');
+  bt.skills.forEach((k, i) => {
+    const b: HTMLButtonElement = button('skill', '', () => pick(b, () => act({ type: 'battle', skill: k.id }, k.name)));
+    b.dataset.idx = String(i + 1);
+    b.disabled = !k.enabled;
+    const top = el('span', 'st');
+    if (i < 9) top.append(el('span', 'k', String(i + 1)));
+    top.append(el('b', undefined, k.name));
+    if (k.cost) top.append(el('span', 'cost', k.cost));
+    b.append(top, el('span', 'sd', k.reason ?? k.desc));
+    grid.append(b);
+  });
+  c.append(grid);
+}
+
+// ---- 기록
+
+function openLog() {
+  const d = $('drawer');
+  const lg = $('log');
+  lg.replaceChildren(...log.map(renderItem));
+  d.hidden = false;
+  requestAnimationFrame(() => {
+    d.classList.add('open');
+    const body = $('drawer-body');
+    body.scrollTop = body.scrollHeight;
+  });
+}
+
+function closeLog() {
+  const d = $('drawer');
+  d.classList.remove('open');
+  window.setTimeout(() => {
+    if (!d.classList.contains('open')) d.hidden = true;
+  }, 260);
+}
+
+// ------------------------------------------------------------ 기록·상태창 (그대로)
 
 function tracked(): Record<string, number> {
   const out: Record<string, number> = {};
@@ -630,7 +1325,7 @@ function act(a: Action, label: string) {
   if (wasBattle) {
     const lines = game.state.battle?.log ?? game.state.lastBattle?.log ?? [];
     log.push({ k: 'battle', enemy: enemyName, lines, result: ended });
-    turnFx = { lines, prev, ended };
+    prevBars = prev;
     label = '';
   }
   const deltas = a.type === 'continue' || (wasBattle && !ended) ? [] : describeDiff(before, tracked());
@@ -651,14 +1346,13 @@ function act(a: Action, label: string) {
   if (game.state.phase === 'battle' && !wasBattle) {
     const b = game.state.battle!;
     log.push({ k: 'battle', enemy: content.enemies.get(b.enemy)!.name, lines: b.log, start: true });
-    turnFx = null;
   }
   checkWeek();
   if (label || deltas.length || ranks.length) {
     log.splice(at, 0, { k: 'act', text: label, deltas, ranks, icon: a.type === 'activity' ? ACTIVITY_ICON[a.id] : undefined });
   }
   writeSave();
-  renderGame(true);
+  afterAct();
 }
 
 /** 누른 버튼을 잠깐 강조한 뒤 실행 (연출) */
@@ -827,236 +1521,6 @@ function renderItem(item: LogItem): HTMLElement {
   return a;
 }
 
-function effectSummary(id: string): string {
-  const names: Record<string, string> = { fatigue: '피로', stress: '스트레스', money: '돈' };
-  const a = content.activities.get(id)!;
-  return a.effects
-    .map((e) => {
-      const n = e.target.startsWith('stat.') ? e.target.slice(5) : names[e.target];
-      return n && e.op !== '=' ? n + (e.op === '+=' ? '↑' : '↓') : '';
-    })
-    .filter(Boolean)
-    .join(' ');
-}
-
-function renderControls() {
-  const g = game!;
-  const v = g.view();
-  const c = $('controls');
-  c.replaceChildren();
-  if (v.phase === 'ended') {
-    const box = el('div', 'ending');
-    box.append(sceneImg('rooftop', 'dusk', 'ending-art'));
-    box.append(el('h3', undefined, '1학년 1학기 끝 — 프로토타입은 여기까지'));
-    box.append(el('p', undefined, `원작 붕괴도 ${g.world.collapse()}%. 지금까지 바꾼 운명은 이렇다.`));
-    const ul = el('ul');
-    for (const cr of content.crossroads.values()) {
-      const val = g.state.vars[cr.key];
-      const txt = val === undefined ? '아직 정해지지 않음' : `${cr.labels[String(val)] ?? String(val)} (${val === cr.canon ? '원작대로' : '원작 이탈'})`;
-      ul.append(el('li', undefined, `${cr.title}: ${txt}`));
-    }
-    box.append(ul);
-    const top = g.relationships().filter((r) => CAST[r.id] && r.affinity > 0).sort((a, b) => b.affinity - a.affinity).slice(0, 4);
-    if (top.length) {
-      box.append(el('p', undefined, '이번 학기에 가장 가까워진 사람들.'));
-      const row = el('div', 'bond-row');
-      for (const r of top) {
-        const f = el('figure', 'bond');
-        f.append(portraitImg(r.id, CAST[r.id], '웃음', 2), el('figcaption', undefined, `${r.name} · 인연 ${r.rank}`));
-        row.append(f);
-      }
-      box.append(row);
-    }
-    box.append(el('p', undefined, '다른 출신이나 재능으로 다시 하면 다른 장면과 선택지가 열린다.'));
-    const again = button('primary', '다른 몸으로 다시 시작', () => {
-      clearSave();
-      game = null;
-      showCreate();
-    });
-    again.style.width = 'auto';
-    again.style.justifySelf = 'start';
-    box.append(again);
-    c.append(box);
-    return;
-  }
-  if (v.phase === 'battle' && v.battle) {
-    renderBattle(c, v.battle);
-    return;
-  }
-  if (v.phase === 'activity') {
-    const slot = cal.slotName(g.state.time);
-    c.append(el('div', 'prompt', `무엇을 할까? · ${slot}`));
-    const next = g.upcoming(1)[0];
-    const active = g.goals().filter((x) => x.status === 'active');
-    if (next || active.length) {
-      const nu = el('div', 'nextup');
-      if (next) nu.append(el('span', undefined, `다음 일정 · ${next.label} (${next.weeks <= 0 ? '이번 주' : `${next.weeks}주 뒤`})`));
-      if (active.length) {
-        const gb = button('linkish', `목표 ${active.length}개 진행 중`, () => {
-          tab = 'goals';
-          renderPanel();
-          $('panel').classList.add('open');
-          $('panel-toggle').textContent = '닫기';
-        });
-        nu.append(gb);
-      }
-      c.append(nu);
-    }
-    const grid = el('div', 'activities');
-    v.activities.forEach((a, i) => {
-      const b: HTMLButtonElement = button('activity', '', () => pick(b, () => act({ type: 'activity', id: a.id }, a.name)));
-      b.dataset.idx = String(i + 1);
-      b.append(iconImg(ACTIVITY_ICON[a.id] ?? 'star', 2, 'aic'));
-      const txt = el('span', 'atext');
-      const nm = el('b', undefined, a.name);
-      if (i < 9) nm.prepend(el('span', 'k', String(i + 1)));
-      txt.append(nm);
-      if (a.desc) txt.append(el('span', 'ad', a.desc));
-      const fx = effectSummary(a.id);
-      if (fx) txt.append(el('span', 'fx', fx));
-      b.append(txt);
-      grid.append(b);
-    });
-    c.append(grid);
-    return;
-  }
-  if (v.choices.length) {
-    v.choices.forEach((ch, i) => {
-      const b: HTMLButtonElement = button('choice', '', () => pick(b, () => act({ type: 'choice', index: ch.index }, ch.text)));
-      b.dataset.idx = String(i + 1);
-      b.disabled = !ch.enabled;
-      const body = el('span');
-      body.append(ch.text);
-      if (!ch.enabled) body.append(el('span', 'lock', '조건이 부족하다'));
-      if (ch.hint) body.append(el('span', 'hint', `⚠ ${ch.hint}`));
-      b.append(el('span', 'k', String(i + 1)), body);
-      c.append(b);
-    });
-    return;
-  }
-  const pending = g.state.scene?.battle;
-  c.append(
-    button(pending ? 'continue fight' : 'continue', pending ? '전투 시작' : '계속', () => {
-      sfx('click');
-      act({ type: 'continue' }, '');
-    }),
-  );
-}
-
-function bar(cls: string, from: number | undefined, to: number): HTMLElement {
-  const b = el('div', `gauge ${cls}`);
-  const f = el('i');
-  b.append(f);
-  animateBar(f, from ?? to, to);
-  return b;
-}
-
-/** 전투가 벌어지는 곳: 가장 최근 장면의 삽화나 장소 */
-function battleBackdrop(): { id: string; tod: string } | null {
-  for (let i = log.length - 1; i >= 0; i--) {
-    const it = log[i];
-    if (it.k !== 'scene') continue;
-    const art = it.lines.find((l) => l.speaker === '삽화')?.text ?? it.strip;
-    if (art) return { id: art, tod: it.tod ?? 'day' };
-    if (!it.cont) return null;
-  }
-  return null;
-}
-
-function renderBattle(c: HTMLElement, bt: BattleView) {
-  const prev = turnFx?.prev;
-  const wrap = el('div', 'battle');
-
-  const enemyId = game!.state.battle?.enemy ?? '';
-  const foe = el('div', `combatant foe${bt.enemy.enraged ? ' enraged' : ''}`);
-  const where = battleBackdrop();
-  if (where) foe.append(sceneImg(where.id, where.tod, 'foe-bg'));
-  const fh = el('div', 'ch');
-  const fname = el('span', 'cn');
-  fname.append(enemyImg(enemyId, bt.enemy.name, 2, 'cpt'), el('b', undefined, bt.enemy.name));
-  fh.append(fname, el('span', 'num', `${bt.enemy.hp} / ${bt.enemy.maxHp}`));
-  foe.append(fh, bar('hp foe', prev?.ehp, bt.enemy.hp / bt.enemy.maxHp));
-  const danger = bt.intent.clarity === 'exact' && ['강타', '차지', '마법'].includes(bt.intent.label);
-  const it = el('div', `intent ${bt.intent.clarity}${danger ? ' danger' : ''}`);
-  const iconId = INTENT_ICON[bt.intent.label] ?? INTENT_ICON['?'];
-  it.append(el('span', 'il', bt.intent.charged ? '다음 행동 · 힘을 모았다' : '다음 행동'));
-  const lab = el('b');
-  lab.append(iconImg(iconId, 2, 'iic'), bt.intent.label);
-  it.append(lab, el('span', 'it', bt.intent.text));
-  foe.append(it);
-
-  const me = el('div', 'combatant me');
-  const mh = el('div', 'ch');
-  const mname = el('span', 'cn');
-  mname.append(portraitImg(lookOf('나')!.key, myLook(), bt.me.hp / bt.me.maxHp < 0.3 ? '슬픔' : '진지', 2, 'cpt'), el('b', undefined, build.name));
-  mh.append(mname, el('span', 'num', `${bt.me.hp} / ${bt.me.maxHp}`));
-  me.append(mh, bar('hp mine', prev?.hp, bt.me.hp / bt.me.maxHp));
-  const res = el('div', 'res');
-  const sp = el('span', 'rl');
-  sp.append(`기력 ${bt.me.sp}/${bt.me.maxSp}`, bar('sp', prev?.sp, bt.me.sp / Math.max(1, bt.me.maxSp)));
-  res.append(sp);
-  if (bt.me.maxMp > 0) {
-    const mp = el('span', 'rl');
-    mp.append(`마나 ${bt.me.mp}/${bt.me.maxMp}`, bar('mp', prev?.mp, bt.me.mp / Math.max(1, bt.me.maxMp)));
-    res.append(mp);
-  }
-  me.append(res);
-  const tags = el('div', 'chips');
-  if (bt.ally) {
-    const chip = el('span', 'chip ally');
-    const face = lookOf(bt.ally);
-    if (face) chip.append(portraitImg(face.key, face.look, '진지', 1, 'mini'));
-    chip.append(`동료 · ${bt.ally}`);
-    tags.append(chip);
-  }
-  for (const s of bt.status) tags.append(el('span', 'chip', s));
-  tags.append(el('span', 'chip turn', `턴 ${bt.turn + 1} / ${bt.turns}`));
-  me.append(tags);
-
-  const grid = el('div', 'skills');
-  bt.skills.forEach((k, i) => {
-    const b: HTMLButtonElement = button('skill', '', () => pick(b, () => act({ type: 'battle', skill: k.id }, k.name)));
-    b.dataset.idx = String(i + 1);
-    b.disabled = !k.enabled;
-    const top = el('span', 'st');
-    if (i < 9) top.append(el('span', 'k', String(i + 1)));
-    top.append(el('b', undefined, k.name));
-    if (k.cost) top.append(el('span', 'cost', k.cost));
-    b.append(top, el('span', 'sd', k.reason ?? k.desc));
-    grid.append(b);
-  });
-  wrap.append(foe, me, grid);
-  c.append(wrap);
-
-  // 직전 턴 연출: 피해 숫자, 흔들림, 효과음
-  if (turnFx && !turnFx.ended) {
-    let t = 0;
-    for (const l of turnFx.lines) {
-      if (l.dmg && l.to === 'enemy') {
-        floatText(foe, `−${l.dmg}`, l.crit ? 'crit' : '', t);
-        window.setTimeout(() => {
-          replay(foe, 'hit');
-          sfx(l.crit ? 'crit' : 'hit');
-        }, t);
-        t += 160;
-      } else if (l.dmg && l.to === 'me') {
-        floatText(me, `−${l.dmg}`, 'me', t + 120);
-        window.setTimeout(() => {
-          replay(me, 'hurt');
-          sfx('hurt');
-        }, t + 120);
-        t += 200;
-      } else if (l.heal) {
-        floatText(me, `+${l.heal}`, 'heal', t);
-        window.setTimeout(() => sfx('heal'), t);
-      } else if (l.text.includes('튕겨냈다') || l.text.includes('피했다')) {
-        window.setTimeout(() => sfx('guard'), t);
-      }
-    }
-    turnFx = null;
-  }
-}
-
 function window_(title: string): HTMLElement {
   const w = el('div', 'window');
   w.append(el('h4', undefined, title));
@@ -1220,40 +1684,24 @@ function renderPanel() {
   }
 }
 
-function renderGame(scroll: boolean) {
-  const g = game!;
-  const v = g.view();
-  $('time').textContent = v.phase === 'ended' ? '1학년 1학기 끝' : v.time;
-  const tod = todOf(cal.slotName(g.state.time));
-  $('time').prepend(iconImg(tod === 'night' ? 'moon' : tod === 'dawn' ? 'dawn' : 'sun', 1, 'tod-ic'));
-  $('doom').textContent = doomText();
-  const collapse = g.world.collapse();
-  ($('collapse-fill') as HTMLElement).style.width = `${collapse}%`;
-  $('collapse-val').textContent = `${collapse}%`;
+function bar(cls: string, from: number | undefined, to: number): HTMLElement {
+  const b = el('div', `gauge ${cls}`);
+  const f = el('i');
+  b.append(f);
+  animateBar(f, from ?? to, to);
+  return b;
+}
 
-  setAmbience(g.state.time.m, g.state.time.w, todOf(cal.slotName(g.state.time)));
-
-  const logEl = $('log');
-  let first: HTMLElement | null = null;
-  fresh = [];
-  for (; rendered < log.length; rendered++) {
-    const node = renderItem(log[rendered]);
-    first ??= node;
-    logEl.append(node);
-    fresh.push(node);
+/** 전투가 벌어지는 곳: 가장 최근 장면의 삽화나 장소 */
+function battleBackdrop(): { id: string; tod: string } | null {
+  for (let i = log.length - 1; i >= 0; i--) {
+    const it = log[i];
+    if (it.k !== 'scene') continue;
+    const art = it.lines.find((l) => l.speaker === '삽화')?.text ?? it.strip;
+    if (art) return { id: art, tod: it.tod ?? 'day' };
+    if (!it.cont) return null;
   }
-  renderControls();
-  renderPanel();
-  runEffects();
-
-  if (scroll) {
-    const story = $('story');
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const bottom = story.scrollHeight - story.clientHeight;
-    const target = first ? Math.min(bottom, first.offsetTop - 16) : bottom;
-    story.scrollTo({ top: Math.max(0, target), behavior: reduce ? 'auto' : 'smooth' });
-    ($('controls').querySelector('button:not([disabled])') as HTMLButtonElement | null)?.focus({ preventScroll: true });
-  }
+  return null;
 }
 
 /** 계절 입자: 2월 눈, 3·4월 꽃잎, 5월 잎, 6월 장마, 7월 밤 반딧불 */
@@ -1291,65 +1739,15 @@ function setAmbience(m: number, w: number, tod: string) {
   }
 }
 
-/** 새로 그려진 기록에 연출을 건다 */
-function runEffects() {
-  if (!fresh.length) return;
-  const motion = !reduceMotion();
-  for (const node of fresh) {
-    if (motion && node.matches('.scene')) {
-      [...node.children].forEach((ch, i) => (ch as HTMLElement).style.setProperty('--i', String(Math.min(i, 14))));
-      node.classList.add('reveal');
-    }
-    node.querySelectorAll<HTMLElement>('.check').forEach((chk) => {
-      const d = chk.querySelector<HTMLElement>('.die');
-      const wrap = chk.querySelector<HTMLElement>('.die-wrap');
-      if (!d || !wrap) return;
-      sfx('dice');
-      if (!motion) return;
-      chk.classList.add('rolling');
-      rollDice(d, Number(d.dataset.final));
-      window.setTimeout(() => {
-        chk.classList.remove('rolling');
-        chk.classList.add('landed');
-        if (wrap.classList.contains('nat20')) {
-          sfx('crit');
-          for (let i = 0; i < 6; i++) floatText(wrap, '✦', 'spark', i * 40);
-        }
-      }, 620);
-    });
-    node.querySelectorAll<HTMLElement>('.sysline').forEach((d) => {
-      const t = d.textContent ?? '';
-      if (t.includes('원작 이탈')) {
-        d.classList.add('glitch');
-        replay($('meter'), 'pulse');
-        sfx('glitch');
-      }
-      if (/기술 습득|아이템 획득|재능 개화|재능 진화/.test(t)) {
-        d.classList.add('learn');
-        toast(t.replace(/ \(.*\)$/, ''), 'learn');
-        sfx('learn');
-      }
-    });
-    node.querySelectorAll<HTMLElement>('.rankup').forEach((r) => {
-      const name = /★ (.+) 인연/.exec(r.textContent ?? '')?.[1] ?? '';
-      const face = lookOf(name);
-      toast(r.textContent ?? '', 'rank', face ? portraitImg(face.key, face.look, '웃음', 1, 'mini') : undefined);
-      sfx('rank');
-    });
-    if (node.matches('.battlelog.end')) {
-      const win = node.classList.contains('win');
-      toast(win ? '승리!' : '패배…', win ? 'win' : 'lose');
-      sfx(win ? 'win' : 'lose');
-    }
-  }
-}
-
 // ------------------------------------------------------------ boot
 
 document.addEventListener('keydown', (e) => {
   if (!game || $('screen-game').hidden) return;
   const t = e.target as HTMLElement;
   if (t.matches('input, select, textarea')) return;
+  if (e.key === 'Escape') return closeLog();
+  if (!$('drawer').hidden) return;
+  if (e.key === 'l' || e.key === 'L') return openLog();
   if (e.key >= '1' && e.key <= '9') {
     const b = $('controls').querySelector<HTMLButtonElement>(`[data-idx="${e.key}"]`);
     if (b && !b.disabled) {
@@ -1357,11 +1755,8 @@ document.addEventListener('keydown', (e) => {
       b.click();
     }
   } else if ((e.key === 'Enter' || e.key === ' ') && !(t instanceof HTMLButtonElement)) {
-    const b = $('controls').querySelector<HTMLButtonElement>('.continue');
-    if (b) {
-      e.preventDefault();
-      b.click();
-    }
+    e.preventDefault();
+    advance();
   }
 });
 
@@ -1379,6 +1774,20 @@ soundBtn.addEventListener('click', () => {
   sfx('click');
 });
 attachRipple(document.body);
+$('stage').addEventListener('click', advance);
+$('dialog').addEventListener('click', advance);
+$('btn-log').addEventListener('click', openLog);
+$('drawer-close').addEventListener('click', closeLog);
+$('drawer').addEventListener('click', (e) => {
+  if (e.target === $('drawer')) closeLog();
+});
+const autoBtn = $('btn-auto') as HTMLButtonElement;
+autoBtn.addEventListener('click', () => {
+  autoPlay = !autoPlay;
+  autoBtn.setAttribute('aria-pressed', String(autoPlay));
+  autoBtn.textContent = autoPlay ? '자동 ▶' : '자동';
+  if (autoPlay) waiter?.();
+});
 
 $('panel-toggle').addEventListener('click', () => {
   const open = $('panel').classList.toggle('open');

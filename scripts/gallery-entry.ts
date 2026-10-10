@@ -64,7 +64,12 @@ if ((!only || only === 'scenes') && 'SCENES' in art) {
 if (only === 'busts') {
   const row = section('흉상 64×64');
   for (const [id, look] of Object.entries(CAST)) show(row, drawBust(look), id, SCALE);
-  for (const [id, look] of Object.entries(CAST).slice(0, 4)) for (const m of MOODS.slice(1)) show(row, drawBust(look, m), `${id} ${m}`, SCALE);
+  const row2 = section('표정 · 프레임');
+  for (const [id, look] of Object.entries(CAST).slice(0, 3)) {
+    for (const m of MOODS) show(row2, drawBust(look, m), `${id} ${m || '기본'}`, SCALE);
+    show(row2, drawBust(look, '', 'blink'), `${id} 깜빡`, SCALE);
+    show(row2, drawBust(look, '', 'talk'), `${id} 말`, SCALE);
+  }
 }
 if (only === 'cg') {
   const bust = bustResolver({ origin: '평민장학생' });

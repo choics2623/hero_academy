@@ -75,7 +75,7 @@ function noise(dur: number, gain: number, cutoff: number, delay = 0) {
   src.start(t);
 }
 
-export type Sfx = 'click' | 'pick' | 'hit' | 'crit' | 'hurt' | 'heal' | 'dice' | 'win' | 'lose' | 'glitch' | 'rank' | 'learn' | 'guard';
+export type Sfx = 'click' | 'pick' | 'hit' | 'crit' | 'hurt' | 'heal' | 'dice' | 'win' | 'lose' | 'glitch' | 'rank' | 'learn' | 'guard' | 'blip' | 'whoosh' | 'slash' | 'stamp';
 
 export function sfx(kind: Sfx) {
   if (!enabled) return;
@@ -120,6 +120,20 @@ export function sfx(kind: Sfx) {
       break;
     case 'rank':
       [784, 988, 1175, 1568].forEach((f, i) => tone(f, 0.16, { type: 'sine', gain: 0.04, delay: i * 0.07 }));
+      break;
+    case 'blip':
+      tone(1500 + Math.random() * 200, 0.018, { type: 'square', gain: 0.008 });
+      break;
+    case 'whoosh':
+      noise(0.28, 0.08, 1400);
+      break;
+    case 'slash':
+      noise(0.09, 0.3, 4000);
+      tone(900, 0.08, { type: 'sawtooth', gain: 0.02, to: 300 });
+      break;
+    case 'stamp':
+      tone(180, 0.14, { type: 'square', gain: 0.05, to: 90 });
+      noise(0.1, 0.2, 700);
       break;
     case 'learn':
       [659, 880, 1319].forEach((f, i) => tone(f, 0.2, { type: 'triangle', gain: 0.04, delay: i * 0.08 }));

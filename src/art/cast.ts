@@ -132,21 +132,27 @@ const ENEMY_AS: Record<string, [string, Mood]> = {
   t_aren: ['aren', '진지'],
 };
 
-export function enemyArt(id: string, name: string): Pix {
+export function enemyAs(id: string): [string, Mood] | undefined {
+  return ENEMY_AS[id];
+}
+
+export function enemyArt(id: string, name: string, clear = false): Pix {
   const as = ENEMY_AS[id];
   if (as && CAST[as[0]]) return drawPortrait({ ...CAST[as[0]], bg: [0x3a1424, 0x5e2236] }, as[1]);
-  if (id === 'rats') return rats();
-  if (id === 'cult_shadow') return shadow();
+  if (id === 'rats') return rats(clear);
+  if (id === 'cult_shadow') return shadow(clear);
   const l = extraLook(name);
   return drawPortrait({ ...l, bg: [0x3a1424, 0x5e2236], acc: [...(l.acc ?? []), id === 't_prelim' ? 'big' : 'sharp'] }, '화남');
 }
 
-function rats(): Pix {
+function rats(clear = false): Pix {
   const p = new Pix(32, 32);
-  for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) p.set(x, y, bayer(x, y) < 4 + y / 5 ? 0x2a2420 : 0x1a1614);
-  // 바위 틈
-  p.ellipse(26, 30, 9, 4, 0x3a322c);
-  p.ellipse(4, 31, 6, 3, 0x3a322c);
+  if (!clear) {
+    for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) p.set(x, y, bayer(x, y) < 4 + y / 5 ? 0x2a2420 : 0x1a1614);
+    // 바위 틈
+    p.ellipse(26, 30, 9, 4, 0x3a322c);
+    p.ellipse(4, 31, 6, 3, 0x3a322c);
+  }
   const RAT = [
     '....kk.........',
     '...kpk..kkkk...',
@@ -171,16 +177,16 @@ function rats(): Pix {
   return p;
 }
 
-function shadow(): Pix {
+function shadow(clear = false): Pix {
   const p = new Pix(32, 32);
-  for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) p.set(x, y, bayer(x, y) < 4 + (31 - y) / 3 ? 0x1c0f1f : 0x2e1426);
+  if (!clear) for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) p.set(x, y, bayer(x, y) < 4 + (31 - y) / 3 ? 0x1c0f1f : 0x2e1426);
   // 바닥의 피의 원
   for (let x = 2; x <= 29; x++) {
     const y = 29 + Math.round(Math.sin((x / 28) * Math.PI) * 1.5);
     p.set(x, y, C.red1);
     if (x % 5 === 0) p.set(x, y - 1, C.red0);
   }
-  p.glow(16, 29, 12, C.red3, 9);
+  if (!clear) p.glow(16, 29, 12, C.red3, 9);
   const robe = new Pix(32, 32);
   robe.poly(
     [
@@ -211,7 +217,7 @@ function shadow(): Pix {
     const rr = rng(i + 3);
     const x = 4 + Math.floor(rr() * 24);
     const y = 4 + Math.floor(rr() * 20);
-    if (robe.get(x, y) === CLEAR) p.set(x, y, C.red2);
+    if (robe.get(x, y) === CLEAR && !clear) p.set(x, y, C.red2);
   }
   return p;
 }
