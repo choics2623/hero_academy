@@ -468,6 +468,7 @@
 
 - id: enc_walk_stars
   title: 별 보기
+  art: starry_hill
   on: 산책
   priority: 1
   slots: [밤]

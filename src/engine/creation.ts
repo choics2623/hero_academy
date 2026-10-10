@@ -11,6 +11,8 @@ export interface Build {
   talents: { id: string; option?: string }[];
   /** 남은 포인트를 능력치에 분배 (포인트 단위) */
   alloc?: Record<string, number>;
+  /** 초상화 외형 (화면 전용, 게임 규칙과 무관) */
+  look?: { hair: string; hairColor: string; eyes: string; skin: string };
 }
 
 export interface BuildCheck {

@@ -12,8 +12,12 @@ export interface Variant {
   text: string;
 }
 
+/** 대사 표정. 화자 뒤에 @를 붙여 쓴다: `리아나@웃음: "..."` */
+export const MOODS = ['웃음', '화남', '슬픔', '놀람', '당황', '진지'] as const;
+
 export interface Line {
   speaker?: string;
+  mood?: string;
   when?: Expr;
   variants: Variant[];
 }
@@ -44,6 +48,8 @@ export interface Outcome {
   plants: Plant[];
   pays: string[];
   battle?: BattleSpec;
+  /** 이 결과가 펼쳐질 때 보여줄 삽화 (art.yaml의 id) */
+  art?: string;
 }
 
 // ---------------------------------------------------------------- battle
@@ -148,6 +154,15 @@ export interface Activity {
   slots?: string[];
   effects: Effect[];
   lines: Line[];
+  /** 장소 그림 (art.yaml의 id). 제목 있는 장면에 배경 띠로 나온다 */
+  art?: string;
+}
+
+/** 삽화 목록. 그림 자체는 src/art에 코드로 그려져 있다 */
+export interface ArtDef {
+  id: string;
+  title: string;
+  desc?: string;
 }
 
 export interface Crossroad {
@@ -267,6 +282,7 @@ export interface Content {
   goals: Map<string, Goal>;
   enemies: Map<string, Enemy>;
   skills: Map<string, Skill>;
+  art: Map<string, ArtDef>;
   derived: Map<string, Expr>;
 }
 
@@ -295,7 +311,7 @@ function asList(v: unknown): unknown[] {
 }
 
 const OUTCOME_KEYS = new Set([
-  'when', 'lines', 'effects', 'next', 'check', 'success', 'fail', 'branch', 'choices', 'plants', 'pays', 'battle',
+  'when', 'lines', 'effects', 'next', 'check', 'success', 'fail', 'branch', 'choices', 'plants', 'pays', 'battle', 'art',
 ]);
 const EVENT_KEYS = new Set([
   ...OUTCOME_KEYS, 'id', 'title', 'on', 'window', 'at', 'slots', 'priority', 'weight', 'repeat', 'free',
@@ -377,7 +393,11 @@ class Builder {
         this.err(where, `대사 한 줄에는 화자가 하나만 있어야 함: ${JSON.stringify(item)}`);
         continue;
       }
-      const speaker = keys[0] === '나레이션' ? undefined : keys[0];
+      const [who, mood] = keys[0].split('@');
+      const speaker = who === '나레이션' ? undefined : who;
+      if (mood !== undefined && !(MOODS as readonly string[]).includes(mood)) {
+        this.err(where, `알 수 없는 표정 '${mood}' (가능: ${MOODS.join(', ')})`);
+      }
       const body = item[keys[0]];
       const variants: Variant[] = [];
       for (const v of asList(body)) {
@@ -385,7 +405,7 @@ class Builder {
         else if (isObj(v) && typeof v.text === 'string') variants.push({ text: v.text, when: this.expr(where, v.when) });
         else this.err(where, `변형 대사 형식이 이상함: ${JSON.stringify(v)}`);
       }
-      out.push({ speaker, when: this.expr(where, item.when), variants });
+      out.push({ speaker, mood: mood || undefined, when: this.expr(where, item.when), variants });
     }
     return out;
   }
@@ -425,6 +445,7 @@ class Builder {
       choices: asList(o.choices).map((c, i) => this.choice(where, `${path}.choices[${i}]`, c)),
       plants,
       pays: asList(o.pays).map(String),
+      art: typeof o.art === 'string' ? o.art : undefined,
       battle: isObj(o.battle)
         ? {
             enemy: String(o.battle.enemy),
@@ -536,6 +557,7 @@ class Builder {
           slots: a.slots === undefined ? undefined : asList(a.slots).map(String),
           effects: this.effects(where, a.effects),
           lines: this.lines(where, a.lines),
+          art: typeof a.art === 'string' ? a.art : undefined,
         };
       }),
     );
@@ -742,6 +764,13 @@ class Builder {
       }
     }
 
+    const art = byId(
+      'art.yaml',
+      asList(this.file('art.yaml')).map((a) =>
+        isObj(a) && typeof a.id === 'string' ? { id: a.id, title: String(a.title ?? a.id), desc: a.desc as string | undefined } : undefined,
+      ),
+    );
+
     if (this.problems.length) throw new ContentError(this.problems);
     return {
       rules,
@@ -759,6 +788,7 @@ class Builder {
       goals,
       enemies,
       skills,
+      art,
       derived,
     };
   }

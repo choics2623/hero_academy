@@ -2,6 +2,7 @@
 
 - id: p_awaken
   title: 빙의
+  art: doom_vision
   on: auto
   at: "0.2.1.오전"
   priority: 10
@@ -31,6 +32,7 @@
 
 - id: p_diary
   title: 몸 주인의 일기장
+  art: home_room
   lines:
     - "서랍 속에 일기장이 있다. 이 몸의 원래 주인 것이다."
     - "마지막 장은 찢겨 나갔다. 남은 건 한 줄뿐이다."
@@ -60,6 +62,7 @@
 
 - id: mine_2
   title: 폐광의 마물
+  art: mine
   on: 폐광
   when: "mine.progress == 1"
   repeat: 3

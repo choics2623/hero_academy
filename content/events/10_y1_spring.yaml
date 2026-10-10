@@ -5,6 +5,7 @@
 
 - id: y1_entrance
   title: 입학식
+  art: great_hall
   on: auto
   at: "1.3.1.방과후"
   priority: 10
@@ -25,6 +26,7 @@
 
 - id: y1_exam
   title: 반 배정 시험
+  art: exam_field
   on: auto
   at: "1.3.1.밤"
   priority: 10
@@ -66,6 +68,7 @@
 
 - id: y1_dorm
   title: 기숙사 배정
+  art: dorm_room
   on: auto
   at: "1.3.1.주말"
   priority: 10
@@ -88,6 +91,7 @@
 
 - id: y1_first_class
   title: 첫 실기 수업
+  art: classroom
   on: auto
   at: "1.3.2.방과후"
   priority: 10
@@ -131,6 +135,7 @@
 
 - id: y1_club_fair
   title: 동아리 박람회
+  art: campus
   on: auto
   at: "1.4.1.방과후"
   priority: 10
@@ -152,6 +157,7 @@
 
 - id: y1_duel
   title: 카이든과 아렌의 결투
+  art: training_ground
   on: auto
   at: "1.4.2.방과후"
   priority: 10
@@ -297,6 +303,7 @@
 
 - id: y1_labyrinth
   title: 미궁 실습
+  art: labyrinth
   on: auto
   at: "1.5.2.방과후"
   priority: 10
@@ -376,6 +383,7 @@
 
 - id: lab_edric_other
   title: 혼자 들어간 에드릭
+  art: blood_circle
   lines:
     - "에드릭이 혼자 안쪽 통로로 들어간다. 아무도 말리지 않는다."
     - when: "note.note_edric.known"
@@ -414,6 +422,7 @@
 
 - id: lab_edric_self
   title: 안쪽 통로의 부름
+  art: blood_circle
   lines:
     - "안쪽 통로에서 누군가 내 이름을 부른다. 원작의 에드릭이 홀린 듯 걸어 들어간 그 길."
   branch:
@@ -452,6 +461,7 @@
 
 - id: y1_midterm
   title: 중간고사
+  art: classroom
   on: auto
   at: "1.6.1.방과후"
   priority: 10

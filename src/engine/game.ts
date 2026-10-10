@@ -248,6 +248,7 @@ export class Game {
   private enter(o: Outcome): EnterResult {
     const w = this.world;
     const lines = renderLines(o.lines, w);
+    if (o.art) lines.unshift({ speaker: '삽화', text: o.art });
     w.applyAll(o.effects);
     for (const p of o.plants) {
       w.set(`fs.${p.id}.seen`, 1);

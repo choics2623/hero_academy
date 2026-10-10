@@ -1,0 +1,35 @@
+# 삽화 목록. 그림은 src/art/scenes.ts에 코드(도트)로 그려져 있다.
+# 이벤트나 결과 노드에 `art: id`를 달면 그 장면 맨 위에 삽화가 나온다.
+# 활동에 `art: id`를 달면 그 활동의 제목 있는 장면에 배경 띠로 나온다 (시간대에 따라 색이 바뀐다).
+# 새 id를 추가하면 src/art/scenes.ts에도 그림을 추가해야 한다 (테스트가 확인한다).
+
+# ---------------------------------------------------------------- 장소 (활동 배경 겸용)
+- { id: home_room, title: 빙의한 몸의 방, desc: "시골 집 다락방. 작은 창, 낡은 침대, 책상" }
+- { id: mine, title: 마을 뒤 폐광, desc: "랜턴 불빛, 버팀목, 반짝이는 광석" }
+- { id: bookshop, title: 도시 고서점, desc: "천장까지 쌓인 책, 졸고 있는 주인" }
+- { id: back_alley, title: 뒷골목, desc: "좁은 골목, 젖은 돌바닥, 등불 하나" }
+- { id: campus, title: 아카데미 교정, desc: "첨탑, 분수, 가로수길" }
+- { id: training_ground, title: 훈련장, desc: "나무 허수아비, 무기 걸이, 흙바닥" }
+- { id: library, title: 도서관, desc: "높은 서가, 사다리, 촛불" }
+- { id: magic_lab, title: 마법 실습실, desc: "마법진, 떠다니는 빛, 플라스크" }
+- { id: chapel, title: 성당, desc: "스테인드글라스, 긴 의자, 제단" }
+- { id: canteen, title: 학생 식당, desc: "긴 식탁, 큰 솥, 김" }
+- { id: market, title: 도시 시장, desc: "천막 노점, 깃발, 사람들" }
+- { id: greenhouse, title: 원예부 온실, desc: "유리 지붕, 덩굴, 화분" }
+- { id: clubroom, title: 동아리방, desc: "어수선한 책상, 게시판, 창" }
+- { id: dorm_room, title: 기숙사 방, desc: "2층 침대, 창밖의 달, 트렁크" }
+- { id: classroom, title: 강의실, desc: "계단식 좌석, 칠판, 교단" }
+- { id: infirmary, title: 의무실, desc: "흰 커튼, 침대, 약장" }
+- { id: rooftop, title: 본관 옥상, desc: "난간, 노을, 멀리 도시" }
+
+# ---------------------------------------------------------------- 사건
+- { id: title, title: 에테르 아카데미, desc: "언덕 위 아카데미, 금 간 밤하늘" }
+- { id: doom_vision, title: 멸망의 기억, desc: "붉은 하늘, 무너진 도시, 검은 태양" }
+- { id: academy_gate, title: 아카데미 정문, desc: "거대한 철문, 벚꽃, 신입생들" }
+- { id: great_hall, title: 입학식 대강당, desc: "깃발, 샹들리에, 빛나는 성검" }
+- { id: exam_field, title: 반 배정 시험장, desc: "원형 시험장, 표적, 관람석" }
+- { id: labyrinth, title: 실습 미궁, desc: "돌 통로, 횃불, 갈림길" }
+- { id: blood_circle, title: 피의 원, desc: "미궁 깊은 곳, 바닥의 붉은 마법진, 로브 입은 그림자" }
+- { id: arena, title: 무투대회 경기장, desc: "원형 경기장, 관중석, 깃발" }
+- { id: festival, title: 봄 축제, desc: "등불 줄, 노점, 밤하늘의 불꽃" }
+- { id: starry_hill, title: 별 보는 언덕, desc: "풀밭, 쏟아지는 별, 멀리 아카데미" }

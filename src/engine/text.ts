@@ -8,6 +8,7 @@ import { compile, evaluate, test, toNum, truthy, type Env } from './expr';
 
 export interface RenderedLine {
   speaker?: string;
+  mood?: string;
   text: string;
 }
 
@@ -35,7 +36,7 @@ export function renderLines(lines: Line[], env: Env): RenderedLine[] {
     const v = pickVariant(line.variants, (x) => test(x.when, env));
     if (!v) continue;
     const text = renderTemplate(v.text, env).trim();
-    if (text) out.push({ speaker: line.speaker, text });
+    if (text) out.push(line.mood ? { speaker: line.speaker, mood: line.mood, text } : { speaker: line.speaker, text });
   }
   return out;
 }

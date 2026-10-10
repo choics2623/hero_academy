@@ -44,6 +44,7 @@ export function lint(c: Content, g: Graph = buildGraph(c)): Finding[] {
       if (node.next && !c.events.has(node.next)) add('error', 'NEXT_MISSING', node.path, `없는 다음 이벤트 '${node.next}'`);
       for (const p of node.plants) if (!c.foreshadows.has(p.id)) add('error', 'FS_MISSING', node.path, `없는 복선 '${p.id}'`);
       for (const f of node.pays) if (!c.foreshadows.has(f)) add('error', 'FS_MISSING', node.path, `없는 복선 '${f}'`);
+      if (node.art && !c.art.has(node.art)) add('error', 'ART_MISSING', node.path, `없는 삽화 '${node.art}' (art.yaml에 없음)`);
       if (node.battle) {
         if (!c.enemies.has(node.battle.enemy)) add('error', 'ENEMY_MISSING', node.path, `없는 적 '${node.battle.enemy}'`);
         if (node.choices.length || node.check || node.branch.length) {
@@ -70,6 +71,9 @@ export function lint(c: Content, g: Graph = buildGraph(c)): Finding[] {
   }
   for (const o of c.origins.values()) {
     for (const t of o.talents) if (!c.talents.has(t)) add('error', 'TALENT_MISSING', o.id, `없는 재능 '${t}'`);
+  }
+  for (const a of c.activities.values()) {
+    if (a.art && !c.art.has(a.art)) add('error', 'ART_MISSING', a.id, `없는 삽화 '${a.art}' (art.yaml에 없음)`);
   }
 
   // ---- 화자 이름 오타

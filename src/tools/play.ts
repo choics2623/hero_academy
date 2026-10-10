@@ -62,6 +62,7 @@ while (!game.ended) {
     for (const l of v.lines) {
       if (!l.speaker) console.log(l.text);
       else if (l.speaker === '속마음') console.log(dim(`💭 ${l.text}`));
+      else if (l.speaker === '삽화') console.log(dim(`[삽화: ${content.art.get(l.text)?.title ?? l.text}]`));
       else console.log(`${bold(l.speaker)}: ${l.text}`);
     }
   }
