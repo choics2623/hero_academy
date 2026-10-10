@@ -632,6 +632,16 @@ function idleBg(): string {
   return game!.state.time.y === 0 ? 'home_room' : 'campus';
 }
 
+/** 기록용 삽화 이미지 (CG면 인물까지 합성) */
+function artImg(id: string, tod: string, alt = ''): HTMLImageElement {
+  const img = el('img', 'px scene-art');
+  img.src = bgUrl(id, tod).url;
+  img.alt = alt;
+  img.width = 640;
+  img.height = 360;
+  return img;
+}
+
 function sheetUrl(key: string, look: Look, mood: string): string {
   return artUrl(`sheet:${key}:${mood}`, () => bustSheet(look, mood));
 }
@@ -828,9 +838,11 @@ async function runWeek(it: Extract<LogItem, { k: 'week' }>) {
   }
   if (it.season) box.append(el('p', 'wk-s', it.season));
   stage.card(box, 'week');
+  $('play').classList.add('carding');
   sfx('whoosh');
   await waitAdvance(autoPlay ? 1600 : 2600);
   stage.hideCard();
+  $('play').classList.remove('carding');
   await sleep(150);
 }
 
@@ -841,9 +853,11 @@ async function runMonth(it: Extract<LogItem, { k: 'month' }>) {
   box.append(el('span', 'mo-k', 'CHAPTER'), el('h2', undefined, it.title), el('p', 'mo-s', it.season));
   for (const x of it.items) box.append(el('p', 'mo-r', x));
   stage.card(box, 'month');
+  $('play').classList.add('carding');
   sfx('learn');
   await waitAdvance(autoPlay ? 2200 : 3600);
   stage.hideCard();
+  $('play').classList.remove('carding');
   await sleep(200);
 }
 
@@ -871,7 +885,7 @@ function battleActors() {
 
 async function runBattleStart(it: Extract<LogItem, { k: 'battle' }>) {
   const where = battleBackdrop();
-  if (where) setBg(where.id, where.tod);
+  if (where) setBg(content.art.get(where.id)?.bg ?? where.id, where.tod);
   battleActors();
   stage.root.classList.add('battle');
   const box = el('div', 'bt');
@@ -969,7 +983,7 @@ async function runBattleTurn(it: Extract<LogItem, { k: 'battle' }>) {
       stage.root.classList.add('defeated');
       sfx('lose');
     }
-    const box = el('div', `res ${it.result}`, it.result === 'win' ? '승리' : '패배');
+    const box = el('div', `res-stamp ${it.result}`, it.result === 'win' ? '승리' : '패배');
     stage.card(box, 'result-card');
     await waitAdvance(autoPlay ? 1500 : 2400);
     stage.hideCard();
@@ -1384,7 +1398,7 @@ function renderLine(l: RenderedLine, tod = 'day', prev = ''): HTMLElement {
   if (l.speaker === '삽화') {
     const f = el('figure', 'art');
     const title = content.art.get(l.text)?.title ?? '';
-    f.append(sceneImg(l.text, tod, '', title));
+    f.append(artImg(l.text, tod, title));
     if (title) f.append(el('figcaption', undefined, title));
     return f;
   }
@@ -1500,7 +1514,7 @@ function renderItem(item: LogItem): HTMLElement {
   const a = el('article', item.cont || item.flavor ? 'scene cont' : 'scene');
   if (item.strip) {
     const f = el('figure', 'strip');
-    f.append(sceneImg(item.strip, item.tod ?? 'day', '', content.art.get(item.strip)?.title ?? ''));
+    f.append(artImg(item.strip, item.tod ?? 'day', content.art.get(item.strip)?.title ?? ''));
     a.append(f);
   }
   if (!item.cont && !item.flavor) {

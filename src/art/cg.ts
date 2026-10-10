@@ -26,7 +26,7 @@ const TOD_TINT: Record<Tod, [number, number]> = {
   dawn: [0xffb6c8, 0.1],
   day: [0xffffff, 0],
   dusk: [0xff8a4a, 0.14],
-  night: [0x1c2350, 0.32],
+  night: [0x2a3266, 0.2],
 };
 
 /** 흉상 하나를 시간대 빛에 맞춰 어둡게/물들인다 */

@@ -450,6 +450,7 @@ img.mini { width: 22px; height: 22px; border-radius: 3px; box-shadow: none; }
 /* ================================================================ 무대 (비주얼 노벨식) */
 .play { overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 14px 0 28px; margin-left: calc(var(--gutter) * -1); padding-left: var(--gutter); }
 .play > * { width: min(100%, 880px); margin-inline: auto; box-sizing: border-box; }
+.theater .dialog { transition: opacity 0.25s ease; }
 .theater { position: relative; width: min(100%, 880px, calc((100vh - 330px) * 16 / 9)); flex: none; }
 .theater .stage { width: 100%; }
 @media (min-width: 861px) {
@@ -466,6 +467,10 @@ img.mini { width: 22px; height: 22px; border-radius: 3px; box-shadow: none; }
   .theater .dialog.k-battle .bl.sys { color: #9ad0ff; }
   .theater .dialog .dl-text { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; }
   .theater .st-intro { bottom: auto; top: 22%; }
+  .theater .actor { bottom: 12%; width: 38%; }
+  .theater .stage.battle .actor { width: 30%; bottom: 20%; }
+  .theater .stage.battle ~ .dialog { height: 21%; }
+  .play.carding .theater .dialog { opacity: 0; pointer-events: none; }
   .st-chips { top: 4%; }
 }
 .stage { position: relative; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; background: #0b0d18; box-shadow: 0 0 0 1px var(--line), 0 24px 60px -34px rgba(0, 0, 0, 0.85); cursor: pointer; flex: none; user-select: none; -webkit-tap-highlight-color: transparent; }
@@ -586,9 +591,9 @@ img.mini { width: 22px; height: 22px; border-radius: 3px; box-shadow: none; }
 .bt-k { font: 800 12px var(--font-sys); letter-spacing: 0.6em; color: #ff5d73; }
 .bt b { font: 400 clamp(28px, 6vw, 52px)/1.1 var(--font-title); }
 @keyframes slam { from { opacity: 0; transform: scale(2.4); } }
-.res { font: 400 clamp(46px, 10vw, 92px)/1 var(--font-title); padding: 0 24px; border: 4px solid currentColor; border-radius: 6px; transform: rotate(-4deg); text-shadow: 0 4px 0 rgba(0, 0, 0, 0.6); animation: slam 0.55s cubic-bezier(0.2, 1.6, 0.4, 1) both !important; }
-.res.win { color: #ffd36b; }
-.res.lose { color: #ff5d73; }
+.res-stamp { font: 400 clamp(46px, 10vw, 92px)/1 var(--font-title); padding: 0 24px; border: 4px solid currentColor; border-radius: 6px; transform: rotate(-4deg); text-shadow: 0 4px 0 rgba(0, 0, 0, 0.6); animation: slam 0.55s cubic-bezier(0.2, 1.6, 0.4, 1) both !important; }
+.res-stamp.win { color: #ffd36b; }
+.res-stamp.lose { color: #ff5d73; }
 
 /* 주사위 */
 .st-dice { position: absolute; left: 50%; top: 44%; translate: -50% -50%; display: grid; justify-items: center; gap: 6px; transition: opacity 0.4s; }
@@ -699,6 +704,7 @@ img.mini { width: 22px; height: 22px; border-radius: 3px; box-shadow: none; }
   .play { margin-right: calc(var(--gutter) * -1); padding-right: var(--gutter); padding-top: 10px; }
   .stage { border-radius: 8px; }
   .dialog { font-size: 15.5px; min-height: 7.6em; padding: 16px 16px 14px; }
+  .dialog.k-prompt, .dialog.k-battle { min-height: 0; }
   .st-hud > * { font-size: 10.5px; padding: 4px 6px; }
   .hud-intent .it { display: none; }
   .activities { grid-template-columns: repeat(2, minmax(0, 1fr)); }
