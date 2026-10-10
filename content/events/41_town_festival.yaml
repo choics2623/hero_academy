@@ -70,6 +70,7 @@
 # ---------------------------------------------------------------- 리아나: 소원 등
 - id: fest_liana
   title: 봄 축제 — 소원 등
+  art: cg_liana_wish
   next: fest_finale
   effects: ["fest.with = 'liana'", "affinity.liana += 4"]
   lines:
@@ -122,6 +123,7 @@
 # ---------------------------------------------------------------- 아렌: 용사님
 - id: fest_aren
   title: 봄 축제 — 용사님
+  art: cg_fest_aren
   next: fest_finale
   effects: ["fest.with = 'aren'", "affinity.aren += 4"]
   lines:
@@ -157,6 +159,7 @@
 # ---------------------------------------------------------------- 브루노: 힘자랑 종
 - id: fest_bruno
   title: 봄 축제 — 힘자랑 종
+  art: cg_fest_bruno
   next: fest_finale
   effects: ["fest.with = 'bruno'", "affinity.bruno += 4"]
   lines:
@@ -196,6 +199,7 @@
 # ---------------------------------------------------------------- 미라벨: 비틀린 술식
 - id: fest_mirabel
   title: 봄 축제 — 비틀린 술식
+  art: lake
   next: fest_finale
   effects: ["fest.with = 'mirabel'", "affinity.mirabel += 3"]
   lines:
@@ -211,6 +215,7 @@
     - text: "\"그럼 우리가 고치자\" (마력제어·지성)"
       check: { label: 술식 보정, value: "stat.마력제어 + stat.지성 / 2 + 5 * skill.영창분할 + luck", dc: 30 }
       success:
+        art: cg_fest_mirabel
         lines:
           - "미라벨이 고리를 붙잡고, 내가 비틀린 마디에 마력을 흘려 넣었다. 술식이 딸깍 맞물린다."
           - "두 번째 시험 발사. 불꽃이 하늘 꼭대기에서 붉은 장미처럼 활짝 피었다."
@@ -243,6 +248,7 @@
 # ---------------------------------------------------------------- 카이든: 회색 후드
 - id: fest_kaiden
   title: 봄 축제 — 회색 후드
+  art: festival
   next: fest_finale
   effects: ["fest.with = 'kaiden'", "affinity.kaiden += 3"]
   lines:
@@ -258,6 +264,7 @@
     - text: 카이든의 팔을 잡고 인파 속으로 뛴다 (민첩·지성)
       check: { label: 근위대 따돌리기, value: "stat.민첩 + stat.지성 / 2 + luck", dc: 28 }
       success:
+        art: cg_fest_kaiden
         lines:
           - "노점 사이 좁은 틈, 빨랫줄 아래, 성가대 천막 뒤. 근위대의 발소리가 멀어졌다."
           - "숨을 몰아쉬던 카이든이 갑자기 웃음을 터뜨렸다. 소리 내어, 황자답지 않게."
@@ -287,6 +294,7 @@
 # ---------------------------------------------------------------- 세라: 성가대
 - id: fest_sera
   title: 봄 축제 — 성가대
+  art: cg_fest_sera
   next: fest_finale
   effects: ["fest.with = 'sera'", "affinity.sera += 4"]
   lines:
@@ -322,6 +330,7 @@
 # ---------------------------------------------------------------- 도로시: 무지개 레모네이드
 - id: fest_dorothy
   title: 봄 축제 — 무지개 레모네이드
+  art: cg_fest_dorothy
   next: fest_finale
   effects: ["fest.with = 'dorothy'", "affinity.dorothy += 4", "found.dorothy = 1"]
   lines:
@@ -364,6 +373,7 @@
 # ---------------------------------------------------------------- 에드릭: 고리 던지기
 - id: fest_edric
   title: 봄 축제 — 고리 던지기
+  art: festival
   next: fest_finale
   effects: ["fest.with = 'edric'", "affinity.edric += 4"]
   lines:
@@ -376,6 +386,7 @@
     - text: 던지는 법을 알려 준다 (민첩·지성)
       check: { label: 고리 던지기, value: "stat.민첩 + stat.지성 / 2 + luck", dc: 26 }
       success:
+        art: cg_fest_edric
         lines:
           - "손목 힘을 빼고, 고리를 눕혀서, 기둥 너머를 보고 던지라고 했다. 에드릭의 세 번째 고리가 기둥에 걸렸다."
           - 에드릭@놀람: "걸렸다. 걸렸어! 봤냐?"
@@ -404,6 +415,7 @@
 # ---------------------------------------------------------------- 핀: 빗자루와 시계탑
 - id: fest_finn
   title: 봄 축제 — 빗자루와 시계탑
+  art: festival
   next: fest_finale
   effects: ["fest.with = 'finn'", "affinity.finn += 4", "fatigue += 5"]
   lines:
@@ -418,6 +430,7 @@
     - { id: F07, notice: { value: "stat.지성 + 10 * talent.직감 - 10 * talent.눈치없음", dc: 18 } }
   choices:
     - text: 손수건으로 손을 감싸 준다
+      art: cg_fest_clocktower
       effects: ["affinity.finn += 4", "trust.finn += 6", "fest.moment = 1"]
       lines:
         - "피가 보이지 않게 손수건으로 꼭 감쌌다. 핀의 떨림이 조금씩 잦아들었다."
@@ -425,6 +438,7 @@
         - 핀: "보답할게요. 따라와요. 아카데미에서 불꽃이 제일 잘 보이는 데 알아요."
         - "핀은 청소부 열쇠로 시계탑 문을 열었다. 꼭대기, 거대한 톱니바퀴 옆으로 호수가 한눈에 내려다보인다."
     - text: "\"방금 그거, 검술이었어\""
+      art: cg_fest_clocktower
       effects: ["affinity.finn += 3", "trust.finn += 2", "fest.moment = 1"]
       lines:
         - 핀@당황: "아, 아니에요. 그냥 빗자루질이에요. 쓸다 보니까 그렇게 된 거예요."
@@ -435,6 +449,7 @@
 # ---------------------------------------------------------------- 혼자 (그리고 노엘)
 - id: fest_alone
   title: 봄 축제 — 혼자 걷는 길
+  art: festival
   next: fest_finale
   effects: ["stress -= 5"]
   lines:
@@ -452,6 +467,7 @@
     - { id: F09, notice: { value: "stat.지성 + 10 * perk.데이터마이너", dc: 24 } }
   choices:
     - text: 노엘 옆에 앉아 술 한 잔 값을 낸다 (은화 5)
+      art: cg_fest_noel
       requires: "money >= 5"
       effects: ["money -= 5", "affinity.noel += 6", "trust.noel += 4", "met.noel = 1", "fest.with = 'noel'", "fest.moment = 1"]
       lines:
@@ -461,6 +477,7 @@
         - when: "perk.데이터마이너"
           속마음: "(이 가락… 미사용 음원 폴더에 있던 'kingdom_lament'다. 본편 어디에도 안 쓰인.)"
     - text: "\"선배, 아까 그 노래 뭐예요?\""
+      art: cg_fest_noel
       effects: ["affinity.noel += 4", "met.noel = 1", "fest.with = 'noel'", "fest.moment = 1"]
       lines:
         - 노엘: "노래? 아, 이거."
@@ -468,6 +485,7 @@
         - 노엘@진지: "내가 너만 할 때 듣던 거. 그 뒤로 부를 사람이 다 없어져서, 이제 나만 알아."
         - 노엘: "…취했다. 방금 건 잊어."
     - text: 인사만 하고 혼자 호숫가로 간다
+      art: lake
       effects: ["stat.의지 += 1", "stress -= 10", "fest.with = 'alone'"]
       lines:
         - "호숫가 끝, 아무도 없는 둑에 앉았다. 축제 소리가 물 건너 멀리서 들린다."
@@ -476,6 +494,7 @@
 # ---------------------------------------------------------------- 불꽃 (공통 마무리)
 - id: fest_finale
   title: 봄 축제 — 불꽃
+  art: cg_fest_fireworks
   effects: ["stat.매력 += 0.5", "stress -= 5"]
   lines:
     - "해가 완전히 졌다. 진행자의 외침과 함께 호수 위로 첫 불꽃이 솟았다."
@@ -553,6 +572,7 @@
     - text: 쫓아간다 (민첩)
       check: { label: 추격, value: "stat.민첩 + stat.체질 / 2 + 10 * talent.고양이반사신경 + luck", dc: 30 }
       success:
+        art: back_alley
         lines:
           - "생선 수레를 뛰어넘고, 빨랫줄 아래를 숙여 지나, 막다른 골목에서 꼬마의 옷깃을 잡았다."
           - "열 살쯤 됐을까. 갈비뼈가 셔츠 위로 비친다. 꼬마가 돈주머니를 내밀며 눈을 질끈 감는다."
@@ -605,6 +625,7 @@
 
 - id: town_temple
   title: 성교회 구호소
+  art: church_kitchen
   on: 도시외출
   pool: true
   lines:
@@ -678,6 +699,7 @@
 
 - id: town_smithy
   title: 대장간 거리
+  art: forge
   on: 도시외출
   pool: true
   when: "affinity.bruno >= 10"
@@ -717,6 +739,7 @@
 
 - id: town_grim_menu
   title: 그림의 가격표
+  art: back_alley
   on: 도시외출
   pool: true
   repeat: 2
@@ -836,6 +859,7 @@
 # ---------------------------------------------------------------- 평민 장학생
 - id: home_commoner_letter
   title: 빵집에서 온 편지
+  art: dorm_room
   on: auto
   free: true
   window: "1.4"
@@ -935,6 +959,7 @@
 
 - id: home_noble_brother
   title: 장벽에서 온 편지
+  art: dorm_room
   on: auto
   free: true
   window: { from: "1.5", to: "1.6" }
@@ -963,6 +988,7 @@
 # ---------------------------------------------------------------- 악역 도련님 (에드릭 벨모어)
 - id: home_villain_maid
   title: 벨모어가의 바구니
+  art: dorm_hall
   on: auto
   free: true
   window: "1.4"
@@ -1010,6 +1036,7 @@
 
 - id: home_villain_father
   title: 벨모어 백작의 마차
+  art: academy_gate
   on: auto
   free: true
   window: { from: "1.5.3", to: "1.6.4" }
@@ -1051,6 +1078,7 @@
 # ---------------------------------------------------------------- 이름 없는 엑스트라
 - id: home_extra_luggage
   title: 여관에서 온 짐
+  art: dorm_room
   on: auto
   free: true
   window: { from: "1.3.2", to: "1.4.4" }
@@ -1085,6 +1113,7 @@
 
 - id: home_extra_rollcall
   title: 출석부의 물음표
+  art: classroom
   on: auto
   free: true
   window: { from: "1.5", to: "1.6" }
@@ -1114,6 +1143,7 @@
 # ---------------------------------------------------------------- 숲 출신 고아
 - id: home_forest_owl
   title: 창틀의 부엉이
+  art: dorm_room
   on: auto
   free: true
   window: "1.4"
@@ -1142,6 +1172,7 @@
 
 - id: home_forest_trail
   title: 몸이 기억하는 숲길
+  art: forest
   on: 산책
   priority: 1
   window: { from: "1.5", to: "1.7" }
@@ -1164,6 +1195,7 @@
     effects: ["fatigue += 10"]
   branch:
     - when: "affinity.liana >= 15"
+      art: cg_liana_forest
       lines:
         - "숲 입구에서 리아나와 마주쳤다. 리아나가 내 소매에 붙은 여우 털을 떼어 냈다."
         - 리아나: "너한테서 우리 마을 숲 냄새가 나. …이상하지. 너랑 있으면 고향에 온 것 같아."
@@ -1255,7 +1287,7 @@
 
 - id: vet_ending
   title: 고인물의 기억 — 서른일곱 번째
-  art: starry_hill
+  art: cg_vet_37
   on: 산책
   slots: [밤]
   priority: 1

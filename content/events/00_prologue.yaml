@@ -2,7 +2,7 @@
 
 - id: p_awaken
   title: 빙의
-  art: doom_vision
+  art: cg_last_ending
   on: auto
   at: "0.2.1.오전"
   priority: 10
@@ -32,7 +32,7 @@
 
 - id: p_diary
   title: 몸 주인의 일기장
-  art: home_room
+  art: cg_diary
   lines:
     - "서랍 속에 일기장이 있다. 이 몸의 원래 주인 것이다."
     - "마지막 장은 찢겨 나갔다. 남은 건 한 줄뿐이다."
@@ -128,6 +128,7 @@
     - 서점 주인: "그 책? 은화 마흔 닢. 깎아줄 생각 없네."
   choices:
     - text: 산다 (은화 40)
+      art: cg_manual
       requires: "money >= 40"
       hint: "아렌은 이 기연을 얻지 못하게 된다"
       effects: ["money -= 40", "gift.manual = 'me'", "skill.마력순환 = 1", "stat.마력제어 += 5"]
@@ -181,6 +182,7 @@
   lines: ["청소부 소년이 빗자루를 검처럼 휘두르고 있다."]
   branch:
     - when: "perk.데이터마이너 or talent.마력감응"
+      art: cg_finn_broom
       lines:
         - when: "talent.마력감응"
           나레이션: "등줄기에 칼날 같은 감각이 스친다."
@@ -197,6 +199,7 @@
   lines: ["오늘도 그 소년이다. 빗자루 끝이 정확히 같은 궤적을 그린다."]
   check: { value: "stat.지성 + stat.민첩 + 20 * talent.직감", dc: 30 }
   success:
+    art: cg_finn_broom
     lines:
       - 속마음: "(같은 궤적을 백 번. 저건 재능이다.)"
       - 핀@놀람: "…아저씨도 검 해요?"
@@ -208,6 +211,7 @@
 
 - id: edric_servants
   title: 벨모어가의 하인들
+  art: manor
   on: 집안정리
   when: "origin == '악역도련님'"
   repeat: 3

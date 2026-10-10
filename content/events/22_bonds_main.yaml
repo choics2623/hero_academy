@@ -5,6 +5,7 @@
 # ================================================================ 리아나
 - id: bond_liana_1
   title: 리아나 — 숲의 노래
+  art: cg_liana_song
   on: [온실, 산책]
   priority: 2
   when: "time.year == 1 and affinity.liana >= 15"
@@ -49,11 +50,13 @@
   next: bond_liana_2_teach
   choices:
     - text: "\"가을 보름에 같이 따러 가자\""
+      art: cg_liana_pinky
       effects: ["promise.liana = 1", "affinity.liana += 8", "trust.liana += 8", "mood.liana.희망 = 1"]
       lines:
         - 리아나@놀람: "…진짜? 국경 숲은 멀어. 하룻밤은 꼬박 걸어야 해."
         - 리아나@웃음: "그래도… 응. 약속이야. 새끼손가락."
     - text: "\"약재상한테 들었어. 가을 보름, 국경 숲에서만 핀다며\""
+      art: cg_liana_pinky
       when: "know.moonherb_where"
       effects: ["promise.liana = 1", "affinity.liana += 6", "trust.liana += 12", "mood.liana.희망 = 1"]
       lines:
@@ -66,6 +69,7 @@
 
 - id: bond_liana_2_teach
   title: 리아나 — 바람 읽기
+  art: back_hill
   lines:
     - 리아나: "아 맞다, 너 저번에 활 쏠 때 바람을 하나도 못 읽더라."
     - 리아나: "귀로 듣는 게 아니야. 피부로 듣는 거야. 눈 감아 봐. …지금 바람이 어느 쪽에서 와?"
@@ -75,7 +79,7 @@
 
 - id: bond_liana_3
   title: 리아나 — 엄마의 심장
-  art: starry_hill
+  art: cg_liana_heart
   on: 산책
   slots: [밤]
   priority: 2
@@ -109,6 +113,7 @@
 # ================================================================ 아렌
 - id: bond_aren_1
   title: 아렌 — 양치기의 성검
+  art: cg_aren_shepherd
   on: [훈련장, 식당, 마법실습]
   priority: 2
   when: "time.year == 1 and affinity.aren >= 15"
@@ -163,7 +168,7 @@
 
 - id: bond_aren_3
   title: 아렌 — 지붕 위의 약속
-  art: rooftop
+  art: cg_aren_rooftop
   on: [훈련장, 식당, 마법실습]
   priority: 2
   when: "time.year == 1 and affinity.aren >= 35 and fired.bond_aren_2"
@@ -208,6 +213,7 @@
 
 - id: bond_kaiden_3
   title: 카이든 — 어깨
+  art: cg_kaiden_shoulder
   on: [검술부, 훈련장]
   priority: 2
   when: "time.year == 1 and affinity.kaiden >= 35 and fired.bond_kaiden_1 and know.kaiden_shoulder"
@@ -229,6 +235,7 @@
 
 - id: bond_kaiden_3_teach
   title: 카이든 — 검의 리듬
+  art: training_ground
   lines:
     - 카이든: "보답이다. 어깨를 감싸는 대신 찾아낸 방법이지."
     - 카이든: "검은 힘이 아니라 리듬이다. 상대가 막는 박자 사이로 밀어 넣는다. 이렇게."
@@ -239,6 +246,7 @@
 # ================================================================ 미라벨
 - id: bond_mirabel_1
   title: 미라벨 — 아델하이트
+  art: cg_mirabel_library
   on: [도서관, 마법실습]
   priority: 2
   when: "time.year == 1 and affinity.mirabel >= 15"
@@ -266,6 +274,7 @@
 
 - id: bond_mirabel_2
   title: 미라벨 — 영창 분할
+  art: cg_mirabel_chant
   on: [도서관, 마법실습]
   priority: 2
   when: "time.year == 1 and affinity.mirabel >= 25 and fired.bond_mirabel_1"
@@ -279,6 +288,7 @@
 
 - id: bond_mirabel_3
   title: 미라벨 — 문장 반지
+  art: cg_mirabel_ring
   on: [도서관, 마법실습]
   priority: 2
   when: "time.year == 1 and affinity.mirabel >= 35 and fired.bond_mirabel_2"

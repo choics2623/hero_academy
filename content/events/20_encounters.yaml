@@ -295,6 +295,7 @@
   effects: ["affinity.sera += 6"]
   branch:
     - when: "fired.enc_chapel_sera >= 3"
+      art: cg_sera_stigma
       lines:
         - "세라가 기도를 마치고 일어서는데, 손등에 희미한 빛 무늬가 떠올랐다 사라진다."
         - 세라@진지: "아, 이거? 어릴 때부터 가끔 이래. 아무한테도 말하지 마."
@@ -306,6 +307,7 @@
 
 - id: enc_chapel_dropped
   title: 떠난 사람의 자리
+  art: cg_sera_note
   on: 성당
   pool: true
   when: "fate.sera == 'dropped'"
@@ -397,6 +399,7 @@
 # ================================================================ 교정 산책
 - id: enc_walk_liana
   title: 뒷산의 활 연습
+  art: back_hill
   on: 산책
   pool: true
   repeat: 2
@@ -415,6 +418,7 @@
 
 - id: enc_walk_cat
   title: 호숫가의 고양이
+  art: lake
   on: 산책
   pool: true
   repeat: 2
@@ -449,6 +453,7 @@
 
 - id: enc_walk_noel
   title: 벤치의 술주정뱅이 선배
+  art: lake
   on: 산책
   pool: true
   repeat: 2
@@ -468,7 +473,7 @@
 
 - id: enc_walk_stars
   title: 별 보기
-  art: starry_hill
+  art: cg_liana_stars
   on: 산책
   priority: 1
   slots: [밤]
@@ -499,6 +504,7 @@
 
 - id: enc_job_dorothy
   title: 도로시의 실험
+  art: kitchen
   on: 아르바이트
   pool: true
   repeat: 3
@@ -576,6 +582,7 @@
 
 - id: enc_city_bookshop
   title: 고서점, 다시
+  art: bookshop
   on: 도시외출
   pool: true
   when: "book.seen and not gift.manual and not book.left"
@@ -584,6 +591,7 @@
     - 서점 주인: "그 책? 요즘 찾는 사람이 늘어서 말이야. 은화 예순 닢."
   choices:
     - text: 산다 (은화 60)
+      art: cg_manual
       requires: "money >= 60"
       hint: 아렌은 이 기연을 얻지 못하게 된다
       effects: ["money -= 60", "gift.manual = 'me'", "skill.마력순환 = 1", "stat.마력제어 += 5"]
@@ -605,6 +613,7 @@
 
 - id: enc_city_noel
   title: 술집의 외상
+  art: tavern
   on: 도시외출
   pool: true
   when: "met.noel and money >= 20"
