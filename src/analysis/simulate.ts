@@ -4,7 +4,7 @@
 //   - 복선: 심었는데 회수 못 함 / 회수됐는데 플레이어가 복선을 못 봄
 // 'curious' 정책은 지금까지 덜 본 이벤트 쪽으로 가려고 해서 커버리지가 빨리 오른다.
 
-import { randomBuild, suggestSkill, type Action, type Content } from '../engine';
+import { randomBuild, suggestSkill, walkOutcomes, type Action, type Content } from '../engine';
 import { Game } from '../engine/game';
 import { nextRandom } from '../engine/rng';
 
@@ -52,14 +52,11 @@ export function simulate(c: Content, opts: SimOptions): SimReport {
     battles: new Map([...c.enemies.keys()].map((k) => [k, { fights: 0, wins: 0, turns: 0 }])),
   };
   // 모든 선택지를 미리 등록 (한 번도 안 보인 선택지를 찾기 위해)
-  const walk = (o: import('../engine').Outcome) => {
-    o.choices.forEach((ch, i) => rep.choices.set(`${o.path}#${i}`, { text: ch.text, shown: 0, enabled: 0, chosen: 0 }));
-    o.branch.forEach(walk);
-    if (o.success) walk(o.success);
-    if (o.fail) walk(o.fail);
-    o.choices.forEach(walk);
-  };
-  c.events.forEach(walk);
+  for (const ev of c.events.values()) {
+    for (const { node } of walkOutcomes(ev)) {
+      node.choices.forEach((ch, i) => rep.choices.set(`${node.path}#${i}`, { text: ch.text, shown: 0, enabled: 0, chosen: 0 }));
+    }
+  }
 
   for (let run = 0; run < opts.runs; run++) {
     const seed = Math.floor(rand() * 2 ** 31);
