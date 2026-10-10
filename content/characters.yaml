@@ -84,6 +84,10 @@
   memo:
     - "검술 교관. 말수가 적다."
     - { when: "affinity.garen >= 20", text: "가끔 내 검을 봐준다. 칭찬은 한 번도 안 했다." }
+    # 40_classes_clubs
+    - { when: "garen.praised and fired.bond_garen_3", text: "\"허리가 들어갔군.\" 입학하고 처음 들은 칭찬이다." }
+    - { when: "garen.promise and fired.bond_garen_3", text: "졸업할 때까지 살아 있으면 20년 전 이야기를 해 주겠다고 했다." }
+    - { when: "garen.warned and fired.bond_garen_3", text: "그가 죽는다는 말을 입 밖에 냈다. 가렌은 웃지 않았다." }
 
 - id: elvera
   name: 엘베라
@@ -91,6 +95,10 @@
   memo:
     - "500살 엘프 마법학 교수."
     - { when: "fs.F11.noticed", text: "마왕의 이름을 부를 때 존칭을 붙일 뻔했다." }
+    # 40_classes_clubs
+    - { when: "elvera.saw_mark", text: "수정구에 스친 내 마력의 붉은 실을 본 것 같다. 아무 말도 하지 않았다." }
+    - { when: "know.warm_flame and fired.bond_elvera_3", text: "태우지 않는 불을 배웠다. 그녀에게 처음 불을 가르쳐 준 사람의 불이라고 한다." }
+    - { when: "fired.bond_elvera_3 and trust.elvera >= 10", text: "불을 가르쳐 준 스승 이야기는 졸업할 때쯤 해 주겠다고 했다." }
 
 - id: bistol
   name: 비스톨
@@ -98,12 +106,21 @@
   memo:
     - "연금술 교수. 늘 피곤해 보인다."
     - { when: "fs.F06.noticed", text: "연구실에 일곱 살쯤 된 소녀의 초상화가 있다." }
+    # 40_classes_clubs
+    - { when: "know.bistol_formula and fired.bond_bistol_1", text: "노트에 아이 몸집에 맞춘 보존액 배합이 적혀 있었다." }
+    - { when: "fired.bond_bistol_2 and affinity.bistol >= 10 and trust.bistol >= 4", text: "식당에서 늘 스튜 두 그릇을 시킨다. 한 그릇은 '약속한 사람' 몫이라고." }
+    - { when: "bistol.warned and fired.bond_bistol_3 and affinity.bistol >= 16 and met.bistol", text: "\"그런 연금술사가 되지 마세요.\" 그는 기억해 두겠다고 했다." }
+    - { when: "bistol.empathy and fired.bond_bistol_3 and affinity.bistol >= 16 and met.bistol", text: "되돌릴 수 있다면 나도 그러겠다고 했다. 그는 처음으로 나를 똑바로 봤다." }
+    - { when: "fired.bond_bistol_3 and trust.bistol >= 10 and affinity.bistol >= 16 and met.bistol", text: "액자 속 아이 이야기는 '언젠가 자네한테 하지'라며 액자를 엎어 두었다." }
 
 - id: luna
   name: 시스터 루나
   desc: 신학 교수
   memo:
     - "성당을 지키는 신학 교수. 웃는 얼굴로 날카로운 말을 한다."
+    # 40_classes_clubs
+    - { when: "luna.covered", text: "성수반 앞에서 아무렇지 않게 나를 가려 주었다. 이유는 묻지 않았다." }
+    - { when: "fired.bond_luna_2 and trust.luna >= 4", text: "\"성인도 이단도 되지 말고, 그냥 졸업하는 학생\"이 되라고 했다." }
 
 - id: librarian
   name: 사서
@@ -111,6 +128,9 @@
   memo:
     - "말수가 적은 도서관 사서 노인."
     - { when: "fs.F02.noticed", text: "입학식 날 성검을 보며 '또 시작이구나'라고 했다." }
+    # 40_classes_clubs
+    - { when: "know.librarian_spring and fs.F02.noticed", text: "'또 시작이구나'는 봄마다 하는 말이라고 했다. 그날 그는 성검을 보고 있었는데." }
+    - { when: "librarian.advice and fired.bond_librarian_2 and affinity.librarian >= 16", text: "바꾸려는 사람은 지치거나 혼자가 된다고 했다. 둘 다 되지 말라고." }
 
 - id: edric
   name: 에드릭
