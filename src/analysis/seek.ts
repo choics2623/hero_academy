@@ -200,20 +200,31 @@ export function seek(content: Content, build: Build, goalSrc: string, opts: Seek
         const c = g.clone();
         c.act(a);
         advance(c);
-        explored++;
-        if (test(goal, c.world)) return { found: true, goal: goalSrc, game: c, explored, pruned, blockers: [] };
-        const h = H.h(c);
-        if (h === INF) {
-          pruned++;
-          if (best.h === INF || pruned === 1) best = { g: c, h: INF };
-          continue;
+        const tries = [c];
+        // 결과가 갈릴 수 있는 판정을 굴렸다면, 같은 행동을 다른 주사위로도 한 번 더 본다
+        if (c.uncertainRolls > 0) {
+          const alt = g.clone();
+          alt.state.rng = (g.state.rng ^ 0x9e3779b9) >>> 0 || 1;
+          alt.act(a);
+          advance(alt);
+          tries.push(alt);
         }
-        if (h < best.h || best.h === INF) best = { g: c, h };
-        if (c.ended) continue;
-        const hash = stateHash(c);
-        if (seen.has(hash)) continue;
-        seen.add(hash);
-        children.push({ g: c, score: h + jitter() });
+        for (const t of tries) {
+          explored++;
+          if (test(goal, t.world)) return { found: true, goal: goalSrc, game: t, explored, pruned, blockers: [] };
+          const h = H.h(t);
+          if (h === INF) {
+            pruned++;
+            if (best.h === INF || pruned === 1) best = { g: t, h: INF };
+            continue;
+          }
+          if (h < best.h || best.h === INF) best = { g: t, h };
+          if (t.ended) continue;
+          const hash = stateHash(t);
+          if (seen.has(hash)) continue;
+          seen.add(hash);
+          children.push({ g: t, score: h + jitter() });
+        }
       }
     }
     children.sort((a, b) => a.score - b.score);

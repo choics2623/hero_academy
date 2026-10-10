@@ -72,8 +72,9 @@ describe('실제 콘텐츠', () => {
     const r = simulate(c, { runs: 300, seed: 9 });
     expect(r.errors).toEqual([]);
     const never = [...r.eventFires].filter(([, n]) => n === 0).map(([id]) => id);
-    // 집중 육성이 필요한 재능 개화 정도만 무작위 플레이에서 빠질 수 있다
-    expect(never.length).toBeLessThanOrEqual(2);
+    // 무작위 300회로는 드문 사슬 끝이나 집중 육성이 필요한 개화가 빠질 수 있다.
+    // 그런 것들의 도달 가능성은 목표 탐색기(seek/verify)가 따로 증명한다. 여기서는 대부분이 실제로 일어나는지만 본다.
+    expect(never.length / r.eventFires.size, never.join(', ')).toBeLessThanOrEqual(0.03);
   });
 
   it('집중 육성하면 무투대회에서 우승할 수 있다', () => {

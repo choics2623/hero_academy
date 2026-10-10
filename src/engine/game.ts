@@ -107,6 +107,9 @@ export class Game {
   observer?: Observer;
   private guard = 0;
 
+  /** 이 인스턴스에서 결과가 갈릴 수 있었던 판정 수 (목표 탐색기가 주사위를 분기점으로 쓰려고 센다. 상태 아님) */
+  uncertainRolls = 0;
+
   private constructor(readonly content: Content, readonly state: GameState) {
     this.world = new World(content, state);
   }
@@ -305,6 +308,7 @@ export class Game {
   private rollDetail(value: { ast: Parameters<typeof evaluate>[0] }, dc: number) {
     const d20 = 1 + Math.floor(this.world.random() * 20);
     const v = toNum(evaluate(value.ast, this.world));
+    if (Math.floor(v) + 1 < dc && Math.floor(v) + 20 >= dc) this.uncertainRolls++;
     return { ok: Math.floor(v) + d20 >= dc, value: v, d20 };
   }
 
