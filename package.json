@@ -12,7 +12,8 @@
     "seek": "tsx src/tools/seek.ts",
     "verify": "tsx src/tools/verify.ts",
     "play": "tsx src/tools/play.ts",
-    "build:web": "tsx scripts/build-web.ts"
+    "build:web": "tsx scripts/build-web.ts",
+    "gallery": "tsx scripts/gallery.ts"
   },
   "dependencies": {
     "yaml": "2.9.1"
