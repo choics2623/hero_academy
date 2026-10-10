@@ -255,3 +255,28 @@ export class Pix {
     return this.get(x, y) !== CLEAR;
   }
 }
+
+/** Scale2x(EPX): 도트를 두 배로 키우면서 계단 모서리를 매끈하게 */
+export function scale2x(src: Pix): Pix {
+  const out = new Pix(src.w * 2, src.h * 2);
+  for (let y = 0; y < src.h; y++) {
+    for (let x = 0; x < src.w; x++) {
+      const p = src.get(x, y);
+      const a = src.get(x, y - 1);
+      const b = src.get(x + 1, y);
+      const c = src.get(x - 1, y);
+      const d = src.get(x, y + 1);
+      let e0 = p, e1 = p, e2 = p, e3 = p;
+      if (c === a && c !== d && a !== b) e0 = a;
+      if (a === b && a !== c && b !== d) e1 = b;
+      if (d === c && d !== b && c !== a) e2 = c;
+      if (b === d && b !== a && d !== c) e3 = d;
+      out.set(x * 2, y * 2, e0);
+      out.set(x * 2 + 1, y * 2, e1);
+      out.set(x * 2, y * 2 + 1, e2);
+      out.set(x * 2 + 1, y * 2 + 1, e3);
+    }
+  }
+  return out;
+}
+

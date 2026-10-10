@@ -163,6 +163,12 @@ export interface ArtDef {
   id: string;
   title: string;
   desc?: string;
+  /** 이벤트 CG: 배경 삽화 위에 인물과 효과를 얹는다 */
+  bg?: string;
+  /** CG의 시간대 (없으면 그 장면의 시간대) */
+  tod?: string;
+  cast?: { who: string; mood?: string; x?: number; flip?: boolean }[];
+  fx?: string[];
 }
 
 export interface Crossroad {
@@ -767,7 +773,27 @@ class Builder {
     const art = byId(
       'art.yaml',
       asList(this.file('art.yaml')).map((a) =>
-        isObj(a) && typeof a.id === 'string' ? { id: a.id, title: String(a.title ?? a.id), desc: a.desc as string | undefined } : undefined,
+        isObj(a) && typeof a.id === 'string'
+          ? {
+              id: a.id,
+              title: String(a.title ?? a.id),
+              desc: a.desc as string | undefined,
+              bg: typeof a.bg === 'string' ? a.bg : undefined,
+              tod: typeof a.tod === 'string' ? a.tod : undefined,
+              cast: a.cast === undefined
+                ? undefined
+                : asList(a.cast).map((c) => {
+                    const o = (isObj(c) ? c : { who: String(c) }) as Obj;
+                    return {
+                      who: String(o.who),
+                      mood: typeof o.mood === 'string' ? o.mood : undefined,
+                      x: typeof o.x === 'number' ? o.x : undefined,
+                      flip: o.flip === true ? true : undefined,
+                    };
+                  }),
+              fx: a.fx === undefined ? undefined : asList(a.fx).map(String),
+            }
+          : undefined,
       ),
     );
 

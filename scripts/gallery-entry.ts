@@ -4,6 +4,8 @@ import { drawPortrait, type Mood } from '../src/art/portrait';
 import type { Pix } from '../src/art/pixel';
 import { toCanvas } from '../src/web/art';
 import * as art from '../src/art';
+import { bustResolver, drawBust, drawCG } from '../src/art';
+declare const __ART__: { id: string; title: string; bg?: string; tod?: string; cast?: { who: string; mood?: string; x?: number; flip?: boolean }[]; fx?: string[] }[];
 
 const MOODS: Mood[] = ['', '웃음', '화남', '슬픔', '놀람', '당황', '진지'];
 const root = document.getElementById('root')!;
@@ -57,4 +59,15 @@ if ((!only || only === 'scenes') && 'SCENES' in art) {
     const row = section(id);
     for (const t of tods) show(row, (art as any).drawScene(id, t), t, 3);
   }
+}
+
+if (only === 'busts') {
+  const row = section('흉상 64×64');
+  for (const [id, look] of Object.entries(CAST)) show(row, drawBust(look), id, SCALE);
+  for (const [id, look] of Object.entries(CAST).slice(0, 4)) for (const m of MOODS.slice(1)) show(row, drawBust(look, m), `${id} ${m}`, SCALE);
+}
+if (only === 'cg') {
+  const bust = bustResolver({ origin: '평민장학생' });
+  const row = section('CG');
+  for (const a of __ART__) if (a.bg) show(row, drawCG(a, 'day', bust), `${a.id} · ${a.title}`, SCALE);
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ACTIVITY_ICON, CAST, ICONS, INTENT_ICON, SCENES, STAT_ICON, drawIcon, drawPortrait, drawScene, enemyArt, extraLook } from '../src/art';
+import { ACTIVITY_ICON, CAST, FX, ICONS, INTENT_ICON, SCENES, STAT_ICON, bustResolver, drawCG, drawIcon, drawPortrait, drawScene, enemyArt, extraLook } from '../src/art';
 import { INTENTS } from '../src/engine';
 import { loadContent } from '../src/engine/load';
 
@@ -8,8 +8,22 @@ const MOODS = ['', '웃음', '화남', '슬픔', '놀람', '당황', '진지'] a
 
 describe('도트 그림', () => {
   it('art.yaml의 모든 삽화가 그려져 있다', () => {
-    const missing = [...content.art.keys()].filter((id) => !SCENES[id]);
+    const missing = [...content.art.values()].filter((a) => !a.bg && !SCENES[a.id]).map((a) => a.id);
     expect(missing).toEqual([]);
+  });
+
+  it('CG는 그려진 배경, 있는 인물, 아는 효과만 쓴다', () => {
+    const bust = bustResolver({ origin: '평민장학생' });
+    for (const a of content.art.values()) {
+      if (!a.bg) continue;
+      expect(SCENES[a.bg], `${a.id}: 배경 ${a.bg}`).toBeTruthy();
+      expect(content.art.get(a.bg)?.bg, `${a.id}: 배경이 또 CG`).toBeUndefined();
+      for (const c of a.cast ?? []) expect(c.who === '나' || content.characters.has(c.who), `${a.id}: ${c.who}`).toBe(true);
+      for (const f of a.fx ?? []) expect((FX as readonly string[]).includes(f), `${a.id}: 효과 ${f}`).toBe(true);
+      if (a.tod) expect(['dawn', 'day', 'dusk', 'night']).toContain(a.tod);
+      const p = drawCG(a, 'day', bust);
+      expect([p.w, p.h]).toEqual([160, 90]);
+    }
   });
 
   it('그려진 삽화는 모두 art.yaml에 있다', () => {

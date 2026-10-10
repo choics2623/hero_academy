@@ -33,3 +33,27 @@
 - { id: arena, title: 무투대회 경기장, desc: "원형 경기장, 관중석, 깃발" }
 - { id: festival, title: 봄 축제, desc: "등불 줄, 노점, 밤하늘의 불꽃" }
 - { id: starry_hill, title: 별 보는 언덕, desc: "풀밭, 쏟아지는 별, 멀리 아카데미" }
+
+# ---------------------------------------------------------------- 장소 2 (scenes_extra.ts)
+- { id: lake, title: 호숫가, desc: "버드나무, 벤치, 잔잔한 물, 멀리 아카데미 첨탑" }
+- { id: back_hill, title: 뒷산 활터, desc: "숲 가장자리의 과녁, 쓰러진 통나무, 언덕 너머 하늘" }
+- { id: forge, title: 대장간, desc: "화덕의 불, 모루, 걸린 망치와 집게, 불티" }
+- { id: dorm_hall, title: 기숙사 복도, desc: "긴 복도, 늘어선 문, 끝의 창, 벽등" }
+- { id: laundry, title: 세탁실, desc: "빨래통, 줄에 걸린 빨래, 김, 작은 창" }
+- { id: cellar, title: 식당 지하 창고, desc: "통과 자루, 거미줄, 계단 위에서 들어오는 빛" }
+- { id: clock_tower, title: 시계탑 꼭대기, desc: "큰 톱니바퀴, 시계 문자판 뒷면, 그 너머 도시 풍경" }
+- { id: mage_tower, title: 마탑 연구실, desc: "둥근 탑 방, 떠다니는 책, 별자리 지도, 망원경" }
+- { id: alchemy_lab, title: 지하 연금술 실습실, desc: "낮은 천장, 솥과 증류기, 색색의 플라스크, 유황 김" }
+- { id: garden_path, title: 벚꽃 가로수길, desc: "벚나무 터널, 꽃잎 깔린 길, 벤치" }
+- { id: rain_courtyard, title: 비 내리는 안뜰, desc: "회랑 아래에서 본 빗속 안뜰, 웅덩이, 회색 하늘" }
+- { id: tavern, title: 도시 술집, desc: "나무 카운터, 술통, 등불, 왁자한 손님들" }
+- { id: church_kitchen, title: 교회 구휼소, desc: "긴 줄, 큰 솥, 수녀, 소박한 빵" }
+- { id: village, title: 고향 마을, desc: "초가지붕, 밀밭, 풍차, 흙길" }
+- { id: forest, title: 깊은 숲, desc: "거대한 나무, 이끼, 빛줄기, 덩굴" }
+- { id: manor, title: 귀족 저택, desc: "대리석 홀, 초상화, 샹들리에, 붉은 카펫 계단" }
+- { id: waiting_room, title: 무투대회 대기실, desc: "돌 벽, 나무 벤치, 무기대, 경기장으로 이어진 통로의 빛" }
+- { id: sword_club, title: 검술부 도장, desc: "나무 바닥 실내 도장, 목검 걸이, 깃발, 높은 창" }
+- { id: exam_hall, title: 필기 시험장, desc: "줄지은 책상, 시험지, 감독관 교탁, 모래시계" }
+- { id: carriage_road, title: 도시로 가는 길, desc: "마차 길, 들판, 멀리 성벽 도시" }
+- { id: kitchen, title: 식당 주방, desc: "큰 화덕, 걸린 냄비, 채소, 도로시의 실험 냄비" }
+- { id: city_gate, title: 도시 성문, desc: "높은 성문, 경비병, 오가는 마차와 사람들" }

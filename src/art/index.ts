@@ -6,3 +6,5 @@ export * from './cast';
 export * from './icons';
 export * from './scenes';
 export * from './scene';
+export * from './cg';
+export * from './bust';

@@ -2,9 +2,10 @@
 import { RAMP } from './palette';
 import { Pix } from './pixel';
 import { CORE_SCENES, H, W, ambient, clouds, ridge, sky, stars, type SceneFn, type Tod } from './scenes';
+import { EXTRA_SCENES } from './scenes_extra';
 import { MORE_SCENES } from './scenes_more';
 
-export const SCENES: Record<string, SceneFn> = { ...CORE_SCENES, ...MORE_SCENES };
+export const SCENES: Record<string, SceneFn> = { ...CORE_SCENES, ...MORE_SCENES, ...EXTRA_SCENES };
 
 export function drawScene(id: string, tod: Tod | string = 'day'): Pix {
   const p = new Pix(W, H);
