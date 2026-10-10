@@ -10,9 +10,13 @@
 - [05 메인 스토리](docs/05_메인스토리.md)
 - [06 엔진 설계 & 작가 가이드](docs/06_엔진_설계.md)
 
+## 바로 플레이
+브라우저: https://claude.ai/artifact/8M5y8XaJtJsjfj5dv323dE
+
 ## 실행
 ```bash
 npm install
+npm run build:web                   # 웹 버전을 dist/play.html 한 장으로 빌드
 npm run play -- --random 1          # 터미널에서 플레이 (서장 ~ 1학년 6월)
 npm run lint:story                  # 스토리 정적 분석
 npm run sim -- --runs 3000          # 자동 플레이테스트 → reports/sim.md

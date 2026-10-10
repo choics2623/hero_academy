@@ -88,6 +88,8 @@ export interface Crossroad {
   canonEffects: Effect[];
   canonEvent?: string;
   about: string[];
+  /** 결과 값 → 화면에 보일 이름 */
+  labels: Record<string, string>;
 }
 
 export interface Note {
@@ -442,6 +444,7 @@ class Builder {
           canonEffects: this.effects(where, c.canon_effects),
           canonEvent: c.canon_event as string | undefined,
           about: asList(c.about).map(String),
+          labels: (isObj(c.labels) ? c.labels : {}) as Record<string, string>,
         };
       }),
     );

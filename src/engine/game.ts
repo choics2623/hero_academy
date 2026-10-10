@@ -112,6 +112,11 @@ export class Game {
     return new Game(this.content, structuredClone(this.state));
   }
 
+  /** 저장해둔 state(JSON)로 이어하기 */
+  static restore(content: Content, state: GameState): Game {
+    return new Game(content, structuredClone(state));
+  }
+
   get(name: string) {
     return this.world.get(name);
   }

@@ -10,6 +10,7 @@
   weight: 6
   canon_event: sera_dropped_news
   about: [sera]
+  labels: { dropped: 세라 탈락, saved: 직접 부축해서 통과시킴, saved_quiet: 감독관에게 알려 재시험 }
 
 - id: edric_labyrinth
   title: 에드릭의 미궁 실습
@@ -19,6 +20,7 @@
   weight: 8
   canon_event: edric_death_news
   about: [edric]
+  labels: { dead: 에드릭 사망, saved: 직접 구해냄, saved_by_teacher: 교관이 구해냄, alive: 함정을 피함, alive_scarred: 중상을 입고 생존 }
 
 - id: gift_manual
   title: 마력 순환 비급의 주인
@@ -27,3 +29,4 @@
   deadline: "2.12"
   weight: 5
   about: [aren]
+  labels: { aren: 2학년 겨울 아렌이 얻음, me: 내가 먼저 가짐, aren_early: 아렌이 일찍 얻도록 부탁함 }
