@@ -20,3 +20,5 @@
 - { id: F21, title: 아델하이트 몰락의 밤, 검은 로브, meaning: "미라벨 가문을 무너뜨린 건 심연교단", pending: "3장" }
 - { id: F22, title: 에드릭을 부른 죽은 어머니의 목소리, meaning: "교단은 죽은 자의 목소리로 제물을 유인한다", pending: "3장" }
 - { id: F23, title: 가렌이 지키지 못한 20년 전의 용사 후보, meaning: "실패한 용사 파티", pending: "5장" }
+# 42_dorm_quests
+- { id: F40, title: 처음 보는데 익숙한 곳, meaning: "아렌도 반복의 기억 조각을 가지고 있다", pending: "9장" }
