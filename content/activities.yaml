@@ -1,0 +1,98 @@
+# 활동: 플레이어가 슬롯마다 고르는 행동. 고르면 effects가 적용되고,
+# 그 활동에 걸린(on) 스토리렛 중 가장 구체적인 하나가 발생한다. 없으면 lines만 나온다.
+
+# ---------------------------------------------------------------- 서장 (입학 전 한 달)
+- id: 폐광
+  name: 마을 뒤 폐광 탐색
+  window: "0.2"
+  effects: ["fatigue += 20 * (1 + mod.fatigue)"]
+  lines: ["폐광 입구는 조용하다. 오늘은 더 볼 게 없다."]
+
+- id: 고서점
+  name: 도시 고서점
+  window: "0.2"
+  effects: ["fatigue += 5"]
+  lines: ["먼지 냄새. 주인은 졸고 있다."]
+
+- id: 뒷골목
+  name: 뒷골목 정보상
+  window: "0.2"
+  when: "money >= 10"
+  lines: ["오늘은 정보상이 보이지 않는다."]
+
+- id: 새벽연무장
+  name: 새벽 연무장 구경
+  window: "0.2"
+  slots: [오전]
+  lines: ["아무도 없는 연무장. 이슬이 차갑다."]
+
+- id: 집안정리
+  name: 집안 정리
+  window: "0.2"
+  effects: ["stress -= 5"]
+  lines: ["방을 정리했다. 이 몸의 원래 주인은 꽤 깔끔한 사람이었던 것 같다."]
+
+- id: 기초훈련
+  name: 기초 훈련
+  window: "0.2"
+  effects: ["stat.근력 += 2", "stat.체질 += 2", "fatigue += 15 * (1 + mod.fatigue)"]
+
+# ---------------------------------------------------------------- 1학년
+- id: 도서관
+  name: 도서관
+  window: { from: "1.3", to: "1.6" }
+  effects: ["stat.지성 += 2", "fatigue += 8 * (1 + mod.fatigue)"]
+
+- id: 훈련장
+  name: 훈련장
+  window: { from: "1.3", to: "1.6" }
+  effects: ["stat.근력 += 2", "stat.민첩 += 1", "stat.체질 += 1", "fatigue += 15 * (1 + mod.fatigue)"]
+
+- id: 마법실습
+  name: 마법 실습실
+  window: { from: "1.3", to: "1.6" }
+  effects: ["stat.마력제어 += 2", "stat.마력량 += 1", "fatigue += 12 * (1 + mod.fatigue)"]
+
+- id: 식당
+  name: 학생 식당
+  window: { from: "1.3", to: "1.6" }
+  effects: ["stat.매력 += 1", "fatigue -= 5", "money -= 2 * (1 + talent.대식가)"]
+
+- id: 온실
+  name: 원예부 온실
+  window: { from: "1.4", to: "1.6" }
+  when: "club == '원예부'"
+  effects: ["stat.지성 += 1", "stress -= 5"]
+  lines: ["화분에 물을 줬다. 오늘은 조용하다."]
+
+- id: 검술부
+  name: 검술부 연습
+  window: { from: "1.4", to: "1.6" }
+  when: "club == '검술부'"
+  effects: ["stat.근력 += 2", "stat.민첩 += 1", "fatigue += 15 * (1 + mod.fatigue)"]
+  lines: ["목검이 부딪히는 소리. 땀이 흐른다."]
+
+- id: 신문부
+  name: 신문부 취재
+  window: { from: "1.4", to: "1.6" }
+  when: "club == '신문부'"
+  effects: ["stat.매력 += 1", "stat.지성 += 1"]
+  lines: ["오늘은 특종이 없다."]
+
+- id: 밤의연무장
+  name: 밤의 연무장
+  window: { from: "1.3", to: "1.6" }
+  slots: [밤]
+  when: "found.finn"
+  effects: ["stat.근력 += 1", "stat.민첩 += 1", "fatigue += 10 * (1 + mod.fatigue)"]
+  lines: ["핀은 오늘 오지 않았다."]
+
+# ---------------------------------------------------------------- 공통
+- id: 휴식
+  name: 휴식
+  effects: ["fatigue -= 30", "stress -= 10"]
+  lines:
+    - 나레이션:
+        - "푹 쉬었다."
+        - { when: "talent.게으름", text: "푹 쉬었다. 너무 푹 쉬어서 해가 중천이다." }
+        - { when: "talent.병약", text: "누워서 기침을 삼켰다. 조금 나아진 것 같다." }

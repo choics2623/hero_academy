@@ -1,0 +1,8 @@
+# 파생 변수: 읽을 때마다 계산된다. 저장하지 않으므로 항상 최신이다.
+rank.liana: "floor(affinity.liana / 10)"
+rank.aren: "floor(affinity.aren / 10)"
+rank.sera: "floor(affinity.sera / 10)"
+rank.finn: "floor(affinity.finn / 10)"
+rank.edric: "floor(affinity.edric / 10)"
+# 아렌의 성격 경향 (+면 다정, -면 냉정/오만)
+aren.temper: "aren.kind - aren.cold - aren.arrogant"

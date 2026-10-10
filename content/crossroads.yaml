@@ -1,0 +1,29 @@
+# 갈림길: 원작의 운명이 정해지는 지점.
+# 마감(deadline)까지 key가 정해지지 않으면 canon(원작 값)으로 자동 확정된다.
+# 원작 붕괴도 = 원작 값과 달라진 갈림길들의 weight 합.
+
+- id: sera_exam
+  title: 세라의 반 배정 시험
+  key: fate.sera
+  canon: dropped
+  deadline: "1.3.1"
+  weight: 6
+  canon_event: sera_dropped_news
+  about: [sera]
+
+- id: edric_labyrinth
+  title: 에드릭의 미궁 실습
+  key: fate.edric
+  canon: dead
+  deadline: "1.5.2"
+  weight: 8
+  canon_event: edric_death_news
+  about: [edric]
+
+- id: gift_manual
+  title: 마력 순환 비급의 주인
+  key: gift.manual
+  canon: aren
+  deadline: "2.12"
+  weight: 5
+  about: [aren]

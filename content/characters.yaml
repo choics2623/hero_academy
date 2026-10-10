@@ -1,0 +1,17 @@
+- { id: aren, name: 아렌, desc: 원작 주인공. 성검에 선택받은 평민 }
+- { id: liana, name: 리아나, desc: 하프엘프. 원작 2학년 여름 사망 }
+- { id: mirabel, name: 미라벨, desc: 몰락 귀족 마법 천재 }
+- { id: kaiden, name: 카이든, desc: 3황자 }
+- { id: kael, name: 카엘, desc: 마족 전학생 }
+- { id: bruno, name: 브루노, desc: 대장장이 아들 }
+- { id: finn, name: 핀, desc: 청소부 소년. 미구현 데이터 }
+- { id: dorothy, name: 도로시, desc: 식당 딸 }
+- { id: sera, name: 세라, desc: 반 배정 시험 탈락생 }
+- { id: noel, name: 노엘, desc: 만년 꼴찌 선배 }
+- { id: garen, name: 가렌, desc: 검술 교관 }
+- { id: elvera, name: 엘베라, desc: 마법학 교수 }
+- { id: bistol, name: 비스톨, desc: 연금술 교수 }
+- { id: luna, name: 시스터 루나, desc: 신학 교수 }
+- { id: librarian, name: 사서, desc: 도서관 사서 노인 }
+- { id: edric, name: 에드릭, desc: 원작 1권에서 죽는 악역 도련님 }
+- { id: grim, name: 그림, desc: 뒷골목 정보상 }

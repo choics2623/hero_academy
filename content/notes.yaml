@@ -1,0 +1,47 @@
+# 공략 노트: 플레이어(고인물)가 기억하는 원작 정보.
+# grade: 3=직접 플레이(확실) 2=커뮤니티 공략 1=데이터마이닝/루머
+# about: 이 갈림길이 원작과 달라지면 노트는 "신뢰할 수 없음"이 된다
+# valid_while: 이 조건이 깨지면 신뢰할 수 없음 / fragile: 붕괴도가 이 값을 넘으면 신뢰할 수 없음
+
+- id: note_sera
+  title: 세라의 탈락
+  text: 반 배정 시험에서 은발의 세라가 실신해서 탈락한다. 사실은 원작 성녀보다 신성력이 높은 성흔 보유자.
+  grade: 3
+  about: [sera_exam]
+
+- id: note_edric
+  title: 에드릭 벨모어의 죽음
+  text: 1학년 5월 미궁 실습 중 혼자 3층 안쪽에 들어갔다가 시체로 발견된다. 원작에선 사고로 처리됨.
+  grade: 3
+  about: [edric_labyrinth]
+
+- id: note_manual
+  title: 고서점의 마력 순환 비급
+  text: 도시 고서점 구석에 마력 순환 비급이 있다. 원작에선 아렌이 2학년 겨울에 얻는다.
+  grade: 2
+  when: "perk.공략위키편집자 or perk.고인물의기억"
+  about: [gift_manual]
+
+- id: note_finn
+  title: 청소부 소년의 스탯
+  text: 게임 파일에 이름 없는 청소부 NPC의 검술 스탯이 S로 설정되어 있다. 이벤트는 없음.
+  grade: 1
+  when: "perk.데이터마이너"
+
+- id: note_liana
+  title: 리아나의 죽음
+  text: 리아나는 2학년 여름 숲 합숙에서 마수 습격으로 죽는다. 전투가 길어지면 심장이 버티지 못한다.
+  grade: 3
+  valid_while: "liana.heart_treated != 1"
+
+- id: note_cult_mark
+  title: 미궁 3층의 문양
+  text: 미궁 3층의 교단 문양은 1학년 가을 첫 토벌 무렵에 처음 발견된다.
+  grade: 2
+  fragile: 10
+
+- id: note_grim
+  title: 정보상 그림
+  text: 뒷골목 정보상 그림은 황제 암살이 일어난 밤 황궁 근처에 있었다.
+  grade: 2
+  when: "perk.공략위키편집자 or perk.고인물의기억"

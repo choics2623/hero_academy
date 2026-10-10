@@ -1,0 +1,279 @@
+# 서장: 입학 전 한 달. 행동 8회로 기연을 골라야 한다.
+
+- id: p_awaken
+  title: 빙의
+  on: auto
+  at: "0.2.1.오전"
+  priority: 10
+  lines:
+    - "3,000시간째의 플레이. 37번째 배드 엔딩."
+    - "화면 가득 마지막 문장이 떠오른다. ── 그리고 세계는, 다시 처음으로."
+    - "눈을 뜨자 낯선 천장이 보인다."
+    - 나레이션:
+        - "삐걱거리는 다락방. 창밖으로 아카데미 첨탑이 보인다."
+        - { when: "origin == '몰락귀족'", text: "곰팡이 핀 벽지와 빛바랜 가문 문장. 몰락한 귀족가의 방이다." }
+        - { when: "origin == '악역도련님'", text: "지나치게 화려한 침대. 문밖에서 하인들이 숨죽여 속삭인다. ─ 도련님이 깨셨어." }
+        - { when: "origin == '엑스트라'", text: "아카데미 근처 싸구려 여관. 침대 옆에 입학 통지서가 놓여 있다." }
+        - { when: "origin == '숲고아'", text: "나무 냄새가 나는 오두막. 새들이 창틀에서 이쪽을 보고 있다." }
+    - 속마음: "…에테크잖아. 그것도 입학 한 달 전."
+    - when: "origin == '악역도련님'"
+      속마음: "(잠깐. 이 얼굴… 1권에서 죽는 에드릭 벨모어잖아?)"
+    - when: "talent.혐오스러운분위기"
+      나레이션: "거울 속 얼굴은 어딘가 섬뜩하다. 웃어 보려 했지만 더 무서워졌다."
+    - when: "talent.병약"
+      나레이션: "기침이 멎지 않는다. 이 몸은 생각보다 약하다."
+    - when: "talent.천생신력"
+      나레이션: "문고리를 잡았더니 문고리가 빠졌다."
+    - when: "perk.상태창"
+      시스템: "[상태창] 근력 {{stat.근력}} · 마력량 {{stat.마력량}} · 지성 {{stat.지성}} · 매력 {{stat.매력}}"
+    - "남은 시간은 10년. 아무것도 바꾸지 않으면, 세계는 멸망한다."
+  next: p_diary
+
+- id: p_diary
+  title: 몸 주인의 일기장
+  lines:
+    - "서랍 속에 일기장이 있다. 이 몸의 원래 주인 것이다."
+    - "마지막 장은 찢겨 나갔다. 남은 건 한 줄뿐이다."
+    - "── 바깥의 누군가에게 닿기를."
+    - when: "talent.몸주인의잔재"
+      속마음: "(가슴 한쪽이 아프다. 내 감정이 아닌 것 같은데.)"
+  plants:
+    - { id: F14, notice: { value: "stat.지성 + 15 * talent.몸주인의잔재", dc: 18 } }
+  choices:
+    - text: 일기장을 챙긴다
+      effects: ["item.일기장 = 1"]
+      lines: ["일기장을 품에 넣었다. 언젠가 의미를 알게 될 것 같다."]
+    - text: 서랍에 도로 넣어둔다
+      lines: ["남의 일기다. 지금은 덮어두자."]
+
+# ---------------------------------------------------------------- 폐광 (3단계 연속 스토리렛)
+
+- id: mine_1
+  title: 폐광 입구
+  on: 폐광
+  lines:
+    - "마을 뒤 폐광. 원작에선 2학년 때 아렌이 영약을 얻는 곳이다."
+    - "안쪽에서 무언가 긁는 소리가 난다."
+    - when: "talent.겁쟁이"
+      속마음: "(…오늘은 입구까지만 보고 갈까.)"
+  effects: ["mine.progress = 1"]
+
+- id: mine_2
+  title: 폐광의 마물
+  on: 폐광
+  when: "mine.progress == 1"
+  repeat: 3
+  lines: ["굴 안쪽에서 동굴 쥐 떼가 튀어나온다!"]
+  check: { value: "stat.근력 + stat.민첩 / 2 + luck", dc: 24 }
+  success:
+    lines:
+      - "몽둥이를 휘둘러 쥐 떼를 쫓아냈다."
+      - { when: "talent.천생신력", 나레이션: "벽에 맞은 쥐가 벽째로 무너졌다." }
+    effects: ["mine.progress = 2", "stat.근력 += 2"]
+  fail:
+    lines: ["물리고 할퀴어서 도망쳐 나왔다. 다음에 다시 와야겠다."]
+    effects: ["fatigue += 20", "stress += 10 * (1 + mod.stress)"]
+
+- id: mine_3
+  title: 붉은 뿌리
+  on: 폐광
+  when: "mine.progress == 2"
+  lines:
+    - "가장 깊은 갱도. 바위틈에 핏빛 뿌리가 자라 있다."
+    - 속마음: "(붉은 뿌리. 체질을 끌어올리는 영약 재료다.)"
+    - when: "talent.만독불침"
+      속마음: "(독성이 있다던데, 나한텐 상관없지.)"
+  effects: ["mine.progress = 3", "item.붉은뿌리 = 1"]
+  choices:
+    - text: 그 자리에서 씹어 먹는다
+      effects: ["item.붉은뿌리 = 0", "stat.체질 += 8"]
+      branch:
+        - when: "talent.병약"
+          lines: ["쓴맛이 혀를 찌른다. 그런데… 숨쉬기가 조금 편해졌다."]
+          effects: ["sick.relief = 1"]
+        - when: "talent.만독불침"
+          lines: ["아무 맛도 안 난다. 몸속에서 열기만 퍼진다."]
+          effects: ["stat.체질 += 3"]
+        - lines: ["쓴맛과 함께 몸속이 뜨거워진다. 한동안 배가 아팠다."]
+          effects: ["fatigue += 20"]
+    - text: 약재상에 팔아 돈으로 바꾼다
+      effects: ["item.붉은뿌리 = 0", "money += 30"]
+      lines: ["약재상 주인이 눈을 크게 뜨더니 은화를 세어 줬다."]
+
+# ---------------------------------------------------------------- 고서점 (원작 주인공의 기연)
+
+- id: book_1
+  title: 고서점
+  on: 고서점
+  lines:
+    - "먼지 쌓인 서가. 주인 노인은 졸고 있다."
+    - "구석에서 표지가 닳은 책 한 권이 눈에 들어온다. 『마력 순환 소고』."
+    - when: "note.note_manual.known"
+      속마음: "(이거다. 원작에서 아렌이 2학년 겨울에 얻는 비급.)"
+    - when: "not note.note_manual.known"
+      속마음: "(낡은 책인데… 왠지 신경 쓰인다.)"
+  effects: ["book.seen = 1"]
+
+- id: book_2
+  title: 마력 순환 비급
+  on: 고서점
+  when: "book.seen and not gift.manual and not book.left"
+  lines:
+    - 서점 주인: "그 책? 은화 마흔 닢. 깎아줄 생각 없네."
+  choices:
+    - text: 산다 (은화 40)
+      requires: "money >= 40"
+      hint: "아렌은 이 기연을 얻지 못하게 된다"
+      effects: ["money -= 40", "gift.manual = 'me'", "skill.마력순환 = 1", "stat.마력제어 += 5"]
+      lines:
+        - 속마음: "(미안, 아렌. 이건 내가 먼저 쓸게.)"
+        - 시스템: "⚠ 원작 이탈 — 아렌은 이 비급을 얻지 못한다."
+    - text: "주인에게 부탁한다: 이 책을 찾는 평민 소년이 오면 싸게 주세요"
+      requires: "stat.매력 >= 14 or talent.사람좋은얼굴"
+      effects: ["gift.manual = 'aren_early'", "aren.boost += 1"]
+      lines:
+        - 서점 주인: "…별 부탁을 다 듣는군. 알았네."
+        - 속마음: "(원작보다 2년 빨리 아렌 손에 들어간다.)"
+        - 시스템: "⚠ 원작 이탈 — 아렌의 성장이 원작보다 빨라진다."
+    - text: 그냥 둔다
+      effects: ["book.left = 1"]
+      lines: ["원작대로 흘러가게 두자. 지금은."]
+
+# ---------------------------------------------------------------- 뒷골목 정보상
+
+- id: grim_1
+  title: 정보상 그림
+  on: 뒷골목
+  effects: ["money -= 10", "affinity.grim += 10", "trust.grim += 5"]
+  lines:
+    - 그림: "처음 보는 얼굴이군. 정보는 공짜가 아니야."
+    - when: "note.note_grim.known"
+      속마음: "(그림. 황제 암살이 일어나는 밤, 황궁 근처에 있던 사람.)"
+    - 그림: "요즘 밤마다 황궁 뒷문으로 검은 마차가 드나들어. 문장도 없는 마차가."
+  plants:
+    - { id: F10, notice: { value: "stat.지성 + 10 * note.note_grim.known", dc: 20 } }
+
+- id: grim_2
+  title: 뒷골목의 소문
+  on: 뒷골목
+  when: "fired.grim_1"
+  repeat: 2
+  effects: ["money -= 10", "intel += 1", "affinity.grim += 5"]
+  branch:
+    - when: "intel == 1"
+      lines:
+        - 그림: "아카데미 미궁 말이야. 3층 안쪽에서 로브 입은 놈들이 뭘 그리고 다닌다더군."
+      effects: ["know.cult_early = 1"]
+    - lines:
+        - 그림: "벨모어가 도련님? 하인들한테 미움받는 걸로 유명하지. 그런 놈은 꼭 혼자 죽더라고."
+
+# ---------------------------------------------------------------- 새벽 연무장 (숨은 인재 발견)
+
+- id: finn_dawn
+  title: 빗자루를 든 소년
+  on: 새벽연무장
+  lines: ["청소부 소년이 빗자루를 검처럼 휘두르고 있다."]
+  branch:
+    - when: "perk.데이터마이너 or talent.마력감응"
+      lines:
+        - when: "talent.마력감응"
+          나레이션: "등줄기에 칼날 같은 감각이 스친다."
+        - when: "perk.데이터마이너"
+          속마음: "(검술 스탯 S. 이벤트가 없던 미구현 NPC… 진짜 있었구나.)"
+        - 핀: "…뭘 봐요. 청소 중인데."
+      effects: ["found.finn = 1", "affinity.finn += 5"]
+    - lines: ["묘하게 자세가 좋다. 기분 탓일까."]
+
+- id: finn_dawn_2
+  title: 다시 본 소년
+  on: 새벽연무장
+  when: "fired.finn_dawn and not found.finn"
+  lines: ["오늘도 그 소년이다. 빗자루 끝이 정확히 같은 궤적을 그린다."]
+  check: { value: "stat.지성 + stat.민첩 + 20 * talent.직감", dc: 30 }
+  success:
+    lines:
+      - 속마음: "(같은 궤적을 백 번. 저건 재능이다.)"
+      - 핀: "…아저씨도 검 해요?"
+    effects: ["found.finn = 1", "affinity.finn += 5"]
+  fail:
+    lines: ["소년은 금방 사라졌다."]
+
+# ---------------------------------------------------------------- 집안 정리 (출신별)
+
+- id: edric_servants
+  title: 벨모어가의 하인들
+  on: 집안정리
+  when: "origin == '악역도련님'"
+  repeat: 3
+  lines:
+    - "하인들이 나를 보자마자 고개를 숙이고 굳는다."
+    - 속마음: "(원작의 에드릭은 하인들을 때렸다. 그러니 아무도 경고해주지 않은 거야.)"
+  choices:
+    - text: 지난 일을 사과한다
+      effects: ["servant.trust += 1"]
+      branch:
+        - when: "servant.trust >= 2"
+          lines:
+            - 늙은 하인: "…도련님. 미궁에 가시거든, 3층 안쪽은 피하십시오. 요즘 흉한 소문이 돕니다."
+          effects: ["servant.warning = 1"]
+        - lines: ["하인들은 대답하지 않았다. 하지만 공기가 조금 달라졌다."]
+    - text: 아무 말 없이 지나간다
+      lines: ["하인들이 안도의 한숨을 쉬는 소리가 들렸다."]
+
+- id: noble_debt
+  title: 가문의 빚
+  on: 집안정리
+  when: "origin == '몰락귀족' and debt > 0"
+  repeat: 2
+  lines: ["책상 위에 독촉장이 쌓여 있다."]
+  choices:
+    - text: 가보 하나를 판다
+      effects: ["debt -= 50", "money += 20", "stress += 5"]
+      lines: ["할아버지의 은잔을 팔았다. 이 몸이 슬퍼하는 것 같다."]
+    - text: 나중에 생각한다
+      effects: ["stress += 5"]
+
+# ---------------------------------------------------------------- 공통 반복
+
+- id: train_flavor
+  on: [기초훈련, 훈련장]
+  repeat: true
+  lines:
+    - 나레이션:
+        - "땀이 흐른다. 조금은 강해진 것 같다."
+        - { when: "talent.질긴힘줄", text: "땀이 흐르지만 몸은 금방 회복된다." }
+        - { when: "talent.천생신력", text: "목검이 부러졌다. 또." }
+        - { when: "talent.병약 and fatigue >= 50", text: "무리했다. 눈앞이 핑 돈다." }
+        - { when: "perk.상태창", text: "[근력 {{stat.근력}} · 체질 {{stat.체질}}]" }
+
+- id: exhausted
+  title: 탈진
+  on: auto
+  repeat: true
+  priority: 5
+  when: "fatigue >= 85"
+  effects: ["fatigue -= 40", "stress += 5 * (1 + mod.stress)"]
+  lines:
+    - 나레이션:
+        - "몸이 말을 듣지 않는다. 하루 종일 누워 있었다."
+        - { when: "talent.병약", text: "열이 펄펄 끓는다. 이 몸은 무리하면 안 된다." }
+
+- id: sick_day
+  title: 앓아누움
+  on: auto
+  repeat: true
+  priority: 4
+  when: "talent.병약 and time.roll < 0.06 * (1 - sick.relief / 2)"
+  effects: ["fatigue += 10", "sick.count += 1"]
+  lines: ["열이 오른다. 오늘은 아무것도 할 수 없다."]
+
+- id: bloom_tough
+  title: 재능 개화 — 질긴 힘줄
+  on: auto
+  free: true
+  priority: 6
+  when: "talent.질긴힘줄 == 1 and count.훈련장 + count.기초훈련 + count.검술부 >= 12"
+  effects: ["talent.질긴힘줄 = 2", "mod.fatigue -= 0.1"]
+  lines:
+    - "아침에 일어났는데 어제의 피로가 하나도 남아 있지 않다."
+    - 시스템: "재능 개화: 질긴 힘줄 → 「지치지 않는 몸」 (피로 누적 추가 -10%)"

@@ -1,0 +1,25 @@
+{
+  "name": "hero-academy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "멸망까지 10년 — 스토리렛 기반 육성 시뮬레이션 엔진",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint:story": "tsx src/tools/lint.ts",
+    "sim": "tsx src/tools/simulate.ts",
+    "seek": "tsx src/tools/seek.ts",
+    "verify": "tsx src/tools/verify.ts",
+    "play": "tsx src/tools/play.ts"
+  },
+  "dependencies": {
+    "yaml": "2.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.18.6",
+    "tsx": "4.20.5",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  }
+}

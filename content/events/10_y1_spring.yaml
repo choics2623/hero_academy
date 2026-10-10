@@ -1,0 +1,440 @@
+# 1학년 1학기 (3월 ~ 6월)
+
+# ---------------------------------------------------------------- 3월: 입학
+
+- id: y1_entrance
+  title: 입학식
+  on: auto
+  at: "1.3.1.방과후"
+  priority: 10
+  lines:
+    - "왕립 루미에르 아카데미 대강당. 신입생 이백 명이 숨을 죽이고 있다."
+    - when: "origin == '악역도련님'"
+      학생들: "저기 봐, 벨모어가 망나니야… 눈 마주치지 마."
+    - "단상 위 성검 에테르가 한 소년 앞에서 빛나기 시작한다."
+    - 아렌: "…검이, 빛나고 있어?"
+    - 속마음: "(원작 명장면. 아렌이 용사 후보가 되는 순간.)"
+    - "그런데 그 순간, 내 몸도 아주 미세하게 떨렸다."
+    - "강당 뒤편, 도서관 사서 노인이 성검을 바라보며 중얼거린다."
+    - 사서: "또 시작이구나."
+  plants:
+    - { id: F01, notice: { value: "stat.마력량 / 2 + 15 * talent.마력감응", dc: 20 } }
+    - { id: F02, notice: { value: "stat.지성 / 2 + 15 * perk.고인물의기억", dc: 20 } }
+
+- id: y1_exam
+  title: 반 배정 시험
+  on: auto
+  at: "1.3.1.밤"
+  priority: 10
+  effects: ["exam.score = stat.근력 + stat.마력량 + stat.지성"]
+  lines:
+    - "실기 시험장. 마법 표적과 목검 대련이 동시에 진행된다."
+    - "옆 레인의 은발 소녀가 비틀거린다. 얼굴이 하얗게 질려 있다."
+    - when: "note.note_sera.known"
+      속마음: "(세라. 원작에선 여기서 쓰러져 탈락한다. 원작 성녀보다 신성력이 높은 아이인데.)"
+    - when: "not note.note_sera.known"
+      속마음: "(저 애, 곧 쓰러지겠는데.)"
+  choices:
+    - text: 세라를 부축한다 (내 점수가 깎인다)
+      effects: ["fate.sera = 'saved'", "affinity.sera += 15", "trust.sera += 10", "exam.score -= 10"]
+      lines:
+        - 세라: "고, 고마워… 나 때문에 너까지…"
+        - 감독관: "거기 둘! …흠, 회복할 때까지 기다려주지."
+        - 시스템: "⚠ 원작 이탈 — 세라가 시험을 통과한다."
+    - text: 감독관에게 조용히 알린다
+      requires: "stat.매력 >= 12 or talent.귀공자의품격"
+      effects: ["fate.sera = 'saved_quiet'", "affinity.sera += 5"]
+      lines:
+        - 감독관: "…그래. 저 학생은 재시험으로 처리하지."
+        - 속마음: "(세라는 누가 도와줬는지 모를 것이다. 그래도 괜찮아.)"
+        - 시스템: "⚠ 원작 이탈 — 세라가 재시험 기회를 얻는다."
+    - text: 내 시험에 집중한다
+      effects: ["exam.score += 5"]
+      lines:
+        - 속마음: "(미안. 지금은 나도 살아남아야 해.)"
+
+- id: sera_dropped_news
+  title: 탈락자 명단
+  free: true
+  lines:
+    - "게시판에 탈락자 명단이 붙었다. 맨 위에 적힌 이름은 세라."
+    - when: "note.note_sera.known"
+      속마음: "(원작대로다.)"
+
+- id: y1_dorm
+  title: 기숙사 배정
+  on: auto
+  at: "1.3.1.주말"
+  priority: 10
+  branch:
+    - when: "origin == '악역도련님'"
+      lines:
+        - "벨모어가가 미리 잡아둔 1인실. 하인까지 딸려 있다."
+        - 속마음: "(이러니까 미움받지.)"
+    - when: "origin == '몰락귀족'"
+      lines: ["귀족 동 맨 끝 방. 창문이 잘 안 닫힌다."]
+    - lines:
+        - "평민 동 2인실. 룸메이트는 덩치 큰 소년이다."
+        - 브루노: "브루노야! 대장장이 아들. 너 팔 힘 좋냐? 내일 망치 좀 들어줄래?"
+      effects: ["affinity.bruno += 10"]
+
+# ---------------------------------------------------------------- 4월: 동아리와 결투
+
+- id: y1_club_fair
+  title: 동아리 박람회
+  on: auto
+  at: "1.4.1.방과후"
+  priority: 10
+  lines: ["중앙 광장에 동아리 천막이 늘어섰다. 하나만 고를 수 있다."]
+  choices:
+    - text: 원예부 (온실에 하프엘프 소녀가 있다)
+      effects: ["club = '원예부'", "affinity.liana += 5"]
+      lines:
+        - 리아나: "어서 와! 신입 부원이 진짜 올 줄은 몰랐어."
+        - when: "talent.자연친화력"
+          나레이션: "온실의 덩굴이 내 쪽으로 슬그머니 고개를 돌린다. 리아나가 눈을 동그랗게 뜬다."
+    - text: 검술부 (3황자 카이든이 있다)
+      effects: ["club = '검술부'", "affinity.kaiden += 3"]
+      lines: [카이든: "평민도 받아준다니, 검술부도 많이 변했군."]
+    - text: 신문부 (소문이 모이는 곳)
+      effects: ["club = '신문부'"]
+      lines: ["부장 선배가 펜을 쥐여준다. 오늘부터 기자다."]
+
+- id: y1_duel
+  title: 카이든과 아렌의 결투
+  on: auto
+  at: "1.4.2.방과후"
+  priority: 10
+  lines:
+    - "중앙 광장. 카이든이 아렌의 발 앞에 장갑을 던진다."
+    - 카이든: "성검이 반응했다고 용사라도 된 줄 아나, 평민."
+    - when: "origin == '악역도련님'"
+      속마음: "(원작에서 이 결투를 부추긴 게 에드릭, 즉 나였지.)"
+  choices:
+    - text: 둘 사이에 끼어들어 말린다
+      requires: "stat.의지 >= 12"
+      effects: ["aren.kind += 1", "affinity.aren += 10", "trust.kaiden += 5", "affinity.kaiden -= 3"]
+      lines:
+        - 아렌: "…고마워. 너, 이름이 뭐야?"
+        - 카이든: "흥. 배짱은 있군."
+    - text: 지켜본다
+      effects: ["aren.cold += 1"]
+      lines:
+        - "아렌은 지고, 아무도 손을 내밀지 않았다. 원작대로."
+        - 속마음: "(이 장면에서 아렌은 처음으로 이를 악문다.)"
+    - text: 카이든 편을 든다
+      effects: ["aren.arrogant += 1", "affinity.kaiden += 10", "affinity.aren -= 5"]
+      lines:
+        - 카이든: "보는 눈이 있군."
+        - 아렌: "……"
+    - text: (에드릭으로서) 부추기지 않고 자리를 뜬다
+      when: "origin == '악역도련님'"
+      effects: ["edric.reformed += 1", "aren.kind += 1"]
+      lines: ["결투는 시시하게 끝났다. 누군가 부추기지 않으면 카이든도 거기까지였다."]
+
+- id: edric_bully
+  title: 식당의 에드릭
+  on: 식당
+  window: "1.4"
+  when: "origin != '악역도련님'"
+  lines:
+    - "식당 구석. 에드릭 벨모어가 아렌의 식판을 엎었다."
+    - 에드릭: "평민 주제에 귀족 테이블 근처에서 밥을 먹어?"
+    - when: "note.note_edric.known"
+      속마음: "(한 달 뒤 미궁에서 죽을 녀석이다.)"
+  choices:
+    - text: 막아선다
+      effects: ["affinity.aren += 5", "affinity.edric -= 10", "edric.hostile = 1"]
+      lines:
+        - 에드릭: "넌 또 뭐야? …두고 보자."
+    - text: 에드릭에게 말을 건다
+      requires: "stat.매력 >= 13 or talent.귀공자의품격"
+      effects: ["affinity.edric += 10", "edric.contact = 1"]
+      lines:
+        - 에드릭: "…뭐야. 나한테 먼저 말 거는 놈은 처음이네."
+        - 속마음: "(이 녀석, 사실 그냥 외로운 거였구나.)"
+    - text: 모른 척한다
+      lines: ["아무도 움직이지 않았다."]
+
+- id: liana_greenhouse_1
+  title: 온실의 리아나
+  on: 온실
+  lines:
+    - 나레이션:
+        - "리아나가 시든 화분 앞에 쪼그려 앉아 있다."
+        - { when: "talent.혐오스러운분위기", text: "리아나가 나를 보고 움찔한다. 화분 뒤로 반쯤 숨었다." }
+    - 리아나: "이 아이, 아무리 해도 안 살아나. 숲에선 이런 적 없었는데."
+  choices:
+    - text: 같이 흙을 갈아준다
+      effects: ["affinity.liana += 8", "trust.liana += 3"]
+      lines: [리아나: "…고마워. 너 손이 따뜻하다."]
+    - text: 마력을 조금 흘려 넣어본다
+      requires: "talent.자연친화력 or stat.마력제어 >= 15"
+      effects: ["affinity.liana += 12", "trust.liana += 5", "liana.impressed = 1"]
+      lines:
+        - "시든 잎 끝에 연두색이 번진다."
+        - 리아나: "어, 어떻게 한 거야? 너 혹시… 엘프 피 섞였어?"
+
+- id: liana_greenhouse_2
+  title: 리아나의 고향 이야기
+  on: 온실
+  when: "fired.liana_greenhouse_1 and rank.liana >= 1"
+  lines:
+    - 리아나: "실바니엘 국경에 있는 작은 마을에서 왔어. 보름달이 뜨면 숲이 은색으로 빛나."
+    - 리아나: "거기선 월광초라는 꽃이 피는데… 엄마가 그걸 달여서 나한테 먹이곤 했어."
+    - when: "note.note_liana.known"
+      속마음: "(월광초. 리아나의 심장을 고칠 수 있는 약재.)"
+  effects: ["affinity.liana += 6", "know.moonherb = 1"]
+
+- id: kaiden_sword
+  title: 검술부의 카이든
+  on: 검술부
+  window: { from: "1.4", to: "1.6" }
+  when: "not fired.kaiden_sword"
+  lines:
+    - 카이든: "평민 중엔 그래도 네가 제일 낫군. 한 판 해라."
+  check: { value: "stat.근력 + stat.민첩 + luck", dc: 34 }
+  success:
+    lines: [카이든: "…다음엔 진심으로 하겠다."]
+    effects: ["affinity.kaiden += 8", "trust.kaiden += 8"]
+  fail:
+    lines: [카이든: "역시 이 정도인가."]
+    effects: ["affinity.kaiden += 2", "stress += 5 * (1 + mod.stress)"]
+
+- id: newspaper_rumor
+  title: 신문부의 제보
+  on: 신문부
+  repeat: 2
+  effects: ["intel += 1"]
+  branch:
+    - when: "not know.cult_early"
+      lines: ["제보함에 쪽지가 하나 있다. ─ 미궁 3층에서 로브 입은 사람을 봤어요."]
+      effects: ["know.cult_early = 1"]
+    - lines: ["제보함엔 연애편지만 잔뜩이다."]
+
+- id: finn_night
+  title: 밤의 연무장
+  on: 밤의연무장
+  repeat: 3
+  effects: ["affinity.finn += 8"]
+  branch:
+    - when: "fired.finn_night >= 2"
+      lines:
+        - "대련 중 핀의 목검이 내 손등을 스쳤다. 피가 한 방울 맺힌다."
+        - "핀의 손이 눈에 띄게 떨린다. 목검을 떨어뜨렸다."
+        - 핀: "…미, 미안해요. 오늘은 여기까지."
+      plants:
+        - { id: F07, notice: { value: "stat.지성 + 10 * talent.직감 - 10 * talent.눈치없음", dc: 18 } }
+    - lines:
+        - 핀: "또 왔어요? …좋아요. 한 번만 더."
+        - "핀의 검은 빗자루였을 때보다 훨씬 날카롭다."
+
+# ---------------------------------------------------------------- 5월: 미궁 실습
+
+- id: y1_labyrinth
+  title: 미궁 실습
+  on: auto
+  at: "1.5.2.방과후"
+  priority: 10
+  lines:
+    - "훈련용 미궁 3층. 횃불 아래 벽면에 낯선 문양이 그려져 있다."
+    - when: "note.note_cult_mark.known"
+      속마음: "(교단 문양? 원작에선 가을에 처음 나오는 건데. 벌써?)"
+  plants:
+    - { id: F03, notice: { value: "stat.지성 + 15 * know.cult_early", dc: 22 } }
+  branch:
+    - when: "origin == '악역도련님'"
+      next: lab_edric_self
+    - next: lab_edric_other
+
+- id: lab_edric_other
+  title: 혼자 들어간 에드릭
+  lines:
+    - "에드릭이 혼자 안쪽 통로로 들어간다. 아무도 말리지 않는다."
+    - when: "note.note_edric.known"
+      속마음: "(원작에선 저기서 시체로 발견된다.)"
+  choices:
+    - text: 따라간다
+      check: { value: "stat.근력 + stat.민첩 + 10 * know.cult_early + luck", dc: 30 }
+      success:
+        lines:
+          - "통로 끝, 바닥에 피로 그린 원. 로브 입은 그림자가 에드릭의 목덜미를 쥐고 있다."
+          - "횃불을 던지자 그림자가 어둠 속으로 사라졌다."
+          - 에드릭: "너… 왜 날 구해? 너 나 싫어하잖아."
+        effects: ["fate.edric = 'saved'", "affinity.edric += 20", "trust.edric += 10"]
+        plants:
+          - { id: F04, notice: { value: "stat.지성", dc: 12 } }
+      fail:
+        lines:
+          - "어둠 속에서 무언가에 부딪혀 정신을 잃었다."
+          - "깨어났을 땐 이미 교관들이 통로를 막고 있었다."
+        effects: ["stress += 20 * (1 + mod.stress)", "fatigue += 30"]
+    - text: 교관에게 알린다
+      requires: "edric.contact or stat.매력 >= 14"
+      effects: ["fate.edric = 'saved_by_teacher'", "affinity.edric += 5"]
+      lines:
+        - 가렌: "벨모어가 혼자 3층 안쪽으로? …알았다. 넌 여기 있어."
+        - "에드릭은 교관에게 끌려 나왔다. 투덜거리면서도 살아 있었다."
+    - text: 가만히 있는다
+      lines: ["통로 안쪽은 조용했다. 너무 조용했다."]
+
+- id: lab_edric_self
+  title: 안쪽 통로의 부름
+  lines:
+    - "안쪽 통로에서 누군가 내 이름을 부른다. 원작의 에드릭이 홀린 듯 걸어 들어간 그 길."
+  branch:
+    - when: "servant.warning"
+      lines:
+        - "늙은 하인의 목소리가 떠오른다. ─ 3층 안쪽은 피하십시오."
+        - "발을 멈췄다. 통로 안쪽에서 무언가 실망한 듯한 기척이 사라진다."
+      effects: ["fate.edric = 'alive'"]
+    - check: { value: "stat.의지 + stat.지성 + luck", dc: 30 }
+      success:
+        lines:
+          - 속마음: "(이건 함정이다. 원작의 에드릭은 여기서 죽었어.)"
+          - "통로 입구에서 바닥에 그려진 피의 원을 발견하고 물러섰다."
+        effects: ["fate.edric = 'alive'"]
+        plants:
+          - { id: F04, notice: { value: "stat.지성", dc: 10 } }
+      fail:
+        lines:
+          - "정신을 차렸을 땐 피로 그린 원 한가운데 쓰러져 있었다. 가슴에 깊은 상처."
+          - "교관들이 들이닥치지 않았다면 원작대로 죽었을 것이다."
+        effects: ["fate.edric = 'alive_scarred'", "stat.체질 -= 5", "stress += 30"]
+        plants:
+          - { id: F04, notice: { value: "stat.지성", dc: 10 } }
+
+- id: edric_death_news
+  title: 에드릭 벨모어의 죽음
+  free: true
+  lines:
+    - "다음 날 아침. 에드릭 벨모어가 미궁 3층에서 시체로 발견됐다는 소식이 돈다."
+    - "사고사로 처리됐다. 원작대로."
+    - "하지만 시체 주변 바닥에 피로 그린 원이 있었다는 소문이 있다."
+  plants:
+    - { id: F04, notice: { value: "stat.지성 + 10 * know.cult_early", dc: 22 } }
+
+# ---------------------------------------------------------------- 6월: 중간고사
+
+- id: y1_midterm
+  title: 중간고사
+  on: auto
+  at: "1.6.1.방과후"
+  priority: 10
+  lines: ["중간고사 주간. 필기와 실기가 사흘 동안 이어진다."]
+  check: { value: "stat.지성 + stat.마력제어 / 2 + luck", dc: 34 }
+  success:
+    lines:
+      - "결과 게시판 상위권에 내 이름이 있다."
+      - when: "origin == '악역도련님'"
+        학생들: "벨모어가… 공부를 했다고?"
+    effects: ["sp += 2", "money += 20", "reputation += 10"]
+  fail:
+    lines: ["평범한 성적. 그래도 낙제는 아니다."]
+    effects: ["sp += 1"]
+
+- id: liana_stairs
+  title: 계단의 리아나
+  on: 온실
+  window: "1.6"
+  priority: 1
+  when: "affinity.liana >= 20"
+  lines:
+    - "온실로 가는 계단. 리아나가 중간에 멈춰 서서 가슴을 짚는다."
+    - 리아나: "아, 괜찮아. 계단이 좀 가팔라서 그래."
+  plants:
+    - { id: F05, notice: { value: "stat.지성 + 25 * talent.직감 + 15 * talent.마력감응 - 20 * talent.눈치없음", dc: 28 } }
+  choices:
+    - text: 보건실에 같이 가자고 한다
+      effects: ["affinity.liana += 3", "trust.liana += 2"]
+      lines: [리아나: "괜찮다니까. …그래도, 고마워."]
+    - text: "월광초 달인 약, 아직 먹어?"
+      when: "know.moonherb"
+      effects: ["affinity.liana += 5", "trust.liana += 5"]
+      lines:
+        - 리아나: "어떻게 기억했어? …요즘은 못 먹었어. 아카데미엔 월광초가 없거든."
+        - 속마음: "(가을 보름, 숲에서 구해야 한다.)"
+    - text: "너 심장 안 좋지? (원작 지식으로 말한다)"
+      when: "note.note_liana.known"
+      effects: ["trust.liana -= 8", "mood.liana.불안 = 1", "secret.liana = 1"]
+      lines:
+        - 리아나: "……그걸 네가 어떻게 알아?"
+        - 속마음: "(실수했다. 아직 들은 적 없는 얘기였어.)"
+    - text: 모른 척한다
+
+- id: bistol_portrait
+  title: 비스톨 교수의 보충 수업
+  on: 마법실습
+  window: "1.6"
+  when: "stat.마력제어 < 25"
+  lines:
+    - 비스톨: "마력 제어가 이 모양이라니. 보충 수업이다. 내 연구실로 와."
+    - "연구실 벽에 일곱 살쯤 된 소녀의 초상화가 걸려 있다. 액자 모서리가 닳도록 손때가 묻었다."
+    - 비스톨: "…뭘 보나. 수업이나 듣게."
+  effects: ["stat.마력제어 += 3"]
+  plants:
+    - { id: F06, notice: { value: "stat.지성 + 10 * talent.직감", dc: 20 } }
+
+- id: library_ritual
+  title: 금서 서가의 기록
+  on: 도서관
+  window: "1.6"
+  when: "fs.F04.seen"
+  lines:
+    - "금서 서가 근처에서 펼쳐진 채 버려진 책을 발견했다. 『고대 제물 의식 연구』."
+    - "삽화 속 문양. 미궁에서 본 피의 원과 똑같다."
+    - 속마음: "(사고가 아니었어. 에드릭은 제물로 바쳐질 뻔한 거야.)"
+    - 사서: "그 책은 원래 자리에 꽂아두게. …그런 책은 너무 오래 펼쳐두면 안 되네."
+  pays: [F04]
+  effects: ["know.sacrifice = 1"]
+
+- id: mirabel_clash
+  title: 미라벨의 시선
+  on: 식당
+  window: "1.6"
+  lines:
+    - 미라벨: "D반은 식당도 따로 쓰면 좋겠네. 마력 냄새가 탁해."
+  choices:
+    - text: 맞받아친다
+      effects: ["affinity.mirabel -= 5", "trust.mirabel += 10", "rival.mirabel = 1"]
+      lines:
+        - 나: "그 탁한 마력한테 실기에서 지면 무슨 냄새가 날까."
+        - 미라벨: "…재밌네. 실기 시간에 보자."
+    - text: 무시한다
+      lines: ["미라벨은 코웃음을 치고 지나갔다."]
+    - text: 정중하게 사과한다
+      requires: "talent.귀공자의품격"
+      effects: ["affinity.mirabel += 5"]
+      lines: [미라벨: "…예법은 아는 모양이네. 아델하이트가에 대해 들어본 적은?"]
+
+# ---------------------------------------------------------------- 반복 장면 (변형 대사 예시)
+
+- id: canteen_flavor
+  on: 식당
+  repeat: true
+  lines:
+    - 나레이션:
+        - "오늘의 메뉴는 감자 스튜다."
+        - { when: "talent.대식가", text: "세 그릇째. 배식 아주머니가 웃으며 한 국자 더 얹어준다." }
+        - { when: "talent.혐오스러운분위기", text: "배식 아주머니가 국자를 떨어뜨렸다. \"아, 아니 그냥… 손이 미끄러져서.\"" }
+        - { when: "talent.악명높은가문", text: "내 주변 자리만 비어 있다." }
+        - { when: "talent.악명높은가문 and fate.edric == 'alive'", text: "주변 자리가 비어 있지만, 오늘은 누군가 옆에 앉았다. \"…미궁에서 살아 나왔다며?\"" }
+
+- id: library_flavor
+  on: 도서관
+  repeat: true
+  lines:
+    - 나레이션:
+        - "책장 넘기는 소리만 들린다."
+        - { when: "talent.완전기억", text: "한 번 읽은 문장이 머릿속에 그대로 새겨진다." }
+        - { when: "talent.산만함", text: "세 줄 읽고 창밖을 봤다. 다시 세 줄 읽고 창밖을 봤다." }
+
+- id: magic_flavor
+  on: 마법실습
+  repeat: true
+  lines:
+    - 나레이션:
+        - "작은 불꽃을 손끝에 띄우는 연습을 했다."
+        - { when: "talent.마력폭주체질", text: "불꽃이 튀었다. 교관이 한숨을 쉬며 소화 마법을 건다." }
+        - { when: "talent.마나탱크", text: "불꽃이 아니라 화염 기둥이 솟았다. 주변 학생들이 물러선다." }
+        - { when: "talent.마나회로손상", text: "아무것도 나오지 않는다. 손끝만 저릿하다." }

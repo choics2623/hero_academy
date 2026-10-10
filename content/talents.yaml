@@ -1,0 +1,94 @@
+# 재능 52개. cost > 0 은 포인트 소모, cost < 0 은 포인트 획득.
+# effects는 캐릭터 생성 시 한 번 적용된다. 성장률(growth.X)은 이후 stat.X 상승량에 곱해진다.
+# 효과가 비어 있는 재능은 이벤트 조건(talent.X)으로만 작동한다.
+
+# ---------------------------------------------------------------- 신체
+- { id: 강골, name: 강골(強骨), cost: 3, category: 신체, excludes: [병약, 유리몸],
+    desc: "부상 확률 -30%, 근력 성장 +15%", effects: ["growth.근력 += 0.15", "mod.injury -= 0.3"] }
+- { id: 질긴힘줄, name: 질긴 힘줄, cost: 2, category: 신체, excludes: [저질체력],
+    desc: "훈련 피로 -20%", effects: ["mod.fatigue -= 0.2"] }
+- { id: 만독불침, name: 만독불침(萬毒不侵), cost: 5, category: 신체,
+    desc: "독 면역, 저주 저항. 독성 영약도 부작용 없이 섭취" }
+- { id: 천생신력, name: 천생신력(天生神力), cost: 5, category: 신체,
+    desc: "근력 +15, 근력 성장 +25%. 섬세한 작업 -20%", effects: ["stat.근력 += 15", "growth.근력 += 0.25", "growth.마력제어 -= 0.2"] }
+- { id: 고양이반사신경, name: 고양이 반사신경, cost: 3, category: 신체,
+    desc: "민첩 성장 +20%", effects: ["growth.민첩 += 0.2"] }
+- { id: 빠른회복, name: 빠른 회복, cost: 2, category: 신체, desc: "부상 회복 기간 절반" }
+- { id: 대식가, name: 대식가, cost: 1, category: 신체, desc: "식사 효과 2배, 식비 2배" }
+- { id: 무통증, name: 무통증, cost: 3, category: 신체, desc: "고통 패널티 무시. 숨은 부상을 자각하지 못함" }
+- { id: 거구, name: 거구, cost: 2, category: 신체, excludes: [키작음],
+    desc: "근력·체질 +5, 민첩 -5", effects: ["stat.근력 += 5", "stat.체질 += 5", "stat.민첩 -= 5"] }
+- { id: 병약, name: 병약(病弱), cost: -4, category: 신체, excludes: [강골],
+    desc: "체질 성장 -30%. 가끔 앓아누움", effects: ["growth.체질 -= 0.3"] }
+- { id: 유리몸, name: 유리몸, cost: -3, category: 신체, excludes: [강골],
+    desc: "부상 확률 +50%", effects: ["mod.injury += 0.5"] }
+- { id: 허약한심장, name: 허약한 심장, cost: -3, category: 신체, desc: "장기전에서 능력치 하락" }
+- { id: 저질체력, name: 저질 체력, cost: -2, category: 신체, excludes: [질긴힘줄],
+    desc: "피로 축적 +30%", effects: ["mod.fatigue += 0.3"] }
+- { id: 키작음, name: 키 작음, cost: -1, category: 신체, excludes: [거구],
+    desc: "민첩 +5. 일부 대사가 바뀜", effects: ["stat.민첩 += 5"] }
+
+# ---------------------------------------------------------------- 마력
+- { id: 마나탱크, name: 마나 탱크, cost: 4, category: 마력, excludes: [마나회로손상],
+    desc: "마력량 +20", effects: ["stat.마력량 += 20"] }
+- { id: 마도학재능, name: 마도학 재능, cost: 3, category: 마력,
+    desc: "마법 이론 효율 +30%", effects: ["growth.지성 += 0.1", "growth.마력제어 += 0.2"] }
+- { id: 자연친화력, name: 자연 친화력, cost: 2, category: 마력, excludes: [혐오스러운분위기],
+    desc: "정령과 동물이 호감을 가짐" }
+- { id: 마력감응, name: 마력 감응, cost: 3, category: 마력, excludes: [마력둔감],
+    desc: "타인의 잠재 재능을 느낌으로 감지" }
+- { id: 섬세한제어, name: 섬세한 제어, cost: 3, category: 마력, excludes: [마력폭주체질],
+    desc: "마력제어 성장 +25%", effects: ["growth.마력제어 += 0.25"] }
+- { id: 원소친화, name: 원소 친화, cost: 2, category: 마력, options: [화, 수, 풍, 지, 뇌],
+    desc: "택1 원소 위력 +30%" }
+- { id: 성흔, name: 성흔(聖痕), cost: 4, category: 마력, excludes: [마왕의흔적], desc: "신성력 사용 가능" }
+- { id: 무영창소질, name: 무영창 소질, cost: 6, category: 마력, desc: "하급 마법 영창 생략" }
+- { id: 마나회로손상, name: 마나 회로 손상, cost: -5, category: 마력, excludes: [마나탱크],
+    desc: "마법 습득 -70%. 투기 루트 해금", effects: ["growth.마력제어 -= 0.7", "growth.마력량 -= 0.7"] }
+- { id: 마력폭주체질, name: 마력 폭주 체질, cost: -3, category: 마력, excludes: [섬세한제어],
+    desc: "감정이 흔들리면 마법 폭주" }
+- { id: 마력둔감, name: 마력 둔감, cost: -2, category: 마력, excludes: [마력감응], desc: "마법 함정 감지 실패" }
+- { id: 속성부적합, name: 속성 부적합, cost: -1, category: 마력, options: [화, 수, 풍, 지, 뇌],
+    desc: "택1 원소 사용 불가" }
+
+# ---------------------------------------------------------------- 정신
+- { id: 강철멘탈, name: 강철 멘탈, cost: 3, category: 정신, excludes: [겁쟁이],
+    desc: "스트레스 -40%, 의지 +5", effects: ["mod.stress -= 0.4", "stat.의지 += 5"] }
+- { id: 직감, name: 직감, cost: 2, category: 정신, desc: "위험한 선택지에 경고" }
+- { id: 서번트, name: 서번트, cost: 4, category: 정신, options: [검, 마법, 연금, 교육, 신성],
+    desc: "한 분야 성장 +60%, 나머지 -15%" }
+- { id: 집중력, name: 집중력, cost: 2, category: 정신, excludes: [산만함],
+    desc: "수업 효율 +15%", effects: ["growth.지성 += 0.15"] }
+- { id: 완전기억, name: 완전기억, cost: 4, category: 정신, excludes: [망각증], desc: "공략 노트 기억 풍화 없음" }
+- { id: 겁쟁이, name: 겁쟁이, cost: -2, category: 정신, excludes: [강철멘탈],
+    desc: "강적 앞 행동 실패. 극복하면 「용기」", effects: ["stat.의지 -= 5"] }
+- { id: 트라우마, name: 트라우마, cost: -2, category: 정신, options: [불, 물, 어둠, 피],
+    desc: "택1 상황에서 행동 불가. 극복하면 「각성」" }
+- { id: 산만함, name: 산만함, cost: -2, category: 정신, excludes: [집중력],
+    desc: "수업 효율 -15%", effects: ["growth.지성 -= 0.15"] }
+- { id: 게으름, name: 게으름, cost: -1, category: 정신, desc: "아침에 자주 늦잠" }
+- { id: 망각증, name: 망각증, cost: -3, category: 정신, excludes: [완전기억], desc: "기억 풍화 2배" }
+
+# ---------------------------------------------------------------- 사회
+- { id: 귀공자의품격, name: 귀공자의 품격, cost: 2, category: 사회, desc: "귀족 첫인상 +" }
+- { id: 사람좋은얼굴, name: 사람 좋은 얼굴, cost: 2, category: 사회, desc: "평민·아이 호감 +" }
+- { id: 달변, name: 달변, cost: 3, category: 사회, excludes: [말더듬],
+    desc: "설득 판정 +, 매력 +3", effects: ["stat.매력 += 3"] }
+- { id: 카리스마, name: 카리스마, cost: 4, category: 사회, desc: "파티 사기 +, 매력 +5", effects: ["stat.매력 += 5"] }
+- { id: 미모, name: 미모, cost: 3, category: 사회, desc: "첫인상 크게 +, 매력 +8", effects: ["stat.매력 += 8"] }
+- { id: 혐오스러운분위기, name: 혐오스러운 분위기, cost: -3, category: 사회, excludes: [자연친화력],
+    desc: "첫인상 크게 -, 동물이 도망감. 위압 +, 마족 호감 +", effects: ["stat.매력 -= 8"] }
+- { id: 눈치없음, name: 눈치 없음, cost: -2, category: 사회, desc: "숨은 감정 힌트가 안 보임" }
+- { id: 악명높은가문, name: 악명 높은 가문, cost: -3, category: 사회, desc: "시작 평판 최악", effects: ["reputation -= 30"] }
+- { id: 말더듬, name: 말더듬, cost: -1, category: 사회, excludes: [달변], desc: "발표 판정 -" }
+- { id: 음치, name: 음치, cost: -1, category: 사회, desc: "축제 개그" }
+
+# ---------------------------------------------------------------- 특수
+- { id: 행운아, name: 행운아, cost: 3, category: 특수, excludes: [불운], desc: "랜덤 판정 보정", effects: ["luck += 2"] }
+- { id: 짐승의혈통, name: 짐승의 혈통, cost: 5, category: 특수, desc: "야성 감각, 수인족 호감", effects: ["stat.민첩 += 3"] }
+- { id: 영웅의그릇, name: 영웅의 그릇, cost: 7, category: 특수, desc: "모든 능력치 상한 +10 (2회차 해금)",
+    locked: "meta.clears < 1" }
+- { id: 불운, name: 불운, cost: -2, category: 특수, excludes: [행운아], desc: "랜덤 판정 불리", effects: ["luck -= 2"] }
+- { id: 마왕의흔적, name: 마왕의 흔적, cost: -4, category: 특수, excludes: [성흔],
+    desc: "마기 보유. 교회의 의심. 마족 루트 해금" }
+- { id: 몸주인의잔재, name: 몸 주인의 잔재, cost: -2, category: 특수, desc: "원래 몸 주인의 기억이 튀어나옴" }

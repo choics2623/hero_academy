@@ -1,0 +1,32 @@
+- id: 평민장학생
+  name: 평민 장학생
+  points: 12
+  desc: 자유롭지만 귀족에게 무시당한다.
+  effects: ["money = 25", "allowance = 10"]
+
+- id: 몰락귀족
+  name: 몰락 귀족 3남
+  points: 10
+  talents: [귀공자의품격]
+  desc: 이름은 있지만 돈이 없다. 가문 빚이 있다.
+  effects: ["money = 15", "allowance = 5", "debt = 100"]
+
+- id: 악역도련님
+  name: 원작 1권에서 죽는 악역 도련님
+  points: 6
+  talents: [악명높은가문]
+  desc: 에드릭 벨모어. 시작 평판 최악, 1학년 5월 사망 플래그. 대신 돈이 많다.
+  effects: ["money = 200", "allowance = 60"]
+
+- id: 엑스트라
+  name: 이름 없는 엑스트라
+  points: 15
+  desc: 아무도 주목하지 않는다. 원작 개입 시 붕괴도 증가 -20%.
+  effects: ["money = 40", "allowance = 15", "mod.collapse = -0.2"]
+
+- id: 숲고아
+  name: 숲 출신 고아
+  points: 11
+  talents: [자연친화력]
+  desc: 엘프 호감. 귀족 예법에 서툴다.
+  effects: ["money = 10", "allowance = 5"]

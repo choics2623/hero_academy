@@ -1,0 +1,54 @@
+# 게임 규칙. 엔진은 이 파일과 나머지 YAML만 보고 동작한다.
+
+calendar:
+  start: "0.2.1"          # 입학 전 2월 1주차 (서장)
+  end: "1.6.4"            # MVP 범위: 1학년 6월까지
+  weeks_per_month: 4
+  slots: [방과후, 밤, 주말]
+  overrides:
+    - { from: "0.2", to: "0.2", slots: [오전, 오후] }   # 서장은 하루 두 번 행동 (한 달 8회)
+
+base_stats: { 근력: 10, 민첩: 10, 체질: 10, 마력량: 10, 마력제어: 10, 지성: 10, 의지: 10, 매력: 10 }
+
+clamps:
+  "stat.*": [0, 100]
+  "affinity.*": [0, 100]
+  "trust.*": [-50, 50]
+  fatigue: [0, 100]
+  stress: [0, 100]
+  money: [0, 9999]
+
+creation:
+  max_talents: 8
+  negative_cap: 12
+  stat_per_point: 2
+
+initial:
+  - "money = 20"
+  - "allowance = 10"
+
+hooks:
+  week_end:
+    - "fatigue -= 20"
+    - "stress -= 5"
+  month_end:
+    - "money += allowance"
+
+# 해가 바뀔 때 ★★★ 기억이 ★★로 흐려질 확률
+memory_decay: "0.3 * (1 - talent.완전기억) * (1 + talent.망각증) * (1 - 0.5 * perk.고인물의기억)"
+
+status:
+  - { key: stat.근력, label: 근력 }
+  - { key: stat.민첩, label: 민첩 }
+  - { key: stat.체질, label: 체질 }
+  - { key: stat.마력량, label: 마력량 }
+  - { key: stat.마력제어, label: 마력제어 }
+  - { key: stat.지성, label: 지성 }
+  - { key: stat.의지, label: 의지 }
+  - { key: stat.매력, label: 매력 }
+  - { key: fatigue, label: 피로 }
+  - { key: stress, label: 스트레스 }
+  - { key: money, label: 돈 }
+
+# 캐릭터 목록 말고 화자로 쓸 수 있는 이름
+speakers: [속마음, 시스템, 나, 감독관, 서점 주인, 늙은 하인, 학생들]

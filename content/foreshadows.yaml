@@ -1,0 +1,11 @@
+# 복선. pending = 아직 회수 이벤트를 쓰지 않음 (회수 예정 시점 메모)
+
+- { id: F01, title: 입학식에서 몸이 떨림, meaning: "잠재 재능 「이계의 영혼」", pending: "3학년 가을" }
+- { id: F02, title: "사서의 \"또 시작이구나\"", meaning: "초대 용사가 반복을 기억함", pending: "10장" }
+- { id: F03, title: 미궁 3층의 교단 문양, meaning: "차원문 의식은 10년 전부터 준비 중", pending: "8장" }
+- { id: F04, title: 피로 그린 원, meaning: "에드릭은 사고가 아니라 제물이었다" }
+- { id: F05, title: 리아나가 가슴을 짚음, meaning: "허약한 심장 → 2학년 여름 사망 원인", pending: "2학년 여름" }
+- { id: F06, title: 연구실의 소녀 초상화, meaning: "비스톨 교수의 죽은 딸 엘레나", pending: "4학년 봄" }
+- { id: F07, title: 핀이 피를 보면 손을 떪, meaning: "핀의 트라우마", pending: "핀 각성 이벤트" }
+- { id: F10, title: 그날 밤 황궁의 검은 마차, meaning: "황제 암살 진범 단서", pending: "6장" }
+- { id: F14, title: 찢긴 일기장의 마지막 장, meaning: "몸 주인은 이전 회차를 눈치챈 사람", pending: "3학년 가을" }
