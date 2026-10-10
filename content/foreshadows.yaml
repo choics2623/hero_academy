@@ -24,3 +24,5 @@
 - { id: F41, title: 처음 온 시계탑을 아는 아렌, meaning: "아렌도 반복의 기억 조각을 가지고 있다", pending: "9장" }
 # 42_dorm_quests
 - { id: F40, title: 처음 보는데 익숙한 곳, meaning: "아렌도 반복의 기억 조각을 가지고 있다", pending: "9장" }
+# 40_classes_clubs
+- { id: F24, title: 아렌이 처음 듣는 지명을 아는 것 같음, meaning: "아렌도 반복의 기억 조각을 가지고 있음", pending: "9장" }
