@@ -261,7 +261,7 @@ button:active:not([disabled]) { transform: scale(0.98); }
 .combatant { position: relative; overflow: hidden; border: 1px solid var(--line); background: var(--page); border-radius: var(--r); padding: 10px 12px; display: grid; gap: 7px; box-shadow: var(--shadow); }
 .combatant.foe { border-color: var(--doom-line); }
 .combatant.enraged { box-shadow: 0 0 0 1px var(--doom), 0 0 26px -8px var(--doom); }
-.ch { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.ch { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .ch b { font: 600 15px var(--font-ui); }
 .num { font: 12px var(--font-sys); color: var(--muted); font-variant-numeric: tabular-nums; }
 .gauge { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
@@ -318,6 +318,130 @@ button:active:not([disabled]) { transform: scale(0.98); }
 @keyframes stamp { from { opacity: 0; transform: scale(1.9) rotate(-8deg); } to { opacity: 1; transform: scale(1) rotate(-2deg); } }
 .continue.fight { background: var(--doom); color: var(--on-accent); }
 
+
+/* ---------- 도트 그림 */
+.px { image-rendering: pixelated; image-rendering: crisp-edges; display: block; flex: none; }
+img.icon { display: inline-block; vertical-align: -3px; }
+.portrait { border-radius: 4px; box-shadow: 0 0 0 1px var(--line); background: var(--line); }
+.portrait.flip { transform: scaleX(-1); }
+
+/* 대사: 초상화 + 말풍선 */
+.say { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; align-items: start; margin: 0.2em 0 0.8em; }
+.say .bubble { padding-top: 2px; min-width: 0; }
+.say.me { grid-template-columns: minmax(0, 1fr) 64px; }
+.say.me .portrait, .say.me .crowd { order: 2; }
+.say.me .bubble { text-align: right; }
+.say .ghost-pt { visibility: hidden; height: 1px; box-shadow: none; }
+.say .crowd { justify-self: center; margin-top: 4px; }
+
+/* 삽화와 장소 띠 */
+.art { margin: 0.4em 0 1.1em; }
+.art img, .strip img, .month img, .hero img, .ending-art { width: 100%; height: auto; border-radius: 4px; box-shadow: 0 0 0 1px var(--line), var(--shadow); }
+.art figcaption { font: 11.5px var(--font-sys); color: var(--muted); margin-top: 6px; letter-spacing: 0.04em; }
+.strip { margin: 0 0 12px; height: 84px; overflow: hidden; border-radius: 4px; }
+.strip img { height: 100%; object-fit: cover; object-position: center 62%; box-shadow: none; }
+.scene.reveal > .art img { animation: artIn 0.9s ease-out both; }
+@keyframes artIn { from { opacity: 0; filter: brightness(2) saturate(0); } }
+
+/* 주 / 달 넘김 */
+.weekly { display: grid; gap: 6px; }
+.wtop { display: flex; align-items: center; gap: 6px; }
+.weekly .season { margin: 0; font: 14px/1.6 var(--font-story); color: var(--muted); }
+.month { margin: 26px 0 8px; border: 1px solid var(--line); border-radius: var(--r); background: var(--page); overflow: hidden; box-shadow: var(--shadow); }
+.month img { border-radius: 0; box-shadow: none; max-height: 200px; object-fit: cover; object-position: center 60%; }
+.mcap { padding: 12px 16px 14px; display: grid; gap: 4px; }
+.mcap h2 { margin: 0; font: 400 26px/1.2 var(--font-title); }
+.mcap .season { margin: 0; font: 15px/1.6 var(--font-story); color: var(--muted); }
+.mcap .mrec { margin: 4px 0 0; font: 12px/1.6 var(--font-sys); color: var(--gold); }
+
+/* 인물 등장 카드 */
+.intro-card { display: flex; align-items: center; gap: 16px; margin: 0.6em 0 1em; padding: 12px 14px; border: 1px solid var(--sys-line); border-radius: var(--r); background: linear-gradient(100deg, var(--sys-bg), transparent 70%); }
+.intro-card .portrait { box-shadow: 0 0 0 1px var(--sys-line), var(--shadow); }
+.ic-text { display: grid; gap: 2px; min-width: 0; }
+.ic-k { font: 11px var(--font-sys); color: var(--sys); letter-spacing: 0.14em; }
+.ic-text b { font: 400 28px/1.15 var(--font-title); }
+.ic-d { font: 14px/1.5 var(--font-story); color: var(--muted); }
+.scene.reveal > .intro-card { animation: cardIn 0.6s cubic-bezier(0.2, 0.9, 0.3, 1) both; animation-delay: calc(var(--i, 0) * 70ms); }
+@keyframes cardIn { from { opacity: 0; transform: translateX(-24px); } }
+
+/* 판정 주사위 */
+.check { display: flex; align-items: center; gap: 10px; }
+.die-wrap { position: relative; width: 32px; height: 32px; display: inline-grid; place-items: center; flex: none; }
+.die-wrap .d20 { position: absolute; inset: 0; }
+.check .die { position: relative; font: 700 12px/1 var(--font-sys); color: #0e0b16; min-width: 0; }
+.die-wrap.nat20 .d20 { filter: drop-shadow(0 0 4px var(--gold)); }
+.die-wrap.nat1 .d20 { filter: drop-shadow(0 0 3px var(--doom)) saturate(0.4); }
+.cinfo { display: flex; flex-wrap: wrap; gap: 0 8px; align-items: baseline; min-width: 0; }
+.clabel { color: var(--ink); }
+.cmath { font-variant-numeric: tabular-nums; }
+.check.rolling .die-wrap { animation: roll 0.62s cubic-bezier(0.25, 0.7, 0.35, 1); }
+.check.rolling .tag, .check.rolling .cmath { opacity: 0; }
+.check.landed .tag { animation: stampIn 0.4s cubic-bezier(0.2, 1.6, 0.4, 1); }
+.check.landed .cmath { animation: lineIn 0.3s ease-out; }
+@keyframes roll {
+  0% { transform: translate(-130px, -14px) rotate(-760deg); }
+  30% { transform: translate(-64px, 0) rotate(-380deg); }
+  45% { transform: translate(-34px, -9px) rotate(-170deg); }
+  62% { transform: translate(0, 0) rotate(0deg); }
+  78% { transform: translate(5px, -3px) rotate(14deg); }
+  100% { transform: none; }
+}
+@keyframes stampIn { from { transform: scale(1.8); opacity: 0; } }
+.float.spark { color: var(--gold); font-size: 14px; top: 0; }
+
+/* 활동 버튼 */
+.activity { grid-template-columns: 32px minmax(0, 1fr); column-gap: 10px; align-items: start; }
+.activity .atext { display: grid; gap: 2px; min-width: 0; }
+.activity .k { margin-right: 6px; }
+.act-ic { margin-right: 6px; }
+.act:has(.act-ic)::before { content: ''; }
+
+/* 상태창 */
+.sname { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.stat { grid-template-columns: 6.4em minmax(0, 1fr) 3.4em; }
+.me-card { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.rel { grid-template-columns: 64px minmax(0, 1fr); column-gap: 12px; }
+.rel > :not(.rel-pt) { grid-column: 2; }
+.rel-pt { grid-row: 1 / span 6; }
+
+/* 전투 초상화 */
+.foe-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.22; pointer-events: none; }
+.combatant > :not(.foe-bg):not(.float) { position: relative; }
+.cn { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.combatant.hit .cpt, .combatant.hurt .cpt { animation: flashWhite 0.35s steps(2); }
+@keyframes flashWhite { 50% { filter: brightness(2.6) saturate(0); } }
+.intent b { display: inline-flex; align-items: center; gap: 8px; }
+.intent.hidden .iic, .intent.vague .iic { opacity: 0.55; }
+.chip.ally { display: inline-flex; align-items: center; gap: 5px; }
+img.mini { width: 22px; height: 22px; border-radius: 3px; box-shadow: none; }
+.toast { display: flex; align-items: center; gap: 8px; }
+
+/* 캐릭터 만들기 */
+.hero { margin: 0 0 22px; max-width: 760px; }
+.look-row { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; }
+.look-preview { display: grid; gap: 8px; justify-items: center; }
+.look-moods { display: flex; gap: 4px; }
+.look-opts { flex: 1 1 280px; display: grid; gap: 10px; }
+.look-group { display: grid; gap: 4px; }
+.look-group .lg { font: 12px var(--font-sys); color: var(--muted); }
+.chip.pick { cursor: pointer; background: var(--page); padding: 3px 10px; }
+.chip.pick[aria-pressed="true"] { border-color: var(--sys); color: var(--sys); background: var(--sys-bg); box-shadow: inset 0 0 0 1px var(--sys); }
+.ending-art { margin-bottom: 6px; }
+.doom-ic { margin-right: -8px; }
+
+/* 계절 입자 */
+#ambience { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+#app > * { position: relative; z-index: 1; }
+#ambience i { position: absolute; top: -12px; left: var(--x); animation: fall var(--d) linear var(--delay) infinite; }
+#ambience.petal i { width: 5px; height: 4px; background: #f6a9c1; border-radius: 4px 0; opacity: 0.55; }
+#ambience.leaf i { width: 5px; height: 4px; background: #8fd16a; border-radius: 0 4px; opacity: 0.4; }
+#ambience.snow i { width: 3px; height: 3px; background: #fff; border-radius: 50%; opacity: 0.7; box-shadow: 0 0 2px rgba(120, 140, 180, 0.6); }
+#ambience.rain i { width: 1px; height: 14px; background: linear-gradient(transparent, rgba(110, 160, 220, 0.55)); animation-name: rain; }
+#ambience.firefly i { top: var(--y); width: 3px; height: 3px; border-radius: 50%; background: #d4f08a; box-shadow: 0 0 6px 2px rgba(212, 240, 138, 0.5); animation-name: drift; animation-timing-function: ease-in-out; animation-direction: alternate; }
+@keyframes fall { to { transform: translate(var(--drift), 105vh) rotate(540deg); } }
+@keyframes rain { to { transform: translate(-30px, 105vh); } }
+@keyframes drift { 0% { transform: translate(0, 0); opacity: 0.1; } 50% { opacity: 0.9; } 100% { transform: translate(var(--drift), -40px); opacity: 0.2; } }
+
 @media (max-width: 860px) {
   .create-grid { grid-template-columns: minmax(0, 1fr); padding-bottom: 120px; }
   .ledger { position: static; }
@@ -338,6 +462,8 @@ button:active:not([disabled]) { transform: scale(0.98); }
   .panel.open { transform: none; }
   .story { margin-left: calc(var(--gutter) * -1); margin-right: calc(var(--gutter) * -1); padding-inline: var(--gutter); }
   .scene { font-size: 16.5px; }
+  .say { gap: 10px; }
+  .strip { height: 48px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -345,6 +471,7 @@ button:active:not([disabled]) { transform: scale(0.98); }
 }
 </style>
 
+<div id="ambience" aria-hidden="true"></div>
 <div id="app">
   <header class="bar">
     <div class="brand">멸망까지 10년</div>

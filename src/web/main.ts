@@ -6,7 +6,12 @@ import { applyBuild } from '../engine/creation';
 import { Game, type GameState } from '../engine/game';
 import type { RenderedLine } from '../engine/text';
 import { World } from '../engine/world';
+import {
+  ACTIVITY_ICON, CAST, DEFAULT_PLAYER, INTENT_ICON, PLAYER_EYES, PLAYER_HAIR, PLAYER_HAIR_COLOR, PLAYER_SKIN, STAT_ICON,
+  extraLook, playerLook, todOf, type Look,
+} from '../art';
 import { animateBar, attachRipple, floatText, loadSoundPref, reduceMotion, replay, rollDice, setSound, sfx, soundOn, toast } from './fx';
+import { enemyImg, iconImg, portraitImg, sceneImg } from './visuals';
 
 declare global {
   interface Window {
@@ -16,9 +21,10 @@ declare global {
 }
 
 type LogItem =
-  | { k: 'scene'; when: string; title?: string; lines: RenderedLine[]; cont?: boolean; flavor?: boolean }
-  | { k: 'act'; text: string; deltas?: string[]; ranks?: string[] }
-  | { k: 'week'; title: string; items: string[] }
+  | { k: 'scene'; when: string; title?: string; lines: RenderedLine[]; cont?: boolean; flavor?: boolean; tod?: string; strip?: string; intros?: string[] }
+  | { k: 'act'; text: string; deltas?: string[]; ranks?: string[]; icon?: string }
+  | { k: 'week'; title: string; items: string[]; season?: string }
+  | { k: 'month'; title: string; art: string; season: string; items: string[] }
   | { k: 'battle'; enemy: string; lines: BattleLine[]; start?: boolean; result?: 'win' | 'lose' };
 interface Save {
   v: 1;
@@ -27,6 +33,8 @@ interface Save {
   log: LogItem[];
   weekKey?: string;
   weekSnap?: Record<string, number>;
+  monthSnap?: Record<string, number>;
+  introduced?: string[];
 }
 type Tab = 'goals' | 'status' | 'people' | 'notes' | 'fate';
 
@@ -43,6 +51,10 @@ let rendered = 0;
 let tab: Tab = 'goals';
 let weekKey = '';
 let weekSnap: Record<string, number> = {};
+let monthSnap: Record<string, number> = {};
+/** 인물 소개 카드를 이미 보여준 캐릭터 */
+let introduced = new Set<string>();
+let lastActivity = '';
 let busy = false;
 /** 직전 턴의 전투 연출 정보 */
 let turnFx: { lines: BattleLine[]; prev?: { hp: number; ehp: number; sp: number; mp: number }; ended?: 'win' | 'lose' } | null = null;
@@ -75,6 +87,40 @@ function deadlineText(label: string): string {
   return `${y}학년 ${m}월${w ? ` ${w}주차` : ''}까지`;
 }
 
+// ---- 그림
+
+const byName = new Map([...content.characters.values()].map((c) => [c.name, c.id]));
+const CROWD = new Set(['학생들', '관중']);
+const NO_FACE = new Set(['속마음', '시스템', '판정', '📌', '삽화']);
+
+/** 화자 이름 → 초상화 외형 (없으면 null) */
+function lookOf(speaker: string): { key: string; look: Look } | null {
+  if (NO_FACE.has(speaker) || CROWD.has(speaker)) return null;
+  if (speaker === '나') return { key: `me:${JSON.stringify(build.look ?? DEFAULT_PLAYER)}:${build.origin}`, look: myLook() };
+  const id = byName.get(speaker);
+  if (id && CAST[id]) return { key: id, look: CAST[id] };
+  return { key: `x:${speaker}`, look: extraLook(speaker) };
+}
+
+function myLook(): Look {
+  return playerLook(build.look, build.origin);
+}
+
+/** 주마다 바뀌는 계절 한 줄 (월 → 주차별) */
+const SEASON: Record<number, string[]> = {
+  2: ['2월의 시골. 입김이 하얗다.', '눈이 녹아 길이 질척하다.', '입학까지 두 주.', '짐을 꾸렸다. 곧 아카데미다.'],
+  3: ['교정에 벚꽃이 피기 시작했다.', '벚꽃이 한창이다. 신입생들이 길을 헤맨다.', '꽃잎이 바람에 흩날린다.', '벚꽃이 지고 새잎이 돋는다.'],
+  4: ['아침 공기가 부드러워졌다.', '온실의 꽃들이 일제히 피었다.', '봄비가 하루 종일 내렸다.', '훈련장 흙바닥이 말라 먼지가 인다.'],
+  5: ['신록이 짙어진다. 창밖이 온통 초록이다.', '축제 준비로 교정이 들썩인다.', '밤바람이 따뜻하다.', '이른 매미 소리가 들린다.'],
+  6: ['시험 기간. 도서관에 빈자리가 없다.', '장마가 시작됐다.', '빗소리에 잠이 잘 온다.', '장마가 그쳤다. 하늘이 높다.'],
+  7: ['무투대회 공고가 붙었다. 교정이 술렁인다.', '한낮의 훈련장은 찜통이다.', '밤마다 반딧불이가 난다.', '학기가 끝나 간다.'],
+};
+const MONTH_ART: Record<number, string> = { 2: 'home_room', 3: 'academy_gate', 4: 'campus', 5: 'greenhouse', 6: 'library', 7: 'arena' };
+
+function seasonLine(m: number, w: number): string {
+  return SEASON[m]?.[Math.max(0, Math.min(3, w - 1))] ?? '';
+}
+
 function twoStep(b: HTMLButtonElement, armedText: string, run: () => void) {
   const original = b.textContent!;
   let armed = false;
@@ -99,7 +145,7 @@ function twoStep(b: HTMLButtonElement, armedText: string, run: () => void) {
 // ------------------------------------------------------------ save
 
 function snapshot(): Save | null {
-  return game ? { v: 1, build, state: game.state, log: log.slice(-150), weekKey, weekSnap } : null;
+  return game ? { v: 1, build, state: game.state, log: log.slice(-150), weekKey, weekSnap, monthSnap, introduced: [...introduced] } : null;
 }
 function readSave(): Save | null {
   try {
@@ -170,6 +216,9 @@ function renderCreate() {
 
   // 소개
   const intro = el('section', 'intro');
+  const hero = el('figure', 'hero');
+  hero.append(sceneImg('title', 'night', '', '금 간 밤하늘 아래의 에테르 아카데미'));
+  intro.append(hero);
   intro.append(el('h1', undefined, '멸망까지 10년'));
   const lede = el('p', 'lede');
   lede.append(
@@ -205,6 +254,40 @@ function renderCreate() {
   });
   sName.append(input);
   main.append(sName);
+
+  // 외모
+  const sLook = el('section', 'step');
+  const hLook = el('h3', undefined, '외모');
+  hLook.append(el('small', undefined, '이 몸의 얼굴. 능력과는 상관없다'));
+  sLook.append(hLook);
+  const lookRow = el('div', 'look-row');
+  const cur = { ...DEFAULT_PLAYER, ...(build.look ?? {}) };
+  const preview = el('div', 'look-preview');
+  preview.append(portraitImg(`me:${JSON.stringify(cur)}:${build.origin}`, playerLook(cur, build.origin), '', 3));
+  const moodRow = el('div', 'look-moods');
+  for (const m of ['웃음', '놀람', '진지'] as const) moodRow.append(portraitImg(`me:${JSON.stringify(cur)}:${build.origin}`, playerLook(cur, build.origin), m, 1));
+  preview.append(moodRow);
+  lookRow.append(preview);
+  const opts = el('div', 'look-opts');
+  const optGroup = (label: string, key: keyof typeof cur, list: { id: string; label: string }[]) => {
+    const g = el('div', 'look-group');
+    g.append(el('span', 'lg', label));
+    const chips = el('div', 'chips');
+    for (const o of list) {
+      const b = button('chip pick', o.label, () => setBuild({ ...build, look: { ...cur, [key]: o.id } }), `look-${key}-${o.id}`);
+      b.setAttribute('aria-pressed', String(cur[key] === o.id));
+      chips.append(b);
+    }
+    g.append(chips);
+    opts.append(g);
+  };
+  optGroup('머리 모양', 'hair', PLAYER_HAIR);
+  optGroup('머리색', 'hairColor', PLAYER_HAIR_COLOR);
+  optGroup('눈', 'eyes', PLAYER_EYES);
+  optGroup('피부', 'skin', PLAYER_SKIN);
+  lookRow.append(opts);
+  sLook.append(lookRow);
+  main.append(sLook);
 
   // 출신
   const sOrigin = el('section', 'step');
@@ -392,6 +475,8 @@ function renderCreate() {
 // ------------------------------------------------------------ game
 
 function showCreate() {
+  ambienceKey = '';
+  $('ambience').replaceChildren();
   $('screen-game').hidden = true;
   $('screen-create').hidden = false;
   for (const id of ['clock', 'meter', 'panel-toggle', 'restart']) $(id).hidden = true;
@@ -412,6 +497,7 @@ function startGame() {
   game = Game.create(content, structuredClone(build), Math.floor(Math.random() * 2147483646) + 1);
   log = [];
   weekKey = '';
+  introduced = new Set();
   capture(false);
   writeSave();
   showGame();
@@ -423,6 +509,8 @@ function resume(s: Save) {
   log = s.log ?? [];
   weekKey = s.weekKey ?? '';
   weekSnap = s.weekSnap ?? {};
+  monthSnap = s.monthSnap ?? {};
+  introduced = new Set(s.introduced ?? []);
   showGame();
 }
 
@@ -466,12 +554,28 @@ function checkWeek() {
   if (!weekKey) {
     weekKey = key;
     weekSnap = tracked();
+    monthSnap = tracked();
     return;
   }
   if (key === weekKey) return;
   const [y, m, w] = weekKey.split('.');
+  const t = game!.state.time;
   const items = describeDiff(weekSnap, tracked(), 1).filter((x) => !x.startsWith('피로') && !x.startsWith('스트레스'));
-  if (items.length) log.push({ k: 'week', title: `${y === '0' ? '입학 전' : `${y}학년`} ${m}월 ${w}주차 결산`, items });
+  const monthChanged = String(t.m) !== m;
+  if (items.length || !monthChanged) {
+    log.push({ k: 'week', title: `${y === '0' ? '입학 전' : `${y}학년`} ${m}월 ${w}주차 결산`, items, season: monthChanged ? undefined : seasonLine(t.m, t.w) });
+  }
+  if (monthChanged) {
+    const mi = describeDiff(monthSnap, tracked(), 2).filter((x) => !x.startsWith('피로') && !x.startsWith('스트레스'));
+    log.push({
+      k: 'month',
+      title: `${t.y === 0 ? '입학 전' : `${t.y}학년`} ${t.m}월`,
+      art: MONTH_ART[t.m] ?? 'campus',
+      season: seasonLine(t.m, t.w),
+      items: mi.length ? [`지난달: ${mi.join(' · ')}`] : [],
+    });
+    monthSnap = tracked();
+  }
   weekKey = key;
   weekSnap = tracked();
 }
@@ -487,7 +591,24 @@ function capture(cont: boolean) {
   checkWeek();
   const v = game!.view();
   if (v.phase === 'scene' && v.lines.length) {
-    log.push({ k: 'scene', when: v.time, title: v.title, lines: v.lines, cont, flavor: isFlavor() });
+    const tod = todOf(cal.slotName(game!.state.time));
+    let strip: string | undefined;
+    if (!cont && v.title && !v.lines.some((l) => l.speaker === '삽화')) {
+      const ev = content.events.get(game!.state.scene?.eventId ?? '');
+      if (ev?.trigger.kind === 'activity') {
+        const aid = ev.trigger.ids.includes(lastActivity) ? lastActivity : ev.trigger.ids[0];
+        strip = content.activities.get(aid)?.art;
+      }
+    }
+    const intros: string[] = [];
+    for (const l of v.lines) {
+      const id = l.speaker ? byName.get(l.speaker) : undefined;
+      if (id && CAST[id] && !introduced.has(id)) {
+        introduced.add(id);
+        intros.push(l.speaker!);
+      }
+    }
+    log.push({ k: 'scene', when: v.time, title: v.title, lines: v.lines, cont, flavor: isFlavor(), tod, strip, intros: intros.length ? intros : undefined });
   }
 }
 
@@ -503,6 +624,7 @@ function act(a: Action, label: string) {
   const prev = barsOf();
   const enemyName = wasBattle ? content.enemies.get(game.state.battle!.enemy)!.name : '';
   const at = log.length;
+  if (a.type === 'activity') lastActivity = a.id;
   game.act(a);
   const ended = game.state.lastBattle?.result;
   if (wasBattle) {
@@ -532,7 +654,9 @@ function act(a: Action, label: string) {
     turnFx = null;
   }
   checkWeek();
-  if (label || deltas.length || ranks.length) log.splice(at, 0, { k: 'act', text: label, deltas, ranks });
+  if (label || deltas.length || ranks.length) {
+    log.splice(at, 0, { k: 'act', text: label, deltas, ranks, icon: a.type === 'activity' ? ACTIVITY_ICON[a.id] : undefined });
+  }
   writeSave();
   renderGame(true);
 }
@@ -559,38 +683,84 @@ function doomText(): string {
   return `멸망까지 ${Math.floor(left / 12)}년 ${left % 12}개월`;
 }
 
-function renderLine(l: RenderedLine): HTMLElement {
+function renderLine(l: RenderedLine, tod = 'day', prev = ''): HTMLElement {
   if (!l.speaker) return el('p', undefined, l.text);
   if (l.speaker === '속마음') return el('p', 'inner', l.text);
   if (l.speaker === '시스템') return el('div', 'sysline', l.text);
-  if (l.speaker === '판정') {
-    const ok = l.text.endsWith('성공');
-    const d = el('div', ok ? 'check ok' : 'check ng');
-    const body = l.text.replace(/ · (성공|실패)$/, '');
-    const m = /^(.*주사위 )(\d+)(.*)$/.exec(body);
-    const text = el('span');
-    if (m) {
-      const die = el('b', 'die', m[2]);
-      die.dataset.final = m[2];
-      text.append(m[1], die, m[3]);
-    } else text.append(body);
-    d.append(el('span', 'tag', ok ? '성공' : '실패'), text);
-    return d;
+  if (l.speaker === '삽화') {
+    const f = el('figure', 'art');
+    const title = content.art.get(l.text)?.title ?? '';
+    f.append(sceneImg(l.text, tod, '', title));
+    if (title) f.append(el('figcaption', undefined, title));
+    return f;
   }
+  if (l.speaker === '판정') return renderCheck(l.text);
   if (l.speaker === '📌') {
     const [kind, rest] = l.text.split(' — ');
     const d = el('div', 'pin');
-    d.append(el('span', 'tag', kind), el('span', undefined, rest ?? ''));
+    d.append(iconImg(kind.includes('회수') ? 'target' : 'eye', 1), el('span', 'tag', kind), el('span', undefined, rest ?? ''));
     return d;
   }
-  const p = el('p', l.speaker === '나' ? 'say me' : 'say');
-  p.append(el('span', 'who', l.speaker === '나' ? build.name : l.speaker), `“${l.text}”`);
+  const me = l.speaker === '나';
+  const p = el('div', me ? 'say me' : 'say');
+  const face = lookOf(l.speaker);
+  const same = prev === l.speaker;
+  if (face) {
+    const img = portraitImg(face.key, face.look, l.mood ?? '', 2, me ? 'flip' : '');
+    if (same) img.classList.add('ghost-pt');
+    p.append(img);
+  } else p.append(iconImg('people', 2, 'crowd'));
+  const body = el('div', 'bubble');
+  if (!same) body.append(el('span', 'who', me ? build.name : l.speaker));
+  body.append(`“${l.text}”`);
+  p.append(body);
   return p;
+}
+
+/** 처음 등장하는 인물의 소개 카드 */
+function introCard(name: string): HTMLElement {
+  const id = byName.get(name)!;
+  const ch = content.characters.get(id)!;
+  const d = el('div', 'intro-card');
+  d.append(portraitImg(id, CAST[id], '', 3));
+  const t = el('div', 'ic-text');
+  t.append(el('span', 'ic-k', '인물 등장'), el('b', undefined, ch.name));
+  if (ch.desc) t.append(el('span', 'ic-d', ch.desc));
+  d.append(t);
+  return d;
+}
+
+/** 판정 줄: 작은 주사위가 굴러와서 멈춘다 */
+function renderCheck(text: string): HTMLElement {
+  const ok = text.endsWith('성공');
+  const d = el('div', ok ? 'check ok' : 'check ng');
+  const body = text.replace(/ · (성공|실패)$/, '');
+  const m = /^(.*?) · (-?\d+) \+ 주사위 (\d+) = (-?\d+) \/ 목표 (\d+)$/.exec(body);
+  if (!m) {
+    d.append(el('span', 'tag', ok ? '성공' : '실패'), el('span', undefined, body));
+    return d;
+  }
+  const [, label, value, die, sum, dc] = m;
+  const n = Number(die);
+  const wrap = el('span', `die-wrap${n === 20 ? ' nat20' : n === 1 ? ' nat1' : ''}`);
+  wrap.append(iconImg('dice', 2, 'd20'));
+  const num = el('b', 'die', die);
+  num.dataset.final = die;
+  wrap.append(num);
+  const info = el('span', 'cinfo');
+  info.append(el('b', 'clabel', label));
+  const math = el('span', 'cmath', `${value} + 주사위 ${die} = ${sum} / 목표 ${dc}`);
+  info.append(math);
+  const tag = el('span', 'tag', ok ? (n === 20 ? '대성공' : '성공') : n === 1 ? '대실패' : '실패');
+  d.append(wrap, info, tag);
+  return d;
 }
 
 function renderItem(item: LogItem): HTMLElement {
   if (item.k === 'act') {
-    const d = el('div', item.text ? 'act' : 'act bare', item.text);
+    const d = el('div', item.text ? 'act' : 'act bare');
+    if (item.icon) d.append(iconImg(item.icon, 1, 'act-ic'));
+    d.append(item.text);
     if (item.deltas?.length) d.append(el('span', 'delta', item.deltas.join(' · ')));
     if (item.ranks?.length) {
       const r = el('span', 'ranks');
@@ -613,18 +783,47 @@ function renderItem(item: LogItem): HTMLElement {
   }
   if (item.k === 'week') {
     const d = el('div', 'weekly');
-    d.append(el('span', 'wt', item.title));
-    const chips = el('span', 'chips');
-    for (const x of item.items) chips.append(el('span', x.includes('-') ? 'chip down' : 'chip', x));
-    d.append(chips);
+    const top = el('div', 'wtop');
+    top.append(iconImg('hourglass', 1), el('span', 'wt', item.title));
+    d.append(top);
+    if (item.items.length) {
+      const chips = el('span', 'chips');
+      for (const x of item.items) chips.append(el('span', x.includes('-') ? 'chip down' : 'chip', x));
+      d.append(chips);
+    }
+    if (item.season) d.append(el('p', 'season', item.season));
+    return d;
+  }
+  if (item.k === 'month') {
+    const d = el('section', 'month');
+    d.append(sceneImg(item.art, 'day', 'month-art'));
+    const cap = el('div', 'mcap');
+    cap.append(el('h2', undefined, item.title), el('p', 'season', item.season));
+    for (const x of item.items) cap.append(el('p', 'mrec', x));
+    d.append(cap);
     return d;
   }
   const a = el('article', item.cont || item.flavor ? 'scene cont' : 'scene');
+  if (item.strip) {
+    const f = el('figure', 'strip');
+    f.append(sceneImg(item.strip, item.tod ?? 'day', '', content.art.get(item.strip)?.title ?? ''));
+    a.append(f);
+  }
   if (!item.cont && !item.flavor) {
     a.append(el('div', 'when', item.when));
     if (item.title) a.append(el('h2', undefined, item.title));
   }
-  for (const l of item.lines) a.append(renderLine(l));
+  let prev = '';
+  const intros = new Set(item.intros ?? []);
+  for (const l of item.lines) {
+    if (l.speaker && intros.has(l.speaker)) {
+      intros.delete(l.speaker);
+      a.append(introCard(l.speaker));
+      prev = '';
+    }
+    a.append(renderLine(l, item.tod ?? 'day', prev));
+    prev = l.speaker && !['판정', '📌', '시스템', '삽화'].includes(l.speaker) ? l.speaker : '';
+  }
   return a;
 }
 
@@ -647,6 +846,7 @@ function renderControls() {
   c.replaceChildren();
   if (v.phase === 'ended') {
     const box = el('div', 'ending');
+    box.append(sceneImg('rooftop', 'dusk', 'ending-art'));
     box.append(el('h3', undefined, '1학년 1학기 끝 — 프로토타입은 여기까지'));
     box.append(el('p', undefined, `원작 붕괴도 ${g.world.collapse()}%. 지금까지 바꾼 운명은 이렇다.`));
     const ul = el('ul');
@@ -695,11 +895,15 @@ function renderControls() {
     v.activities.forEach((a, i) => {
       const b: HTMLButtonElement = button('activity', '', () => pick(b, () => act({ type: 'activity', id: a.id }, a.name)));
       b.dataset.idx = String(i + 1);
-      if (i < 9) b.append(el('span', 'k', String(i + 1)));
-      b.append(el('b', undefined, a.name));
-      if (a.desc) b.append(el('span', 'ad', a.desc));
+      b.append(iconImg(ACTIVITY_ICON[a.id] ?? 'star', 2, 'aic'));
+      const txt = el('span', 'atext');
+      const nm = el('b', undefined, a.name);
+      if (i < 9) nm.prepend(el('span', 'k', String(i + 1)));
+      txt.append(nm);
+      if (a.desc) txt.append(el('span', 'ad', a.desc));
       const fx = effectSummary(a.id);
-      if (fx) b.append(el('span', 'fx', fx));
+      if (fx) txt.append(el('span', 'fx', fx));
+      b.append(txt);
       grid.append(b);
     });
     c.append(grid);
@@ -736,22 +940,45 @@ function bar(cls: string, from: number | undefined, to: number): HTMLElement {
   return b;
 }
 
+/** 전투가 벌어지는 곳: 가장 최근 장면의 삽화나 장소 */
+function battleBackdrop(): { id: string; tod: string } | null {
+  for (let i = log.length - 1; i >= 0; i--) {
+    const it = log[i];
+    if (it.k !== 'scene') continue;
+    const art = it.lines.find((l) => l.speaker === '삽화')?.text ?? it.strip;
+    if (art) return { id: art, tod: it.tod ?? 'day' };
+    if (!it.cont) return null;
+  }
+  return null;
+}
+
 function renderBattle(c: HTMLElement, bt: BattleView) {
   const prev = turnFx?.prev;
   const wrap = el('div', 'battle');
 
+  const enemyId = game!.state.battle?.enemy ?? '';
   const foe = el('div', `combatant foe${bt.enemy.enraged ? ' enraged' : ''}`);
+  const where = battleBackdrop();
+  if (where) foe.append(sceneImg(where.id, where.tod, 'foe-bg'));
   const fh = el('div', 'ch');
-  fh.append(el('b', undefined, bt.enemy.name), el('span', 'num', `${bt.enemy.hp} / ${bt.enemy.maxHp}`));
+  const fname = el('span', 'cn');
+  fname.append(enemyImg(enemyId, bt.enemy.name, 2, 'cpt'), el('b', undefined, bt.enemy.name));
+  fh.append(fname, el('span', 'num', `${bt.enemy.hp} / ${bt.enemy.maxHp}`));
   foe.append(fh, bar('hp foe', prev?.ehp, bt.enemy.hp / bt.enemy.maxHp));
   const danger = bt.intent.clarity === 'exact' && ['강타', '차지', '마법'].includes(bt.intent.label);
   const it = el('div', `intent ${bt.intent.clarity}${danger ? ' danger' : ''}`);
-  it.append(el('span', 'il', bt.intent.charged ? '다음 행동 · 힘을 모았다' : '다음 행동'), el('b', undefined, bt.intent.label), el('span', 'it', bt.intent.text));
+  const iconId = INTENT_ICON[bt.intent.label] ?? INTENT_ICON['?'];
+  it.append(el('span', 'il', bt.intent.charged ? '다음 행동 · 힘을 모았다' : '다음 행동'));
+  const lab = el('b');
+  lab.append(iconImg(iconId, 2, 'iic'), bt.intent.label);
+  it.append(lab, el('span', 'it', bt.intent.text));
   foe.append(it);
 
   const me = el('div', 'combatant me');
   const mh = el('div', 'ch');
-  mh.append(el('b', undefined, build.name), el('span', 'num', `${bt.me.hp} / ${bt.me.maxHp}`));
+  const mname = el('span', 'cn');
+  mname.append(portraitImg(lookOf('나')!.key, myLook(), bt.me.hp / bt.me.maxHp < 0.3 ? '슬픔' : '진지', 2, 'cpt'), el('b', undefined, build.name));
+  mh.append(mname, el('span', 'num', `${bt.me.hp} / ${bt.me.maxHp}`));
   me.append(mh, bar('hp mine', prev?.hp, bt.me.hp / bt.me.maxHp));
   const res = el('div', 'res');
   const sp = el('span', 'rl');
@@ -764,7 +991,13 @@ function renderBattle(c: HTMLElement, bt: BattleView) {
   }
   me.append(res);
   const tags = el('div', 'chips');
-  if (bt.ally) tags.append(el('span', 'chip ally', `동료 · ${bt.ally}`));
+  if (bt.ally) {
+    const chip = el('span', 'chip ally');
+    const face = lookOf(bt.ally);
+    if (face) chip.append(portraitImg(face.key, face.look, '진지', 1, 'mini'));
+    chip.append(`동료 · ${bt.ally}`);
+    tags.append(chip);
+  }
   for (const s of bt.status) tags.append(el('span', 'chip', s));
   tags.append(el('span', 'chip turn', `턴 ${bt.turn + 1} / ${bt.turns}`));
   me.append(tags);
@@ -870,7 +1103,9 @@ function renderPanel() {
   } else if (tab === 'status') {
     const exact = !!g.state.vars['perk.상태창'];
     const w = window_(`[상태창] ${build.name}`);
-    w.append(el('div', 'legend', content.origins.get(build.origin)?.name ?? ''));
+    const who = el('div', 'me-card');
+    who.append(portraitImg(lookOf('나')!.key, myLook(), '', 2), el('div', 'legend', content.origins.get(build.origin)?.name ?? ''));
+    w.append(who);
     if (!exact) w.append(el('div', 'legend', '상태창 특전이 없어서 등급만 보인다'));
     for (const s of content.rules.stats) {
       const v = Math.floor(Number(g.get(`stat.${s}`) ?? 0));
@@ -879,7 +1114,9 @@ function renderPanel() {
       const fill = el('i');
       fill.style.width = `${Math.min(100, v)}%`;
       bar.append(fill);
-      r.append(el('span', undefined, s), bar, el('span', 'g', exact ? `${v} ${grade(v)}` : grade(v)));
+      const nm = el('span', 'sname');
+      nm.append(iconImg(STAT_ICON[s] ?? 'star', 1), s);
+      r.append(nm, bar, el('span', 'g', exact ? `${v} ${grade(v)}` : grade(v)));
       w.append(r);
     }
     pane.append(w);
@@ -923,6 +1160,8 @@ function renderPanel() {
     if (!people.length) pane.append(el('p', 'empty', '아직 인연을 맺은 사람이 없다.'));
     for (const r of people) {
       const d = el('div', 'rel');
+      const look = CAST[r.id];
+      if (look) d.append(portraitImg(r.id, look, r.trust < 0 ? '진지' : r.affinity >= 30 ? '웃음' : '', 2, 'rel-pt'));
       const top = el('div', 'rel-top');
       top.append(el('b', undefined, r.name), el('span', 'rank', `인연 ${r.rank}`));
       const bar = el('div', 'bar-s');
@@ -979,6 +1218,8 @@ function renderGame(scroll: boolean) {
   ($('collapse-fill') as HTMLElement).style.width = `${collapse}%`;
   $('collapse-val').textContent = `${collapse}%`;
 
+  setAmbience(g.state.time.m, g.state.time.w, todOf(cal.slotName(g.state.time)));
+
   const logEl = $('log');
   let first: HTMLElement | null = null;
   fresh = [];
@@ -1002,6 +1243,41 @@ function renderGame(scroll: boolean) {
   }
 }
 
+/** 계절 입자: 2월 눈, 3·4월 꽃잎, 5월 잎, 6월 장마, 7월 밤 반딧불 */
+let ambienceKey = '';
+function setAmbience(m: number, w: number, tod: string) {
+  const kind = reduceMotion()
+    ? ''
+    : m === 2
+      ? 'snow'
+      : m === 3 || m === 4
+        ? 'petal'
+        : m === 5
+          ? 'leaf'
+          : m === 6 && (w === 2 || w === 3)
+            ? 'rain'
+            : m === 7 && tod === 'night'
+              ? 'firefly'
+              : '';
+  const key = `${kind}`;
+  if (key === ambienceKey) return;
+  ambienceKey = key;
+  const box = $('ambience');
+  box.replaceChildren();
+  box.className = kind;
+  if (!kind) return;
+  const n = kind === 'rain' ? 40 : kind === 'firefly' ? 12 : 16;
+  for (let i = 0; i < n; i++) {
+    const s = el('i');
+    s.style.setProperty('--x', `${Math.random() * 100}%`);
+    s.style.setProperty('--d', `${(kind === 'rain' ? 0.6 : kind === 'firefly' ? 6 : 9) * (0.7 + Math.random() * 0.6)}s`);
+    s.style.setProperty('--delay', `${-Math.random() * 12}s`);
+    s.style.setProperty('--drift', `${(Math.random() - 0.3) * 120}px`);
+    s.style.setProperty('--y', `${Math.random() * 100}%`);
+    box.append(s);
+  }
+}
+
 /** 새로 그려진 기록에 연출을 건다 */
 function runEffects() {
   if (!fresh.length) return;
@@ -1011,9 +1287,22 @@ function runEffects() {
       [...node.children].forEach((ch, i) => (ch as HTMLElement).style.setProperty('--i', String(Math.min(i, 14))));
       node.classList.add('reveal');
     }
-    node.querySelectorAll<HTMLElement>('.check .die').forEach((d) => {
-      rollDice(d, Number(d.dataset.final));
+    node.querySelectorAll<HTMLElement>('.check').forEach((chk) => {
+      const d = chk.querySelector<HTMLElement>('.die');
+      const wrap = chk.querySelector<HTMLElement>('.die-wrap');
+      if (!d || !wrap) return;
       sfx('dice');
+      if (!motion) return;
+      chk.classList.add('rolling');
+      rollDice(d, Number(d.dataset.final));
+      window.setTimeout(() => {
+        chk.classList.remove('rolling');
+        chk.classList.add('landed');
+        if (wrap.classList.contains('nat20')) {
+          sfx('crit');
+          for (let i = 0; i < 6; i++) floatText(wrap, '✦', 'spark', i * 40);
+        }
+      }, 620);
     });
     node.querySelectorAll<HTMLElement>('.sysline').forEach((d) => {
       const t = d.textContent ?? '';
@@ -1029,7 +1318,9 @@ function runEffects() {
       }
     });
     node.querySelectorAll<HTMLElement>('.rankup').forEach((r) => {
-      toast(r.textContent ?? '', 'rank');
+      const name = /★ (.+) 인연/.exec(r.textContent ?? '')?.[1] ?? '';
+      const face = lookOf(name);
+      toast(r.textContent ?? '', 'rank', face ? portraitImg(face.key, face.look, '웃음', 1, 'mini') : undefined);
       sfx('rank');
     });
     if (node.matches('.battlelog.end')) {
@@ -1062,6 +1353,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 loadSoundPref();
+$('doom').before(iconImg('hourglass', 1, 'doom-ic'));
 const soundBtn = $('sound') as HTMLButtonElement;
 const syncSound = () => {
   soundBtn.textContent = soundOn() ? '소리 켬' : '소리 끔';

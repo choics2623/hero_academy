@@ -165,7 +165,7 @@ export function floatText(target: HTMLElement, text: string, cls: string, delay 
 }
 
 /** 화면 위쪽에 잠깐 떴다 사라지는 알림 */
-export function toast(text: string, kind = '') {
+export function toast(text: string, kind = '', img?: HTMLElement) {
   let box = document.getElementById('toasts');
   if (!box) {
     box = document.createElement('div');
@@ -175,7 +175,8 @@ export function toast(text: string, kind = '') {
   }
   const t = document.createElement('div');
   t.className = `toast ${kind}`;
-  t.textContent = text;
+  if (img) t.append(img);
+  t.append(text);
   box.append(t);
   window.setTimeout(() => t.classList.add('out'), 2400);
   window.setTimeout(() => t.remove(), 2900);
