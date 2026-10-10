@@ -295,6 +295,14 @@ const dice: Draw = (p) => {
   p.line(4, 11, 12, 11, C.slate2);
 };
 
+const sunIcon: Draw = (p) => {
+  for (let i = 0; i < 8; i++) {
+    const t = (i * Math.PI) / 4;
+    p.line(8 + Math.cos(t) * 5, 8 + Math.sin(t) * 5, 8 + Math.cos(t) * 7, 8 + Math.sin(t) * 7, C.gold2);
+  }
+  p.ellipse(8, 8, 4, 4, (x, y) => (x + y < 15 ? C.gold0 : C.gold1));
+};
+
 const hourglass: Draw = (p) => {
   p.hline(3, 12, 1, C.wood1);
   p.hline(3, 12, 14, C.wood1);
@@ -401,7 +409,7 @@ const lock: Draw = (p) => {
 
 export const ICONS: Record<string, Draw> = {
   sword, swords, book, books, wand, chapel, bowl, coin, tree, bag, plant, quill, moon, bed, pickaxe, eye, dawn, house,
-  dumbbell, wing, heart, crystal, orb, flame, star, hammer, shield, charge, burst, dice, hourglass, skull, zzz, cloud,
+  sun: sunIcon, dumbbell, wing, heart, crystal, orb, flame, star, hammer, shield, charge, burst, dice, hourglass, skull, zzz, cloud,
   target, signpost, potion, rune, scroll, people, lock,
 };
 

@@ -856,6 +856,17 @@ function renderControls() {
       ul.append(el('li', undefined, `${cr.title}: ${txt}`));
     }
     box.append(ul);
+    const top = g.relationships().filter((r) => CAST[r.id] && r.affinity > 0).sort((a, b) => b.affinity - a.affinity).slice(0, 4);
+    if (top.length) {
+      box.append(el('p', undefined, '이번 학기에 가장 가까워진 사람들.'));
+      const row = el('div', 'bond-row');
+      for (const r of top) {
+        const f = el('figure', 'bond');
+        f.append(portraitImg(r.id, CAST[r.id], '웃음', 2), el('figcaption', undefined, `${r.name} · 인연 ${r.rank}`));
+        row.append(f);
+      }
+      box.append(row);
+    }
     box.append(el('p', undefined, '다른 출신이나 재능으로 다시 하면 다른 장면과 선택지가 열린다.'));
     const again = button('primary', '다른 몸으로 다시 시작', () => {
       clearSave();
@@ -1213,6 +1224,8 @@ function renderGame(scroll: boolean) {
   const g = game!;
   const v = g.view();
   $('time').textContent = v.phase === 'ended' ? '1학년 1학기 끝' : v.time;
+  const tod = todOf(cal.slotName(g.state.time));
+  $('time').prepend(iconImg(tod === 'night' ? 'moon' : tod === 'dawn' ? 'dawn' : 'sun', 1, 'tod-ic'));
   $('doom').textContent = doomText();
   const collapse = g.world.collapse();
   ($('collapse-fill') as HTMLElement).style.width = `${collapse}%`;
