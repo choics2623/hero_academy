@@ -86,10 +86,10 @@
   on: auto
   free: true
   priority: 3
-  when: "time.year == 1 and stat.근력 >= 45"
+  when: "time.year == 1 and stat.근력 >= 40"
   lines:
     - 가렌: "너. 내일부터 상급반 대련에 들어가라."
-    - 시스템: "근력 C등급 달성 — 가렌 교관이 이름을 기억한다."
+    - 시스템: "근력 C등급 직전 — 가렌 교관이 이름을 기억한다."
   effects: ["affinity.garen += 8", "reputation += 5"]
 
 - id: ms_int_30
@@ -97,7 +97,7 @@
   on: auto
   free: true
   priority: 3
-  when: "time.year == 1 and stat.지성 >= 30"
+  when: "time.year == 1 and stat.지성 >= 28"
   lines:
     - "수업 내용이 한 번에 들어온다. 교수가 질문하기 전에 답이 떠오른다."
     - 시스템: "지성 D등급 달성 — 도서관 사서가 금서 열람을 허락할지도 모른다."
@@ -118,7 +118,7 @@
   on: auto
   free: true
   priority: 3
-  when: "time.year == 1 and stat.매력 >= 22"
+  when: "time.year == 1 and stat.매력 >= 20"
   lines:
     - 나레이션:
         - "복도에서 모르는 동기들이 먼저 인사를 건넨다."
@@ -141,7 +141,7 @@
   on: auto
   free: true
   priority: 6
-  when: "talent.마나탱크 == 1 and stat.마력량 >= 48"
+  when: "talent.마나탱크 == 1 and stat.마력량 >= 45"
   lines:
     - "자다가 깼다. 몸 안에서 마력이 강물처럼 돌고 있다."
     - 시스템: "재능 개화: 마나 탱크 → 「마나 순환」 (마력량 +6, 마력량 성장 +20%)"
@@ -164,7 +164,7 @@
   on: auto
   free: true
   priority: 6
-  when: "talent.병약 and sick.count >= 2 and stat.체질 >= 28"
+  when: "talent.병약 and sick.count >= 2 and stat.체질 >= 22"
   lines:
     - "또 앓아누웠다가 일어난 아침. 이상하게 몸이 가볍다."
     - "몇 번을 쓰러져도 다시 일어났던 몸이, 그 사실을 기억하고 있다."

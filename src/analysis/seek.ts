@@ -8,7 +8,7 @@
 //   이렇게 하면 "아직 결과는 안 바뀌었지만 필요한 조건에 다가가는" 행동을 우선 탐색할 수 있다.
 // 실패하면 무엇이 막고 있는지(마감된 이벤트, 못 채운 조건)를 설명한다.
 
-import { compile, distance, evaluate, show, test, toNum, truthy, type Action, type Build, type Content, type Expr, type Node } from '../engine';
+import { battleStats, compile, distance, evaluate, show, test, toNum, truthy, type Action, type Build, type Content, type Expr, type Node } from '../engine';
 import { Game } from '../engine/game';
 import { nextRandom } from '../engine/rng';
 import { buildGraph, positiveAtoms, type Graph, type Writer } from './graph';
@@ -70,10 +70,22 @@ export class GoalHeuristic {
     if (w.eventId) {
       const ev = this.content.events.get(w.eventId)!;
       // 이미 발생했어도 지금 그 이벤트의 선택지가 화면에 떠 있으면 아직 열려 있다
-      const active = g.state.scene?.eventId === ev.id;
+      const active = g.state.scene?.eventId === ev.id || g.state.battle?.eventId === ev.id;
       if (!active && toNum(g.state.vars[`fired.${ev.id}`]) >= ev.repeat) return false;
     }
     return true;
+  }
+
+  /** 이 적을 이길 준비가 얼마나 안 됐는가 (0 = 충분, 1 = 한참 모자람). 쓰러뜨리는 데 걸리는 턴 vs 버티는 턴 */
+  battleGap(g: Game, enemyId: string): number {
+    const e = this.content.enemies.get(enemyId);
+    if (!e) return 0;
+    const s = battleStats(this.content, g.world);
+    const dps = Math.max(s.atk - e.def, s.matk - e.def * 0.5, 1);
+    const toKill = e.hp / dps;
+    // 강타·마법·분노를 감안해 평균 피해를 넉넉히 잡고, 쓰러지기 한참 전에 이길 수 있어야 '준비됨'
+    const toDie = s.hp / Math.max(1, Math.max(e.atk, e.matk) * 1.4 * (e.enrage ? 1.1 : 1) - s.def);
+    return Math.max(0, Math.min(1, (toKill - toDie * 0.6) / toKill));
   }
 
   atomCost(g: Game, name: string, atom: Node, depth: number, memo: Map<string, number>): number {
@@ -85,7 +97,7 @@ export class GoalHeuristic {
     let best = INF;
     for (const w of this.graph.writers.get(name) ?? []) {
       if (!this.open(w, g) || !this.helps(w, atom, g)) continue;
-      let cost = 1;
+      let cost = 1 + (w.battle ? 3 * this.battleGap(g, w.battle) : 0);
       for (const cond of w.conds) {
         if (depth <= 0) {
           cost += distance(cond.ast, g.world);
@@ -113,8 +125,11 @@ export class GoalHeuristic {
     if (test(this.goal, g.world)) return 0;
     const memo = new Map<string, number>();
     let total = distance(this.goal.ast, g.world);
+    // 전투 중이면 이기는 쪽으로 가는 상태를 조금 더 선호
+    const b = g.state.battle;
+    if (b) total += 0.5 * (b.ehp / b.emaxHp) - 0.4 * (b.hp / b.maxHp);
     for (const a of positiveAtoms(this.goal.ast)) {
-      const c = this.atomCost(g, a.name, a.node, 2, memo);
+      const c = this.atomCost(g, a.name, a.node, 5, memo);
       if (c === INF) return INF;
       total += c;
     }
@@ -152,7 +167,9 @@ export function advance(g: Game) {
 function stateHash(g: Game): string {
   const keys = Object.keys(g.state.vars).filter((k) => k !== 'time.roll').sort();
   const sc = g.state.scene;
-  return JSON.stringify([g.state.time, g.state.phase, sc?.eventId, sc?.owner, keys.map((k) => [k, g.state.vars[k]])]);
+  const b = g.state.battle;
+  const bk = b ? [b.enemy, b.hp, b.ehp, b.sp, b.mp, b.turn, b.intent, b.charged, b.broken, b.counter] : null;
+  return JSON.stringify([g.state.time, g.state.phase, sc?.eventId, sc?.owner, bk, keys.map((k) => [k, g.state.vars[k]])]);
 }
 
 export function seek(content: Content, build: Build, goalSrc: string, opts: SeekOptions = {}, graph = buildGraph(content)): SeekResult {

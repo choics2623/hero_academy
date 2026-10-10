@@ -66,7 +66,20 @@ while (!game.ended) {
     }
   }
   const opts: { label: string; act: () => void }[] = [];
-  if (v.phase === 'activity') {
+  if (game.state.lastBattle) {
+    for (const l of game.state.lastBattle.log) console.log(dim(`  ${l.text}${l.dmg ? ` (-${l.dmg})` : ''}`));
+    console.log(bold(game.state.lastBattle.result === 'win' ? '  ── 승리 ──' : '  ── 패배 ──'));
+  }
+  if (v.phase === 'battle' && v.battle) {
+    const bt = v.battle;
+    for (const l of bt.log) console.log(dim(`  ${l.text}${l.dmg ? ` (-${l.dmg})` : ''}${l.heal ? ` (+${l.heal})` : ''}`));
+    console.log(`\n  ${bold(bt.enemy.name)} 체력 ${bt.enemy.hp}/${bt.enemy.maxHp}   |   나 체력 ${bt.me.hp}/${bt.me.maxHp} 기력 ${bt.me.sp}/${bt.me.maxSp} 마나 ${bt.me.mp}/${bt.me.maxMp}`);
+    console.log(`  다음 행동: ${bold(bt.intent.label)} — ${bt.intent.text}   (턴 ${bt.turn + 1}/${bt.turns})${bt.status.length ? '  [' + bt.status.join(', ') + ']' : ''}`);
+    for (const k of bt.skills) {
+      const label = `${k.enabled ? '' : '🔒 '}${k.name}${k.cost ? dim(` (${k.cost})`) : ''} ${dim('— ' + k.desc)}`;
+      opts.push({ label, act: () => k.enabled && game.act({ type: 'battle', skill: k.id }) });
+    }
+  } else if (v.phase === 'activity') {
     for (const a of v.activities) opts.push({ label: a.name, act: () => game.act({ type: 'activity', id: a.id }) });
   } else if (v.choices.length) {
     for (const c of v.choices) {

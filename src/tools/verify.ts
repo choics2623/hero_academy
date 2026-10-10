@@ -56,12 +56,15 @@ for (const g of goals) {
     continue;
   }
   let ok = false;
-  for (const b of builds) {
-    const r = seek(content, b, g.goal, { beam, maxSteps: 300 }, graph);
-    if (r.found) {
-      console.log(`✅ ${g.title}\n     ${r.game.state.trace.length}단계 · ${describeBuild(content, b)}`);
-      ok = true;
-      break;
+  // 주사위 결과에 달린 결과도 있으므로 시드를 바꿔 한 번 더 시도한다
+  search: for (const seed of [7, 11]) {
+    for (const b of builds) {
+      const r = seek(content, b, g.goal, { beam, maxSteps: 300, seed }, graph);
+      if (r.found) {
+        console.log(`✅ ${g.title}\n     ${r.game.state.trace.length}단계 · ${describeBuild(content, b)}`);
+        ok = true;
+        break search;
+      }
     }
   }
   if (!ok) {

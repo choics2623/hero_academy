@@ -1,0 +1,29 @@
+# 전투 기술. when이 참일 때만 목록에 나온다.
+# kind: attack heavy guard dodge magic read heal intimidate blind focus item surrender
+
+# ---------------------------------------------------------------- 기본
+- { id: attack, name: 공격, kind: attack, desc: "근력으로 친다. 방어 중인 적에겐 반만 들어간다." }
+- { id: heavy, name: 강타, kind: heavy, mult: 1.8, sp: 3, desc: "힘을 실은 일격. 적이 힘을 모을 때 치면 끊긴다. 방어 중인 적에겐 거의 막힌다." }
+- { id: guard, name: 방어, kind: guard, desc: "피해를 크게 줄이고 기력 +2. 강타를 받아내면 적이 무방비가 된다." }
+- { id: dodge, name: 회피, kind: dodge, counter: 1.5, desc: "민첩 판정. 성공하면 피해 없음 + 다음 공격 1.5배. 마법은 피하기 어렵다." }
+- { id: magic, name: 마법, kind: magic, mp: 3, when: "stat.마력량 >= 12 and not talent.마나회로손상", desc: "마력제어로 공격. 방어를 반쯤 무시한다." }
+- { id: read, name: 간파, kind: read, desc: "지성 판정. 성공하면 적이 무방비가 되고 다음 행동이 두 번 보인다." }
+- { id: focus, name: 숨 고르기, kind: focus, desc: "마나 +4, 기력 +2." }
+- { id: potion, name: 강장제, kind: item, item: 강장제, heal: 0.4, when: "item.강장제 >= 1", desc: "체력 40% 회복, 기력 +3." }
+- { id: rune, name: 노엘의 룬 부적, kind: item, item: 룬부적, heal: 0.25, when: "item.룬부적 >= 1", desc: "부적이 타오르며 상처를 덮는다. 체력 25% 회복." }
+- { id: surrender, name: 기권, kind: surrender, desc: "싸움을 포기한다." }
+
+# ---------------------------------------------------------------- 재능
+- { id: brute, name: 괴력 일격, kind: heavy, mult: 2.6, sp: 5, when: "talent.천생신력", desc: "천생신력. 강타보다 훨씬 무겁다." }
+- { id: burst, name: 마력 폭발, kind: magic, mult: 2.2, mp: 6, when: "talent.마나탱크", desc: "마나 탱크. 그릇째로 쏟아붓는다." }
+- { id: intimidate, name: 위압, kind: intimidate, bonus: 10, when: "talent.혐오스러운분위기 or talent.카리스마", desc: "이번 턴 적의 공격을 크게 약하게 만든다 (매력·의지 판정)." }
+- { id: prayer, name: 치유의 기도, kind: heal, heal: 0.35, sp: 4, when: "talent.성흔 or skill.치유기도", desc: "체력 35% 회복." }
+
+# ---------------------------------------------------------------- 인연으로 배운 기술
+- { id: rhythm, name: 검의 리듬, kind: attack, mult: 1.5, sp: 2, pierce: true, when: "skill.검의리듬", desc: "카이든에게 배운 리듬. 방어 중인 적도 뚫는다." }
+- { id: wind, name: 바람 읽기, kind: read, bonus: 25, when: "skill.바람읽기", desc: "리아나에게 배운 감각. 간파가 거의 확실하다." }
+- { id: smith, name: 대장장이의 일격, kind: heavy, mult: 2.0, sp: 4, pierce: true, when: "skill.대장장이", desc: "브루노에게 배운 일격. 방어째로 부순다." }
+- { id: broom, name: 빗자루 보법, kind: dodge, bonus: 15, counter: 2.0, when: "skill.빗자루보법", desc: "핀의 발놀림. 회피 +15, 반격 2배." }
+- { id: split, name: 영창 분할, kind: magic, mult: 1.2, mp: 2, when: "skill.영창분할", desc: "미라벨의 기술. 적은 마나로 마법." }
+- { id: sand, name: 모래 뿌리기, kind: blind, sp: 2, when: "skill.모래뿌리기", desc: "에드릭의 비열한 수. 3턴 동안 적의 공격 반감." }
+- { id: ward, name: 엘베라의 방벽, kind: guard, ward: 0.15, when: "skill.방벽", desc: "마법까지 거의 막아내는 방벽. 기력 +2." }

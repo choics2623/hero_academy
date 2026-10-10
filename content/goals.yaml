@@ -60,8 +60,8 @@
   when: "time.year == 1 and time.month >= 5"
   done: "tourney.result"
   hint:
-    - "예선 30 · 8강 40~50 · 4강 50~60 · 결승 60 이상 (능력치 + 주사위 1~20). 정면 승부는 근력, 빈틈 공략은 민첩·지성, 마법 견제는 마력제어, 심리전은 매력·의지."
-    - { when: "know.kaiden_shoulder or note.note_kaiden_style.known", text: "예선 30 · 8강 40~50 · 4강 50~60 · 결승 60 이상. 카이든은 왼쪽 어깨가 약하다 — 빈틈 공략이 잘 통한다." }
+    - "예선 → 8강(브루노 또는 미라벨) → 4강 카이든 → 결승 아렌. 근력은 공격력, 체질은 체력, 지성은 상대 행동을 읽는 힘, 마력은 마법. 강장제를 챙겨 두자."
+    - { when: "know.kaiden_shoulder or note.note_kaiden_style.known", text: "예선 → 8강 → 4강 카이든 → 결승 아렌. 카이든은 강타 전에 왼쪽 어깨를 감싼다 — 방어로 받아내면 빈틈이 생긴다. 강장제를 챙겨 두자." }
     - { when: "tourney.result", text: "{{if tourney.result == 'win'}}우승했다.{{elif tourney.result == 'final'}}준우승.{{else}}끝났다.{{/if}}" }
 
 - id: g_bond

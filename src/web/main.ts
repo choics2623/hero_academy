@@ -1,11 +1,12 @@
 // 브라우저 플레이 화면. 엔진은 터미널 버전과 똑같은 것을 쓴다.
 // 콘텐츠(YAML)는 빌드 시 JSON으로 바뀌어 window.__HERO_CONTENT__로 들어온다.
 
-import { buildContent, checkBuild, randomBuild, test, type Action, type Build, type Content } from '../engine';
+import { buildContent, checkBuild, randomBuild, test, type Action, type BattleLine, type BattleView, type Build, type Content } from '../engine';
 import { applyBuild } from '../engine/creation';
 import { Game, type GameState } from '../engine/game';
 import type { RenderedLine } from '../engine/text';
 import { World } from '../engine/world';
+import { animateBar, attachRipple, floatText, loadSoundPref, reduceMotion, replay, rollDice, setSound, sfx, soundOn, toast } from './fx';
 
 declare global {
   interface Window {
@@ -16,8 +17,9 @@ declare global {
 
 type LogItem =
   | { k: 'scene'; when: string; title?: string; lines: RenderedLine[]; cont?: boolean; flavor?: boolean }
-  | { k: 'act'; text: string; deltas?: string[] }
-  | { k: 'week'; title: string; items: string[] };
+  | { k: 'act'; text: string; deltas?: string[]; ranks?: string[] }
+  | { k: 'week'; title: string; items: string[] }
+  | { k: 'battle'; enemy: string; lines: BattleLine[]; start?: boolean; result?: 'win' | 'lose' };
 interface Save {
   v: 1;
   build: Build;
@@ -41,6 +43,10 @@ let rendered = 0;
 let tab: Tab = 'goals';
 let weekKey = '';
 let weekSnap: Record<string, number> = {};
+let busy = false;
+/** 직전 턴의 전투 연출 정보 */
+let turnFx: { lines: BattleLine[]; prev?: { hp: number; ehp: number; sp: number; mp: number }; ended?: 'win' | 'lose' } | null = null;
+let fresh: HTMLElement[] = [];
 
 // ------------------------------------------------------------ helpers
 
@@ -485,22 +491,64 @@ function capture(cont: boolean) {
   }
 }
 
+function barsOf(): { hp: number; ehp: number; sp: number; mp: number } | undefined {
+  const b = game!.state.battle;
+  return b ? { hp: b.hp / b.maxHp, ehp: b.ehp / b.emaxHp, sp: b.sp / Math.max(1, b.maxSp), mp: b.mp / Math.max(1, b.maxMp) } : undefined;
+}
+
 function act(a: Action, label: string) {
   if (!game) return;
   const before = tracked();
+  const wasBattle = game.state.phase === 'battle';
+  const prev = barsOf();
+  const enemyName = wasBattle ? content.enemies.get(game.state.battle!.enemy)!.name : '';
   const at = log.length;
   game.act(a);
-  const deltas = a.type === 'continue' ? [] : describeDiff(before, tracked());
+  const ended = game.state.lastBattle?.result;
+  if (wasBattle) {
+    const lines = game.state.battle?.log ?? game.state.lastBattle?.log ?? [];
+    log.push({ k: 'battle', enemy: enemyName, lines, result: ended });
+    turnFx = { lines, prev, ended };
+    label = '';
+  }
+  const deltas = a.type === 'continue' || (wasBattle && !ended) ? [] : describeDiff(before, tracked());
+  const after = tracked();
+  const ranks: string[] = [];
+  for (const k of Object.keys(after)) {
+    if (!k.startsWith('affinity.')) continue;
+    const r0 = Math.floor((before[k] ?? 0) / 10);
+    const r1 = Math.floor(after[k] / 10);
+    if (r1 > r0) ranks.push(`${content.characters.get(k.slice(9))?.name ?? k} 인연 ${r1}`);
+  }
   capture(a.type === 'choice');
   // 일상 묘사는 '계속'을 누르지 않아도 다음으로 넘어간다
   for (let i = 0; i < 20 && game.state.phase === 'scene' && isFlavor(); i++) {
     game.act({ type: 'continue' });
     capture(false);
   }
+  if (game.state.phase === 'battle' && !wasBattle) {
+    const b = game.state.battle!;
+    log.push({ k: 'battle', enemy: content.enemies.get(b.enemy)!.name, lines: b.log, start: true });
+    turnFx = null;
+  }
   checkWeek();
-  if (label || deltas.length) log.splice(at, 0, { k: 'act', text: label, deltas });
+  if (label || deltas.length || ranks.length) log.splice(at, 0, { k: 'act', text: label, deltas, ranks });
   writeSave();
   renderGame(true);
+}
+
+/** 누른 버튼을 잠깐 강조한 뒤 실행 (연출) */
+function pick(b: HTMLButtonElement, run: () => void) {
+  if (busy) return;
+  sfx('pick');
+  if (reduceMotion()) return run();
+  busy = true;
+  b.classList.add('picked');
+  b.parentElement?.querySelectorAll('button').forEach((x) => x !== b && x.classList.add('dim'));
+  window.setTimeout(() => {
+    busy = false;
+    run();
+  }, 170);
 }
 
 function doomText(): string {
@@ -518,7 +566,15 @@ function renderLine(l: RenderedLine): HTMLElement {
   if (l.speaker === '판정') {
     const ok = l.text.endsWith('성공');
     const d = el('div', ok ? 'check ok' : 'check ng');
-    d.append(el('span', 'tag', ok ? '성공' : '실패'), el('span', undefined, l.text.replace(/ · (성공|실패)$/, '')));
+    const body = l.text.replace(/ · (성공|실패)$/, '');
+    const m = /^(.*주사위 )(\d+)(.*)$/.exec(body);
+    const text = el('span');
+    if (m) {
+      const die = el('b', 'die', m[2]);
+      die.dataset.final = m[2];
+      text.append(m[1], die, m[3]);
+    } else text.append(body);
+    d.append(el('span', 'tag', ok ? '성공' : '실패'), text);
     return d;
   }
   if (l.speaker === '📌') {
@@ -536,6 +592,23 @@ function renderItem(item: LogItem): HTMLElement {
   if (item.k === 'act') {
     const d = el('div', item.text ? 'act' : 'act bare', item.text);
     if (item.deltas?.length) d.append(el('span', 'delta', item.deltas.join(' · ')));
+    if (item.ranks?.length) {
+      const r = el('span', 'ranks');
+      for (const x of item.ranks) r.append(el('span', 'rankup', `★ ${x}`));
+      d.append(r);
+    }
+    return d;
+  }
+  if (item.k === 'battle') {
+    const d = el('div', `battlelog${item.result ? ` end ${item.result}` : ''}`);
+    if (item.start) d.append(el('div', 'bl-head', `전투 개시 — ${item.enemy}`));
+    for (const l of item.lines) {
+      const row = el('div', `bl ${l.who}${l.crit ? ' crit' : ''}`, l.text);
+      if (l.dmg) row.append(el('span', l.to === 'me' ? 'dmg me' : 'dmg', ` −${l.dmg}`));
+      if (l.heal) row.append(el('span', 'dmg heal', ` +${l.heal}`));
+      d.append(row);
+    }
+    if (item.result) d.append(el('div', `result ${item.result}`, item.result === 'win' ? '승리' : '패배'));
     return d;
   }
   if (item.k === 'week') {
@@ -595,6 +668,10 @@ function renderControls() {
     c.append(box);
     return;
   }
+  if (v.phase === 'battle' && v.battle) {
+    renderBattle(c, v.battle);
+    return;
+  }
   if (v.phase === 'activity') {
     const slot = cal.slotName(g.state.time);
     c.append(el('div', 'prompt', `무엇을 할까? · ${slot}`));
@@ -616,7 +693,7 @@ function renderControls() {
     }
     const grid = el('div', 'activities');
     v.activities.forEach((a, i) => {
-      const b = button('activity', '', () => act({ type: 'activity', id: a.id }, a.name));
+      const b: HTMLButtonElement = button('activity', '', () => pick(b, () => act({ type: 'activity', id: a.id }, a.name)));
       b.dataset.idx = String(i + 1);
       if (i < 9) b.append(el('span', 'k', String(i + 1)));
       b.append(el('b', undefined, a.name));
@@ -630,7 +707,7 @@ function renderControls() {
   }
   if (v.choices.length) {
     v.choices.forEach((ch, i) => {
-      const b = button('choice', '', () => act({ type: 'choice', index: ch.index }, ch.text));
+      const b: HTMLButtonElement = button('choice', '', () => pick(b, () => act({ type: 'choice', index: ch.index }, ch.text)));
       b.dataset.idx = String(i + 1);
       b.disabled = !ch.enabled;
       const body = el('span');
@@ -642,7 +719,98 @@ function renderControls() {
     });
     return;
   }
-  c.append(button('continue', '계속', () => act({ type: 'continue' }, '')));
+  const pending = g.state.scene?.battle;
+  c.append(
+    button(pending ? 'continue fight' : 'continue', pending ? '전투 시작' : '계속', () => {
+      sfx('click');
+      act({ type: 'continue' }, '');
+    }),
+  );
+}
+
+function bar(cls: string, from: number | undefined, to: number): HTMLElement {
+  const b = el('div', `gauge ${cls}`);
+  const f = el('i');
+  b.append(f);
+  animateBar(f, from ?? to, to);
+  return b;
+}
+
+function renderBattle(c: HTMLElement, bt: BattleView) {
+  const prev = turnFx?.prev;
+  const wrap = el('div', 'battle');
+
+  const foe = el('div', `combatant foe${bt.enemy.enraged ? ' enraged' : ''}`);
+  const fh = el('div', 'ch');
+  fh.append(el('b', undefined, bt.enemy.name), el('span', 'num', `${bt.enemy.hp} / ${bt.enemy.maxHp}`));
+  foe.append(fh, bar('hp foe', prev?.ehp, bt.enemy.hp / bt.enemy.maxHp));
+  const danger = bt.intent.clarity === 'exact' && ['강타', '차지', '마법'].includes(bt.intent.label);
+  const it = el('div', `intent ${bt.intent.clarity}${danger ? ' danger' : ''}`);
+  it.append(el('span', 'il', bt.intent.charged ? '다음 행동 · 힘을 모았다' : '다음 행동'), el('b', undefined, bt.intent.label), el('span', 'it', bt.intent.text));
+  foe.append(it);
+
+  const me = el('div', 'combatant me');
+  const mh = el('div', 'ch');
+  mh.append(el('b', undefined, build.name), el('span', 'num', `${bt.me.hp} / ${bt.me.maxHp}`));
+  me.append(mh, bar('hp mine', prev?.hp, bt.me.hp / bt.me.maxHp));
+  const res = el('div', 'res');
+  const sp = el('span', 'rl');
+  sp.append(`기력 ${bt.me.sp}/${bt.me.maxSp}`, bar('sp', prev?.sp, bt.me.sp / Math.max(1, bt.me.maxSp)));
+  res.append(sp);
+  if (bt.me.maxMp > 0) {
+    const mp = el('span', 'rl');
+    mp.append(`마나 ${bt.me.mp}/${bt.me.maxMp}`, bar('mp', prev?.mp, bt.me.mp / Math.max(1, bt.me.maxMp)));
+    res.append(mp);
+  }
+  me.append(res);
+  const tags = el('div', 'chips');
+  if (bt.ally) tags.append(el('span', 'chip ally', `동료 · ${bt.ally}`));
+  for (const s of bt.status) tags.append(el('span', 'chip', s));
+  tags.append(el('span', 'chip turn', `턴 ${bt.turn + 1} / ${bt.turns}`));
+  me.append(tags);
+
+  const grid = el('div', 'skills');
+  bt.skills.forEach((k, i) => {
+    const b: HTMLButtonElement = button('skill', '', () => pick(b, () => act({ type: 'battle', skill: k.id }, k.name)));
+    b.dataset.idx = String(i + 1);
+    b.disabled = !k.enabled;
+    const top = el('span', 'st');
+    if (i < 9) top.append(el('span', 'k', String(i + 1)));
+    top.append(el('b', undefined, k.name));
+    if (k.cost) top.append(el('span', 'cost', k.cost));
+    b.append(top, el('span', 'sd', k.reason ?? k.desc));
+    grid.append(b);
+  });
+  wrap.append(foe, me, grid);
+  c.append(wrap);
+
+  // 직전 턴 연출: 피해 숫자, 흔들림, 효과음
+  if (turnFx && !turnFx.ended) {
+    let t = 0;
+    for (const l of turnFx.lines) {
+      if (l.dmg && l.to === 'enemy') {
+        floatText(foe, `−${l.dmg}`, l.crit ? 'crit' : '', t);
+        window.setTimeout(() => {
+          replay(foe, 'hit');
+          sfx(l.crit ? 'crit' : 'hit');
+        }, t);
+        t += 160;
+      } else if (l.dmg && l.to === 'me') {
+        floatText(me, `−${l.dmg}`, 'me', t + 120);
+        window.setTimeout(() => {
+          replay(me, 'hurt');
+          sfx('hurt');
+        }, t + 120);
+        t += 200;
+      } else if (l.heal) {
+        floatText(me, `+${l.heal}`, 'heal', t);
+        window.setTimeout(() => sfx('heal'), t);
+      } else if (l.text.includes('튕겨냈다') || l.text.includes('피했다')) {
+        window.setTimeout(() => sfx('guard'), t);
+      }
+    }
+    turnFx = null;
+  }
 }
 
 function window_(title: string): HTMLElement {
@@ -813,13 +981,16 @@ function renderGame(scroll: boolean) {
 
   const logEl = $('log');
   let first: HTMLElement | null = null;
+  fresh = [];
   for (; rendered < log.length; rendered++) {
     const node = renderItem(log[rendered]);
     first ??= node;
     logEl.append(node);
+    fresh.push(node);
   }
   renderControls();
   renderPanel();
+  runEffects();
 
   if (scroll) {
     const story = $('story');
@@ -828,6 +999,44 @@ function renderGame(scroll: boolean) {
     const target = first ? Math.min(bottom, first.offsetTop - 16) : bottom;
     story.scrollTo({ top: Math.max(0, target), behavior: reduce ? 'auto' : 'smooth' });
     ($('controls').querySelector('button:not([disabled])') as HTMLButtonElement | null)?.focus({ preventScroll: true });
+  }
+}
+
+/** 새로 그려진 기록에 연출을 건다 */
+function runEffects() {
+  if (!fresh.length) return;
+  const motion = !reduceMotion();
+  for (const node of fresh) {
+    if (motion && node.matches('.scene')) {
+      [...node.children].forEach((ch, i) => (ch as HTMLElement).style.setProperty('--i', String(Math.min(i, 14))));
+      node.classList.add('reveal');
+    }
+    node.querySelectorAll<HTMLElement>('.check .die').forEach((d) => {
+      rollDice(d, Number(d.dataset.final));
+      sfx('dice');
+    });
+    node.querySelectorAll<HTMLElement>('.sysline').forEach((d) => {
+      const t = d.textContent ?? '';
+      if (t.includes('원작 이탈')) {
+        d.classList.add('glitch');
+        replay($('meter'), 'pulse');
+        sfx('glitch');
+      }
+      if (/기술 습득|아이템 획득|재능 개화|재능 진화/.test(t)) {
+        d.classList.add('learn');
+        toast(t.replace(/ \(.*\)$/, ''), 'learn');
+        sfx('learn');
+      }
+    });
+    node.querySelectorAll<HTMLElement>('.rankup').forEach((r) => {
+      toast(r.textContent ?? '', 'rank');
+      sfx('rank');
+    });
+    if (node.matches('.battlelog.end')) {
+      const win = node.classList.contains('win');
+      toast(win ? '승리!' : '패배…', win ? 'win' : 'lose');
+      sfx(win ? 'win' : 'lose');
+    }
   }
 }
 
@@ -843,8 +1052,28 @@ document.addEventListener('keydown', (e) => {
       e.preventDefault();
       b.click();
     }
+  } else if ((e.key === 'Enter' || e.key === ' ') && !(t instanceof HTMLButtonElement)) {
+    const b = $('controls').querySelector<HTMLButtonElement>('.continue');
+    if (b) {
+      e.preventDefault();
+      b.click();
+    }
   }
 });
+
+loadSoundPref();
+const soundBtn = $('sound') as HTMLButtonElement;
+const syncSound = () => {
+  soundBtn.textContent = soundOn() ? '소리 켬' : '소리 끔';
+  soundBtn.setAttribute('aria-pressed', String(soundOn()));
+};
+syncSound();
+soundBtn.addEventListener('click', () => {
+  setSound(!soundOn());
+  syncSound();
+  sfx('click');
+});
+attachRipple(document.body);
 
 $('panel-toggle').addEventListener('click', () => {
   const open = $('panel').classList.toggle('open');

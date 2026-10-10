@@ -17,7 +17,7 @@
 ```bash
 npm install
 npm run build:web                   # 웹 버전을 dist/play.html 한 장으로 빌드
-npm run play -- --random 1          # 터미널에서 플레이 (서장 ~ 1학년 6월)
+npm run play -- --random 1          # 터미널에서 플레이 (서장 ~ 1학년 1학기 끝)
 npm run lint:story                  # 스토리 정적 분석
 npm run sim -- --runs 3000          # 자동 플레이테스트 → reports/sim.md
 npm run seek -- "fate.sera == 'saved'" --origin 평민장학생

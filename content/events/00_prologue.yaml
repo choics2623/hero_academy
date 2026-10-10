@@ -63,16 +63,19 @@
   on: 폐광
   when: "mine.progress == 1"
   repeat: 3
-  lines: ["굴 안쪽에서 동굴 쥐 떼가 튀어나온다!"]
-  check: { value: "stat.근력 + stat.민첩 / 2 + luck", dc: 24 }
-  success:
-    lines:
-      - "몽둥이를 휘둘러 쥐 떼를 쫓아냈다."
-      - { when: "talent.천생신력", 나레이션: "벽에 맞은 쥐가 벽째로 무너졌다." }
-    effects: ["mine.progress = 2", "stat.근력 += 2"]
-  fail:
-    lines: ["물리고 할퀴어서 도망쳐 나왔다. 다음에 다시 와야겠다."]
-    effects: ["fatigue += 20", "stress += 10 * (1 + mod.stress)"]
+  lines:
+    - "굴 안쪽에서 동굴 쥐 떼가 튀어나온다!"
+    - 속마음: "(에테크 전투는 패턴 싸움이다. 몸은 처음이어도 손은 기억한다.)"
+  battle:
+    enemy: rats
+    win:
+      lines:
+        - "쥐 떼가 비명을 지르며 흩어졌다."
+        - { when: "talent.천생신력", 나레이션: "벽에 맞은 쥐가 벽째로 무너졌다." }
+      effects: ["mine.progress = 2", "stat.근력 += 2"]
+    lose:
+      lines: ["물리고 할퀴어서 도망쳐 나왔다. 다음에 다시 와야겠다."]
+      effects: ["fatigue += 15", "stress += 10 * (1 + mod.stress)"]
 
 - id: mine_3
   title: 붉은 뿌리

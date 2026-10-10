@@ -246,15 +246,18 @@
   priority: 1
   lines:
     - 카이든: "평민 중엔 그래도 네가 제일 낫군. 한 판 해라."
-  check: { label: 카이든과 대련, value: "stat.근력 + stat.민첩 + luck", dc: 34 }
-  success:
-    lines:
-      - 카이든: "…다음엔 진심으로 하겠다."
-      - "대련 내내 카이든은 왼쪽 어깨를 감싸고 있었다."
-    effects: ["affinity.kaiden += 8", "trust.kaiden += 8", "know.kaiden_shoulder = 1"]
-  fail:
-    lines: [카이든: "역시 이 정도인가."]
-    effects: ["affinity.kaiden += 2", "stress += 5 * (1 + mod.stress)"]
+  battle:
+    enemy: kaiden_spar
+    win:
+      lines:
+        - 카이든: "…다음엔 진심으로 하겠다."
+        - "대련 내내 카이든은 왼쪽 어깨를 감싸고 있었다."
+      effects: ["affinity.kaiden += 8", "trust.kaiden += 8", "know.kaiden_shoulder = 1"]
+    lose:
+      lines:
+        - 카이든: "역시 이 정도인가. …그래도 마지막 한 수는 나쁘지 않았다."
+        - "돌아서는 카이든의 왼쪽 어깨가 미세하게 처져 있었다."
+      effects: ["affinity.kaiden += 3", "know.kaiden_shoulder = 1", "stress += 5 * (1 + mod.stress)"]
 
 - id: newspaper_rumor
   title: 신문부의 제보
@@ -378,21 +381,28 @@
     - when: "note.note_edric.known"
       속마음: "(원작에선 저기서 시체로 발견된다.)"
   choices:
-    - text: 따라간다 (근력·민첩)
-      check: { label: 에드릭 구출, value: "stat.근력 + stat.민첩 + 10 * know.cult_early + 5 * lab.clean + luck", dc: 34 }
-      success:
-        lines:
-          - "통로 끝, 바닥에 피로 그린 원. 로브 입은 그림자가 에드릭의 목덜미를 쥐고 있다."
-          - "횃불을 던지자 그림자가 어둠 속으로 사라졌다."
-          - 에드릭: "너… 왜 날 구해? 너 나 싫어하잖아."
-        effects: ["fate.edric = 'saved'", "affinity.edric += 20", "trust.edric += 10", "met.edric = 1"]
-        plants:
-          - { id: F04, notice: { value: "stat.지성", dc: 12 } }
-      fail:
-        lines:
-          - "어둠 속에서 무언가에 부딪혀 정신을 잃었다."
-          - "깨어났을 땐 이미 교관들이 통로를 막고 있었다."
-        effects: ["stress += 20 * (1 + mod.stress)", "fatigue += 30"]
+    - text: 따라간다
+      lines:
+        - "통로 끝, 바닥에 피로 그린 원. 로브 입은 그림자가 에드릭의 목덜미를 쥐고 있다."
+        - when: "lab.partner == 'bruno' or lab.partner == 'aren' or lab.partner == 'liana'"
+          나레이션: "조원이 내 뒤를 따라 뛰어들었다."
+        - when: "lab.clean"
+          나레이션: "2층 함정을 깔끔하게 넘긴 덕에 숨이 차지 않는다."
+      plants:
+        - { id: F04, notice: { value: "stat.지성", dc: 12 } }
+      battle:
+        enemy: cult_shadow
+        ally: "lab.partner"
+        win:
+          lines:
+            - "그림자가 비명도 없이 어둠 속으로 흩어졌다. 바닥의 피의 원이 식어간다."
+            - 에드릭: "너… 왜 날 구해? 너 나 싫어하잖아."
+          effects: ["fate.edric = 'saved'", "affinity.edric += 20", "trust.edric += 10", "met.edric = 1"]
+        lose:
+          lines:
+            - "검붉은 빛이 시야를 덮었다. 무릎이 꺾인다."
+            - "깨어났을 땐 이미 교관들이 통로를 막고 있었다. 에드릭은 보이지 않았다."
+          effects: ["stress += 20 * (1 + mod.stress)", "fatigue += 20"]
     - text: 교관에게 알린다
       requires: "edric.contact or stat.매력 >= 14"
       effects: ["fate.edric = 'saved_by_teacher'", "affinity.edric += 5", "affinity.garen += 5"]
@@ -447,7 +457,7 @@
   priority: 10
   announce: 중간고사
   lines: ["중간고사 주간. 첫날은 필기, 둘째 날은 실기 한 과목을 골라 치른다."]
-  check: { label: 필기 시험, value: "stat.지성 + 10 * talent.완전기억 + luck", dc: 34 }
+  check: { label: 필기 시험, value: "stat.지성 + 10 * talent.완전기억 + luck", dc: 32 }
   success:
     lines: ["필기는 막힘없이 풀었다."]
     effects: ["mid.written = 1"]

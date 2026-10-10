@@ -1,6 +1,5 @@
 # 7월: 1학년 무투대회와 1학기 종업식
-# 전술 네 가지 — 정면 승부(근력), 빈틈 공략(민첩·지성), 마법 견제(마력제어), 심리전(매력·의지)
-# 상대마다 강한 전술과 약한 전술이 다르다. 공략 노트나 관찰로 알아낸 약점은 판정에 보너스가 된다.
+# 매 경기는 패턴 읽기 전투. 공략 노트나 관찰로 알아낸 정보가 있으면 상대의 다음 행동이 정확히 보인다.
 
 - id: t_signup
   title: 무투대회 참가 신청
@@ -34,32 +33,18 @@
       lines:
         - 진행자: "예선 3조! D반 대 C반!"
         - "상대는 덩치 큰 C반 남학생. 목검을 어깨에 걸치고 히죽 웃는다."
-      choices:
-        - text: 정면 승부 (근력)
-          check: { label: 정면 승부, value: "stat.근력 + stat.민첩 / 2 + luck", dc: 28 }
-          success: { lines: ["힘 대 힘. 상대의 목검이 먼저 튕겨 나갔다."], effects: ["tourney.round = 1"] }
-          fail: { lines: ["힘에서 밀렸다. 예선 탈락."], effects: ["tourney.result = 'prelim'"] }
-        - text: 빈틈을 노린다 (민첩·지성)
-          check: { label: 빈틈 공략, value: "stat.민첩 + stat.지성 / 2 + 15 * talent.직감 + luck", dc: 26 }
-          success: { lines: ["덩치가 크면 돌아서는 게 느리다. 등 뒤를 잡았다."], effects: ["tourney.round = 1"] }
-          fail: { lines: ["파고들다가 어깨에 정통으로 맞았다. 예선 탈락."], effects: ["tourney.result = 'prelim'"] }
-        - text: 마법으로 견제한다 (마력제어)
-          check: { label: 마법 견제, value: "stat.마력제어 + stat.마력량 / 2 + luck", dc: 28 }
-          success: { lines: ["발밑에 얼음을 깔았다. 상대가 미끄러지며 장외."], effects: ["tourney.round = 1"] }
-          fail: { lines: ["영창이 늦었다. 예선 탈락."], effects: ["tourney.result = 'prelim'"] }
-        - text: 심리전으로 흔든다 (매력·의지)
-          check: { label: 심리전, value: "stat.매력 + stat.의지 / 2 + 10 * talent.혐오스러운분위기 + luck", dc: 28 }
-          success:
-            lines:
-              - 나레이션:
-                  - "\"네 왼발, 아까부터 떨리던데.\" 상대가 발을 내려다본 순간 끝났다."
-                  - { when: "talent.혐오스러운분위기", text: "웃으면서 다가갔을 뿐인데 상대가 스스로 장외로 물러났다." }
-            effects: ["tourney.round = 1"]
-          fail: { lines: ["상대는 말을 듣지 않는 타입이었다. 예선 탈락."], effects: ["tourney.result = 'prelim'"] }
+      battle:
+        enemy: t_prelim
+        win:
+          lines: ["덩치가 장외로 굴러떨어졌다. 관중석에서 휘파람이 터진다.", 진행자: "D반, 본선 진출!"]
+          effects: ["tourney.round = 1", "reputation += 3"]
+        lose:
+          lines: ["목검이 손에서 튕겨 나갔다. 예선 탈락."]
+          effects: ["tourney.result = 'prelim'"]
     - lines:
         - "관중석에서 예선을 지켜봤다. 아렌은 성검 없이 목검으로 아슬아슬하게 이겼다."
-        - "카이든은 세 합 만에 상대를 장외로 보냈다."
-      effects: ["stat.지성 += 1"]
+        - "카이든은 세 합 만에 상대를 장외로 보냈다. 왼쪽 어깨를 한 번도 쓰지 않고."
+      effects: ["stat.지성 += 1", "know.kaiden_shoulder = 1"]
 
 # ---------------------------------------------------------------- 본선 8강
 - id: t_quarter
@@ -74,45 +59,27 @@
       lines:
         - 진행자: "8강! 아델하이트의 천재, 미라벨!"
         - 미라벨: "드디어 공식적으로 짓밟을 수 있겠네."
-        - 속마음: "(마법 대결로는 불리하다. 거리를 좁혀야 한다.)"
-      choices:
-        - text: 정면 승부 (근력)
-          check: { label: 정면 승부, value: "stat.근력 + stat.민첩 / 2 + luck", dc: 42 }
-          success: { lines: ["영창이 끝나기 전에 거리를 좁혔다. 목검이 미라벨의 지팡이를 쳐냈다.", 미라벨: "…반칙이야, 이건."], effects: ["tourney.round = 2", "affinity.mirabel += 5"] }
-          fail: { lines: ["다가가기도 전에 바람 마법에 날아갔다. 8강 탈락."], effects: ["tourney.result = 'quarter'"] }
-        - text: 빈틈을 노린다 (민첩·지성)
-          check: { label: 빈틈 공략, value: "stat.민첩 + stat.지성 / 2 + 15 * talent.직감 + luck", dc: 40 }
-          success: { lines: ["대마법 영창 사이의 0.5초. 그 틈으로 뛰어들었다."], effects: ["tourney.round = 2", "affinity.mirabel += 5"] }
-          fail: { lines: ["틈은 없었다. 미라벨은 영창을 둘로 쪼개 쓰고 있었다. 8강 탈락."], effects: ["tourney.result = 'quarter'"] }
-        - text: 마법으로 맞선다 (마력제어)
-          check: { label: 마법 대결, value: "stat.마력제어 + stat.마력량 / 2 + luck", dc: 50 }
-          success: { lines: ["두 마법이 정면으로 부딪혔다. 먼저 무릎을 꿇은 건 미라벨이었다.", 미라벨: "말도 안 돼…"], effects: ["tourney.round = 2", "affinity.mirabel += 10", "trust.mirabel += 10"] }
-          fail: { lines: ["마법 싸움에선 상대가 되지 않았다. 8강 탈락."], effects: ["tourney.result = 'quarter'"] }
-        - text: 심리전으로 흔든다 (매력·의지)
-          check: { label: 심리전, value: "stat.매력 + stat.의지 / 2 + 10 * (trust.mirabel >= 15) + luck", dc: 44 }
-          success: { lines: ["\"아델하이트가 몰락한 이유, 알고 싶지 않아?\" 영창이 끊겼다."], effects: ["tourney.round = 2", "trust.mirabel -= 5"] }
-          fail: { lines: [미라벨: "그런 말에 흔들릴 거면 여기 서지도 않았어.", "8강 탈락."], effects: ["tourney.result = 'quarter'"] }
+        - 속마음: "(마법 싸움으로는 불리하다. 붙어서 쳐야 한다. 대마법 영창은 강타로 끊는다.)"
+      battle:
+        enemy: t_mirabel
+        win:
+          lines: ["미라벨의 지팡이가 바닥을 굴렀다.", 미라벨: "…말도 안 돼. 다음엔, 다음엔 절대."]
+          effects: ["tourney.round = 2", "affinity.mirabel += 8", "trust.mirabel += 8"]
+        lose:
+          lines: ["회오리에 휩쓸려 장외로 날아갔다. 8강 탈락.", 미라벨: "…그래도 여기까지 온 건 칭찬해 줄게."]
+          effects: ["tourney.result = 'quarter'", "affinity.mirabel += 3"]
     - lines:
         - 진행자: "8강! 대장장이의 아들, 브루노!"
         - 브루노: "친구라도 봐주는 거 없다!"
-        - 속마음: "(힘으로는 못 이긴다. 브루노는 느리다.)"
-      choices:
-        - text: 정면 승부 (근력)
-          check: { label: 정면 승부, value: "stat.근력 + stat.민첩 / 2 + luck", dc: 50 }
-          success: { lines: ["힘 대 힘으로 브루노를 밀어냈다. 관중석이 뒤집혔다.", 브루노: "하하! 너 진짜 뭐 먹고 사냐!"], effects: ["tourney.round = 2", "affinity.bruno += 8"] }
-          fail: { lines: ["브루노의 일격에 목검이 부러졌다. 8강 탈락.", 브루노: "괜찮냐? 미안!"], effects: ["tourney.result = 'quarter'", "affinity.bruno += 3"] }
-        - text: 빈틈을 노린다 (민첩·지성)
-          check: { label: 빈틈 공략, value: "stat.민첩 + stat.지성 / 2 + 15 * talent.직감 + luck", dc: 40 }
-          success: { lines: ["크게 휘두른 뒤의 빈틈. 브루노의 옆구리에 목검을 댔다."], effects: ["tourney.round = 2", "affinity.bruno += 5"] }
-          fail: { lines: ["너무 깊이 들어갔다. 브루노의 어깨에 튕겨 나갔다. 8강 탈락."], effects: ["tourney.result = 'quarter'"] }
-        - text: 마법으로 견제한다 (마력제어)
-          check: { label: 마법 견제, value: "stat.마력제어 + stat.마력량 / 2 + luck", dc: 40 }
-          success: { lines: ["발을 묶는 마법. 브루노가 제자리에서 허우적댄다."], effects: ["tourney.round = 2", "affinity.bruno += 5"] }
-          fail: { lines: ["마법을 힘으로 찢고 들어왔다. 8강 탈락."], effects: ["tourney.result = 'quarter'"] }
-        - text: 심리전으로 흔든다 (매력·의지)
-          check: { label: 심리전, value: "stat.매력 + stat.의지 / 2 + luck", dc: 44 }
-          success: { lines: ["\"너희 할아버지 망치보다 내 검이 낫다\" 한마디에 브루노가 이성을 잃고 달려들었다. 피하기만 하면 됐다."], effects: ["tourney.round = 2", "affinity.bruno += 2"] }
-          fail: { lines: [브루노: "응? 뭐라고? 잘 안 들려!", "통하지 않았다. 8강 탈락."], effects: ["tourney.result = 'quarter'"] }
+        - 속마음: "(힘은 브루노가 위다. 발을 구르면 전력이 온다. 그때는 받지 말고 끊어야 한다.)"
+      battle:
+        enemy: t_bruno
+        win:
+          lines: ["브루노가 대자로 뻗었다. 그리고 웃었다.", 브루노: "하하! 너 진짜 뭐 먹고 사냐! 결승까지 가라!"]
+          effects: ["tourney.round = 2", "affinity.bruno += 8"]
+        lose:
+          lines: ["브루노의 일격에 목검이 부러졌다. 8강 탈락.", 브루노: "괜찮냐? 미, 미안! 너무 세게 쳤다!"]
+          effects: ["tourney.result = 'quarter'", "affinity.bruno += 5"]
 
 # ---------------------------------------------------------------- 4강
 - id: t_semi
@@ -124,33 +91,18 @@
   when: "tourney.round == 2"
   lines:
     - 진행자: "4강! 제국의 3황자, 카이든 아스테라!"
-    - 카이든: "여기까지 올 줄은 몰랐군. 하지만 여기까지다."
     - when: "know.kaiden_shoulder or note.note_kaiden_style.known"
-      속마음: "(왼쪽 어깨. 오른쪽 아래가 빈다.)"
-  choices:
-    - text: 정면 승부 (근력)
-      check: { label: 정면 승부, value: "stat.근력 + stat.민첩 / 2 + luck", dc: 60 }
-      success: { lines: ["황자의 검을 정면으로 받아냈다. 두 번, 세 번. 카이든의 손목이 먼저 풀렸다.", 카이든: "……인정하지."], effects: ["tourney.round = 3", "affinity.kaiden += 10", "trust.kaiden += 10"] }
-      fail: { lines: ["정석의 검. 한 치의 빈틈도 없었다. 4강 탈락.", 카이든: "나쁘지 않았다."], effects: ["tourney.result = 'semi'", "affinity.kaiden += 3"] }
-    - text: 오른쪽 아래 빈틈을 노린다 (민첩·지성)
-      check: { label: 빈틈 공략, value: "stat.민첩 + stat.지성 / 2 + 15 * talent.직감 + 15 * (know.kaiden_shoulder or note.note_kaiden_style.known) + luck", dc: 58 }
-      success:
-        lines:
-          - "카이든이 왼쪽 어깨를 감싸는 순간, 오른쪽 아래로 파고들었다."
-          - 카이든: "…어떻게 알았지?"
-        effects: ["tourney.round = 3", "affinity.kaiden += 6", "trust.kaiden += 12"]
-      fail: { lines: ["빈틈을 노린 걸 읽혔다. 4강 탈락."], effects: ["tourney.result = 'semi'"] }
-    - text: 마법으로 견제한다 (마력제어)
-      check: { label: 마법 견제, value: "stat.마력제어 + stat.마력량 / 2 + luck", dc: 58 }
-      success: { lines: ["검과 마법을 번갈아 쓰자 카이든의 리듬이 무너졌다."], effects: ["tourney.round = 3", "affinity.kaiden += 6"] }
-      fail: { lines: ["카이든은 마법을 베어냈다. 말 그대로. 4강 탈락."], effects: ["tourney.result = 'semi'"] }
-    - text: 황자의 자존심을 건드린다 (매력·의지)
-      check: { label: 심리전, value: "stat.매력 + stat.의지 / 2 + 10 * know.kaiden_palace + luck", dc: 60 }
-      success:
-        lines:
-          - "\"형님들이 보고 계시겠네.\" 카이든의 검끝이 처음으로 흔들렸다."
-        effects: ["tourney.round = 3", "trust.kaiden -= 10"]
-      fail: { lines: [카이든: "그 말, 형님들한테서 백 번은 들었다.", "4강 탈락."], effects: ["tourney.result = 'semi'"] }
+      속마음: "(왼쪽 어깨. 강타를 쓸 때마다 어깨를 감싼다. 그 순간을 받아내면 빈틈이 생긴다.)"
+  battle:
+    enemy: t_kaiden
+    win:
+      lines:
+        - "카이든의 목검이 허공을 갈랐다. 그 틈으로 파고들었다."
+        - 카이든: "……인정하지. 결승에서 지면 용서 안 한다."
+      effects: ["tourney.round = 3", "affinity.kaiden += 10", "trust.kaiden += 10"]
+    lose:
+      lines: ["정석의 검. 한 치의 빈틈도 없었다. 4강 탈락.", 카이든: "나쁘지 않았다. 평민 중에선."]
+      effects: ["tourney.result = 'semi'", "affinity.kaiden += 4"]
 
 # ---------------------------------------------------------------- 결승 (내가 올라간 경우)
 - id: t_final
@@ -167,27 +119,21 @@
         - "결승에서 보자고 했잖아."
         - { when: "aren.temper >= 1", text: "너랑 붙게 될 줄 알았어. 봐주지 마." }
         - { when: "aren.temper <= -1", text: "…비켜. 나는 이겨야 해." }
-  choices:
-    - text: 정면 승부 (근력)
-      check: { label: 정면 승부, value: "stat.근력 + stat.민첩 / 2 + luck", dc: 66 }
-      success: { lines: ["성검의 빛이 번쩍였지만, 목검이 먼저 닿았다."], effects: ["tourney.winner = 'me'", "tourney.result = 'win'"] }
-      fail: { lines: ["아렌의 검에서 빛이 터졌다. 정신을 차렸을 땐 하늘이 보였다. 준우승."], effects: ["tourney.winner = 'aren'", "tourney.result = 'final'"] }
-    - text: 빈틈을 노린다 (민첩·지성)
-      check: { label: 빈틈 공략, value: "stat.민첩 + stat.지성 / 2 + 15 * talent.직감 + luck", dc: 64 }
-      success: { lines: ["아렌은 성검을 쓸지 말지 망설였다. 그 반 박자를 찔렀다."], effects: ["tourney.winner = 'me'", "tourney.result = 'win'"] }
-      fail: { lines: ["아렌은 빈틈마저 성검의 빛으로 메웠다. 준우승."], effects: ["tourney.winner = 'aren'", "tourney.result = 'final'"] }
-    - text: 마법으로 견제한다 (마력제어)
-      check: { label: 마법 견제, value: "stat.마력제어 + stat.마력량 / 2 + luck", dc: 66 }
-      success: { lines: ["성검이 내 마법을 빨아들이려는 순간, 마법을 거뒀다. 아렌이 앞으로 고꾸라졌다."], effects: ["tourney.winner = 'me'", "tourney.result = 'win'"] }
-      fail: { lines: ["성검이 마법을 통째로 삼켰다. 준우승."], effects: ["tourney.winner = 'aren'", "tourney.result = 'final'"] }
-    - text: 성검의 목소리를 떠올리게 한다 (매력·의지)
-      check: { label: 심리전, value: "stat.매력 + stat.의지 / 2 + 12 * note.note_aren_final.known + 8 * (aren.temper >= 1) + luck", dc: 60 }
-      success:
-        lines:
-          - "\"성검이 뭐라고 속삭이지?\" 아렌의 눈이 흔들렸다. 그 순간 끝났다."
-          - 속마음: "(공략 위키 그대로다. 미안, 아렌.)"
-        effects: ["tourney.winner = 'me'", "tourney.result = 'win'", "aren.cold += 1"]
-      fail: { lines: [아렌: "이제 그 목소리, 안 무서워.", "준우승."], effects: ["tourney.winner = 'aren'", "tourney.result = 'final'", "aren.kind += 1"] }
+    - when: "note.note_aren_final.known"
+      속마음: "(체력이 반쯤 깎이면 성검이 깨어난다. 그때부터가 진짜다.)"
+  battle:
+    enemy: t_aren
+    win:
+      lines:
+        - "성검의 빛이 사그라들었다. 아렌이 무릎을 꿇은 채 웃는다."
+        - 아렌: "…졌다. 진짜로 졌어. 고마워, 봐주지 않아서."
+        - 진행자: "우승! D반, {{player.name}}!"
+      effects: ["tourney.winner = 'me'", "tourney.result = 'win'"]
+    lose:
+      lines:
+        - "빛이 터졌다. 정신을 차렸을 땐 하늘이 보였다. 준우승."
+        - 아렌: "{{player.name}}, 일어날 수 있어? …너 아니었으면 나 여기까지 못 왔어."
+      effects: ["tourney.winner = 'aren'", "tourney.result = 'final'", "aren.kind += 1"]
 
 # ---------------------------------------------------------------- 결승 관전 (원작대로 카이든 vs 아렌)
 - id: t_final_watch

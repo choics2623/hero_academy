@@ -1,3 +1,4 @@
+export * from './battle';
 export * from './content';
 export * from './creation';
 export * from './expr';

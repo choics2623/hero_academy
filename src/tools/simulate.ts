@@ -24,5 +24,8 @@ for (const [id, m] of rep.crossroads) {
   const parts = [...m].sort((a, b) => b[1] - a[1]).map(([v, n]) => `${v}${v === String(cr.canon) ? '(원작)' : ''} ${Math.round((n / runs) * 100)}%`);
   console.log(`갈림길 ${cr.title}: ${parts.join(' / ')}`);
 }
+for (const [id, b] of rep.battles) {
+  if (b.fights) console.log(`전투 ${content.enemies.get(id)!.name}: ${b.fights}회, 승률 ${Math.round((b.wins / b.fights) * 100)}%, 평균 ${(b.turns / b.fights).toFixed(1)}턴`);
+}
 console.log(`자세한 리포트: ${out}`);
 if (rep.errors.length) process.exit(1);

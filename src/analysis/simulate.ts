@@ -4,7 +4,7 @@
 //   - 복선: 심었는데 회수 못 함 / 회수됐는데 플레이어가 복선을 못 봄
 // 'curious' 정책은 지금까지 덜 본 이벤트 쪽으로 가려고 해서 커버리지가 빨리 오른다.
 
-import { randomBuild, type Action, type Content } from '../engine';
+import { randomBuild, suggestSkill, type Action, type Content } from '../engine';
 import { Game } from '../engine/game';
 import { nextRandom } from '../engine/rng';
 
@@ -27,6 +27,7 @@ export interface SimReport {
   collapse: number[];
   errors: { seed: number; msg: string }[];
   origins: Map<string, number>;
+  battles: Map<string, { fights: number; wins: number; turns: number }>;
 }
 
 export function simulate(c: Content, opts: SimOptions): SimReport {
@@ -48,6 +49,7 @@ export function simulate(c: Content, opts: SimOptions): SimReport {
     collapse: [],
     errors: [],
     origins: new Map(),
+    battles: new Map([...c.enemies.keys()].map((k) => [k, { fights: 0, wins: 0, turns: 0 }])),
   };
   // 모든 선택지를 미리 등록 (한 번도 안 보인 선택지를 찾기 위해)
   const walk = (o: import('../engine').Outcome) => {
@@ -84,6 +86,13 @@ export function simulate(c: Content, opts: SimOptions): SimReport {
         const opts = g.options();
         if (!opts.length) throw new Error(`막힘: 고를 수 있는 행동이 없음 (${g.view().time}, ${g.state.scene?.eventId ?? '활동 선택'})`);
         g.act(policy === 'curious' ? curious(c, g, opts, rep, rand) : opts[Math.floor(rand() * opts.length)]);
+        const lb = g.state.lastBattle;
+        if (lb) {
+          const s = rep.battles.get(lb.enemy)!;
+          s.fights++;
+          s.turns += lb.turns;
+          if (lb.result === 'win') s.wins++;
+        }
       }
       for (const id of firedThisRun) rep.eventRuns.set(id, rep.eventRuns.get(id)! + 1);
       for (const cr of c.crossroads.values()) {
@@ -110,6 +119,10 @@ export function simulate(c: Content, opts: SimOptions): SimReport {
 
 /** 덜 본 이벤트/선택지로 향하는 행동을 고르는 정책 (70%), 나머지는 무작위 */
 function curious(c: Content, g: Game, opts: Action[], rep: SimReport, rand: () => number): Action {
+  // 전투는 대체로 정석대로 싸운다 (가끔 실수)
+  if (g.state.phase === 'battle') {
+    return rand() < 0.8 ? { type: 'battle', skill: suggestSkill(c, g.world, g.state.battle!) } : opts[Math.floor(rand() * opts.length)];
+  }
   if (rand() < 0.3) return opts[Math.floor(rand() * opts.length)];
   let best = opts[0];
   let bestScore = -Infinity;
@@ -172,6 +185,11 @@ export function formatReport(c: Content, r: SimReport): string {
   for (const [id, f] of r.foreshadow) {
     const t = c.foreshadows.get(id)!;
     L.push(`| ${id} ${t.title} | ${pct(f.seen)} | ${pct(f.noticed)} | ${pct(f.paid)} | ${f.paidUnnoticed ? '⚠️ ' + pct(f.paidUnnoticed) : '-'} |`);
+  }
+  L.push('', '## 전투 (정석 대응 80% 정책 기준)', '', '| 적 | 전투 수 | 승률 | 평균 턴 |', '|---|---|---|---|');
+  for (const [id, s] of r.battles) {
+    if (!s.fights) continue;
+    L.push(`| ${c.enemies.get(id)!.name} | ${s.fights} | ${pct(s.wins, s.fights)} | ${(s.turns / s.fights).toFixed(1)} |`);
   }
   L.push('', '## 출신 분포', '');
   for (const [o, n] of r.origins) L.push(`- ${c.origins.get(o)?.name ?? o}: ${n}`);

@@ -112,13 +112,14 @@
   when: "stat.근력 >= 25"
   lines:
     - 선배: "1학년 중에 힘 좀 쓴다는 게 너냐? 한 판 붙자."
-  check: { label: 선배와 대련, value: "stat.근력 + stat.민첩 / 2 + luck", dc: 42 }
-  success:
-    lines: ["선배의 목검이 바닥을 굴렀다. 주변에 구경꾼이 몰려들었다."]
-    effects: ["reputation += 8", "stat.근력 += 2"]
-  fail:
-    lines: ["세 합 만에 목검을 놓쳤다. 선배가 어깨를 두드린다.", 선배: "나쁘지 않아. 2학년 되면 다시 붙자."]
-    effects: ["stat.민첩 += 1"]
+  battle:
+    enemy: senior
+    win:
+      lines: ["선배의 목검이 바닥을 굴렀다. 주변에 구경꾼이 몰려들었다."]
+      effects: ["reputation += 8", "stat.근력 += 2"]
+    lose:
+      lines: ["목검을 놓쳤다. 선배가 어깨를 두드린다.", 선배: "나쁘지 않아. 2학년 되면 다시 붙자."]
+      effects: ["stat.민첩 += 1"]
 
 # ================================================================ 도서관
 - id: enc_lib_librarian
@@ -192,7 +193,7 @@
   title: 금서 열람증
   on: 도서관
   pool: true
-  when: "stat.지성 >= 30"
+  when: "stat.지성 >= 28"
   lines:
     - 사서: "자네, 매일 오는군. …이걸 주지. 금서 서가 열람증일세."
     - "금서 서가에는 제국 초기 연대기가 있었다. 초대 용사의 이름이 적힌 쪽만 찢겨 있다."
@@ -222,14 +223,15 @@
   cooldown: 3
   when: "rival.mirabel or affinity.mirabel >= 10"
   lines:
-    - 미라벨: "표적 열 개. 먼저 다 맞히는 쪽이 이기는 거야."
-  check: { label: 마법 대결, value: "stat.마력제어 + stat.마력량 / 2 + luck", dc: 40 }
-  success:
-    lines: ["마지막 표적이 동시에 터졌다. …아니, 내 쪽이 반 박자 빨랐다.", 미라벨: "……한 번 더."]
-    effects: ["affinity.mirabel += 8", "trust.mirabel += 5", "reputation += 5"]
-  fail:
-    lines: [미라벨: "아델하이트를 이기려면 백 년은 이르지."]
-    effects: ["affinity.mirabel += 3", "stress += 5"]
+    - 미라벨: "실습용 결계 안에서 한 판. 마법이든 뭐든 써도 좋아. 어차피 내가 이기니까."
+  battle:
+    enemy: mirabel_duel
+    win:
+      lines: ["결계가 깨지는 소리. 미라벨이 무릎을 짚고 숨을 몰아쉰다.", 미라벨: "……한 번 더."]
+      effects: ["affinity.mirabel += 8", "trust.mirabel += 5", "reputation += 5"]
+    lose:
+      lines: [미라벨: "아델하이트를 이기려면 백 년은 이르지. …그래도 영창 끊은 건 인정해."]
+      effects: ["affinity.mirabel += 4", "stress += 5"]
 
 - id: enc_magic_backfire
   title: 마력 폭주
@@ -556,10 +558,14 @@
   cooldown: 1
   lines: ["노점이 늘어선 시장. 향신료 냄새와 호객 소리."]
   choices:
-    - text: 강장제를 산다 (은화 15, 피로 회복)
+    - text: 강장제를 산다 (은화 15, 전투 중 체력 회복)
       requires: "money >= 15"
-      effects: ["money -= 15", "fatigue -= 35"]
-      lines: [상인: "이거 한 병이면 사흘 밤샘도 거뜬하지!"]
+      effects: ["money -= 15", "item.강장제 += 1"]
+      lines: [상인: "이거 한 병이면 사흘 밤샘도 거뜬하지! 싸움판에서도 효과 직빵이야."]
+    - text: 피로회복제를 그 자리에서 마신다 (은화 10)
+      requires: "money >= 10"
+      effects: ["money -= 10", "fatigue -= 35"]
+      lines: ["쓴맛과 함께 눈이 번쩍 뜨인다."]
     - text: 꿀과자를 산다 (은화 5, 스트레스 해소)
       requires: "money >= 5"
       effects: ["money -= 5", "stress -= 20"]

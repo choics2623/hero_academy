@@ -27,6 +27,8 @@ export interface Writer {
   window?: Window;
   /** 처음부터 존재하는 값 (캐릭터 생성 등) */
   initial?: boolean;
+  /** 이 쓰기는 이 적을 이겨야 일어난다 */
+  battle?: string;
 }
 
 export interface Reader {
@@ -177,13 +179,46 @@ export function buildGraph(c: Content): Graph {
     read(`인연:${ch.id}`, ch.met);
     readLines(`인연:${ch.id}`, ch.memo);
   }
+  for (const k of c.skills.values()) read(`기술:${k.id}`, k.when);
+  for (const e of c.enemies.values()) {
+    read(`적:${e.id}`, e.reveal);
+    readLines(`적:${e.id}`, e.intro);
+  }
+  for (const [k, e] of Object.entries(c.rules.battle)) read(`규칙:battle.${k}`, e);
+  for (const k of c.skills.values()) {
+    if (k.kind === 'item' && k.item) write({ source: `기술:${k.id}`, target: `item.${k.item}`, op: '-=', conds: [] });
+  }
+
+  // next로만 도달하는 이벤트는 '부모 노드의 조건'을 만족해야 일어난다
+  const nextConds = new Map<string, { eventId: string; conds: Expr[] }[]>();
+  for (const ev of c.events.values()) {
+    for (const { node, conds } of walkOutcomes(ev)) {
+      if (!node.next) continue;
+      if (!nextConds.has(node.next)) nextConds.set(node.next, []);
+      nextConds.get(node.next)!.push({ eventId: ev.id, conds });
+    }
+  }
 
   for (const ev of c.events.values()) {
     const window = eventWindow.get(ev.id);
-    write({ source: `이벤트:${ev.id}`, eventId: ev.id, target: `fired.${ev.id}`, op: 'implicit', conds: ev.when ? [ev.when] : [], window });
+    const own = ev.when ? [ev.when] : [];
+    const parents = ev.trigger.kind === 'none' ? nextConds.get(ev.id) ?? [] : [];
+    if (parents.length) {
+      for (const p of parents) {
+        write({ source: `이벤트:${ev.id}(${p.eventId}에서)`, eventId: ev.id, target: `fired.${ev.id}`, op: 'implicit', conds: [...p.conds, ...own], window });
+      }
+    } else {
+      write({ source: `이벤트:${ev.id}`, eventId: ev.id, target: `fired.${ev.id}`, op: 'implicit', conds: own, window });
+    }
+    // 전투 승리 결과 아래의 노드들 → 어떤 적을 이겨야 하는가
+    const behind = new Map<string, string>();
+    for (const { node } of walkOutcomes(ev)) {
+      if (!node.battle?.win) continue;
+      for (const { node: n } of walkOutcomes(node.battle.win)) behind.set(n.path, node.battle.enemy);
+    }
     for (const { node, conds } of walkOutcomes(ev)) {
       const src = `이벤트:${node.path}`;
-      const base = { eventId: ev.id, conds, window };
+      const base = { eventId: ev.id, conds, window, battle: behind.get(node.path) };
       writeEffects(src, node.effects, base);
       for (const p of node.plants) {
         write({ ...base, source: src, target: `fs.${p.id}.seen`, op: 'implicit' });
@@ -200,6 +235,12 @@ export function buildGraph(c: Content): Graph {
       if (node.check) {
         write({ ...base, source: src, target: 'check.last', op: 'implicit' });
         read(src, node.check.value, window);
+      }
+      if (node.battle) {
+        for (const t of ['battle.result', 'battle.turns', `beat.${node.battle.enemy}`, 'fatigue']) {
+          write({ ...base, source: src, target: t, op: t === 'fatigue' ? '+=' : 'implicit' });
+        }
+        read(src, node.battle.ally, window);
       }
       read(src, node.when, window);
       if ('requires' in node) read(src, (node as { requires?: Expr }).requires, window);

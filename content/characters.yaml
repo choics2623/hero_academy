@@ -4,6 +4,7 @@
 - id: aren
   name: 아렌
   desc: 원작 주인공. 성검에 선택받은 평민
+  assist: { dmg: 6, text: "아렌의 목검이 빈틈을 친다!" }
   memo:
     - "성검에 선택받은 평민. 아직 자기 힘을 모른다."
     - { when: "aren.temper >= 1", text: "나를 믿기 시작했다. 원작보다 표정이 밝다." }
@@ -13,6 +14,7 @@
 - id: liana
   name: 리아나
   desc: 하프엘프. 원작 2학년 여름 사망
+  assist: { dmg: 5, text: "리아나의 화살이 어둠을 가른다!" }
   memo:
     - "원예부의 하프엘프. 숲 이야기를 좋아한다."
     - { when: "know.moonherb", text: "어릴 때 월광초 달인 약을 먹었다고 한다." }
@@ -39,6 +41,7 @@
 - id: bruno
   name: 브루노
   desc: 대장장이 아들
+  assist: { dmg: 6, text: "브루노가 어깨로 들이받는다!" }
   memo:
     - "덩치 큰 대장장이 아들. 힘이 장사다."
     - { when: "fired.enc_canteen_bruno >= 2", text: "할아버지의 망치를 자랑으로 여긴다." }

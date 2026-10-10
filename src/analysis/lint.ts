@@ -23,10 +23,11 @@ const NAMESPACES: { prefix: string; kind: string; has: (c: Content, id: string) 
   { prefix: 'fs.', kind: '복선', has: (c, id) => c.foreshadows.has(id.split('.')[0]) },
   { prefix: 'note.', kind: '공략 노트', has: (c, id) => c.notes.has(id.split('.')[0]) },
   { prefix: 'crossroad.', kind: '갈림길', has: (c, id) => c.crossroads.has(id.split('.')[0]) },
+  { prefix: 'beat.', kind: '적', has: (c, id) => c.enemies.has(id) },
 ];
 
 /** 쓰이기만 하고 안 읽혀도 괜찮은 변수 (수치형 자원) */
-const QUIET_PREFIXES = ['last.', 'met.', 'stat.', 'growth.', 'mod.', 'fired.', 'count.', 'fs.', 'note.', 'check.', 'crossroad.', 'talent.', 'perk.', 'time.'];
+const QUIET_PREFIXES = ['beat.', 'battle.', 'last.', 'met.', 'stat.', 'growth.', 'mod.', 'fired.', 'count.', 'fs.', 'note.', 'check.', 'crossroad.', 'talent.', 'perk.', 'time.'];
 
 export function lint(c: Content, g: Graph = buildGraph(c)): Finding[] {
   const out: Finding[] = [];
@@ -43,6 +44,12 @@ export function lint(c: Content, g: Graph = buildGraph(c)): Finding[] {
       if (node.next && !c.events.has(node.next)) add('error', 'NEXT_MISSING', node.path, `없는 다음 이벤트 '${node.next}'`);
       for (const p of node.plants) if (!c.foreshadows.has(p.id)) add('error', 'FS_MISSING', node.path, `없는 복선 '${p.id}'`);
       for (const f of node.pays) if (!c.foreshadows.has(f)) add('error', 'FS_MISSING', node.path, `없는 복선 '${f}'`);
+      if (node.battle) {
+        if (!c.enemies.has(node.battle.enemy)) add('error', 'ENEMY_MISSING', node.path, `없는 적 '${node.battle.enemy}'`);
+        if (node.choices.length || node.check || node.branch.length) {
+          add('warn', 'BATTLE_MIXED', node.path, '전투가 있는 결과에는 choices/check/branch를 같이 쓸 수 없음 (무시됨). win/lose 안에 넣으세요');
+        }
+      }
       if (node.choices.length && node.branch.some((b) => b.choices.length)) {
         add('info', 'CHOICES_OVERRIDE', node.path, '분기 안의 선택지가 바깥 선택지를 덮어씀');
       }

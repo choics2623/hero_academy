@@ -8,13 +8,18 @@
 //
 // 상태는 전부 직렬화 가능한 값이라서 clone()이 싸다. 시뮬레이터와 목표 탐색기가 이걸 이용한다.
 
+import { battleView, startBattle, takeTurn, type BattleLine, type BattleState, type BattleView } from './battle';
 import { applyBuild, checkBuild, type Build } from './creation';
 import type { Activity, Choice, Content, EventDef, Note, Outcome } from './content';
 import { evaluate, test, toNum, truthy } from './expr';
 import { pickVariant, renderLines, renderTemplate, type RenderedLine } from './text';
 import { World, type WorldState } from './world';
 
-export type Action = { type: 'activity'; id: string } | { type: 'choice'; index: number } | { type: 'continue' };
+export type Action =
+  | { type: 'activity'; id: string }
+  | { type: 'choice'; index: number }
+  | { type: 'continue' }
+  | { type: 'battle'; skill: string };
 
 export interface ChoiceView {
   index: number;
@@ -30,6 +35,7 @@ export interface View {
   lines: RenderedLine[];
   choices: ChoiceView[];
   activities: { id: string; name: string; desc?: string }[];
+  battle?: BattleView;
 }
 
 interface SceneState {
@@ -40,11 +46,23 @@ interface SceneState {
   choices: { index: number; enabled: boolean }[];
   next?: string;
   then: 'endSlot' | 'dispatch';
+  /** 이 장면이 끝나면 시작할 전투 (전투를 품은 결과 노드 경로) */
+  battle?: string;
+}
+
+/** 방금 끝난 전투 (화면 연출용, 다음 입력 때 지워진다) */
+export interface BattleEnd {
+  enemy: string;
+  result: 'win' | 'lose';
+  log: BattleLine[];
+  turns: number;
 }
 
 export interface GameState extends WorldState {
-  phase: 'activity' | 'scene' | 'ended';
+  phase: 'activity' | 'scene' | 'battle' | 'ended';
   scene?: SceneState;
+  battle?: BattleState;
+  lastBattle?: BattleEnd;
   queue: string[];
   slotFired: string[];
   trace: { time: string; kind: string; text: string }[];
@@ -60,6 +78,7 @@ interface EnterResult {
   lines: RenderedLine[];
   owner?: Outcome;
   next?: string;
+  battle?: string;
 }
 
 const outcomeIndexCache = new WeakMap<Content, Map<string, Outcome>>();
@@ -73,6 +92,8 @@ function outcomeIndex(c: Content): Map<string, Outcome> {
       o.branch.forEach(walk);
       if (o.success) walk(o.success);
       if (o.fail) walk(o.fail);
+      if (o.battle?.win) walk(o.battle.win);
+      if (o.battle?.lose) walk(o.battle.lose);
       o.choices.forEach(walk);
     };
     c.events.forEach(walk);
@@ -213,7 +234,14 @@ export class Game {
     });
     if (r.owner && choices.length) this.observer?.onChoices?.(r.owner.path, choices);
     this.state.phase = 'scene';
-    this.state.scene = { ...base, lines: r.lines, owner: choices.length ? r.owner!.path : undefined, choices, next: r.next };
+    this.state.scene = {
+      ...base,
+      lines: r.lines,
+      owner: choices.length ? r.owner!.path : undefined,
+      choices,
+      next: r.next,
+      battle: r.battle,
+    };
     if (!r.lines.length && !choices.length) this.proceed();
   }
 
@@ -236,8 +264,10 @@ export class Game {
         lines.push({ speaker: '📌', text: `복선 회수 — ${this.content.foreshadows.get(f)?.title ?? f}` });
       }
     }
+    if (o.battle) return { lines, next: o.next, battle: o.path };
     let owner = o.choices.length ? o : undefined;
     let next = o.next;
+    let battle: string | undefined;
     const subs: Outcome[] = [];
     if (o.check) {
       const r = this.rollDetail(o.check.value, o.check.dc);
@@ -261,8 +291,9 @@ export class Game {
       lines.push(...r.lines);
       if (r.owner) owner = r.owner;
       if (r.next) next = r.next;
+      if (r.battle) battle = r.battle;
     }
-    return { lines, owner, next };
+    return { lines, owner: battle ? undefined : owner, next, battle };
   }
 
   /** 판정: 값 + d20 >= 난이도 */
@@ -278,6 +309,7 @@ export class Game {
 
   private proceed() {
     const sc = this.state.scene!;
+    if (sc.battle) return this.beginBattle(sc);
     if (sc.next) {
       const ev = this.content.events.get(sc.next);
       if (!ev) throw new Error(`없는 다음 이벤트: ${sc.next}`);
@@ -286,6 +318,42 @@ export class Game {
     this.state.scene = undefined;
     if (sc.then === 'endSlot') this.endSlot();
     else this.dispatch();
+  }
+
+  // ------------------------------------------------------------ battle
+
+  private beginBattle(sc: SceneState) {
+    const spec = outcomeIndex(this.content).get(sc.battle!)!.battle!;
+    const ally = spec.ally ? evaluate(spec.ally.ast, this.world) : undefined;
+    this.state.battle = startBattle(
+      this.content,
+      this.world,
+      spec.enemy,
+      typeof ally === 'string' ? ally : undefined,
+      { path: sc.battle!, next: sc.next, then: sc.then, eventId: sc.eventId, title: sc.title },
+      () => this.world.random(),
+    );
+    const enemy = this.content.enemies.get(spec.enemy)!;
+    this.state.battle.log.unshift(
+      ...renderLines(enemy.intro, this.world).map((l) => ({ who: 'sys' as const, text: l.speaker ? `${l.speaker}: “${l.text}”` : l.text })),
+    );
+    this.state.scene = undefined;
+    this.state.phase = 'battle';
+  }
+
+  private finishBattle() {
+    const b = this.state.battle!;
+    const w = this.world;
+    const spec = outcomeIndex(this.content).get(b.path)!.battle!;
+    w.set('battle.result', b.result!);
+    w.set('battle.turns', b.turn);
+    if (b.result === 'win') w.set(`beat.${b.enemy}`, 1);
+    w.add('fatigue', b.turn * 2);
+    this.state.lastBattle = { enemy: b.enemy, result: b.result!, log: b.log, turns: b.turn };
+    this.state.battle = undefined;
+    const outcome = b.result === 'win' ? spec.win : spec.lose;
+    const r: EnterResult = outcome ? this.enter(outcome) : { lines: [] };
+    this.showScene({ eventId: b.eventId, title: b.title, then: b.then }, { ...r, next: r.next ?? b.next });
   }
 
   private endSlot() {
@@ -350,6 +418,11 @@ export class Game {
   options(): Action[] {
     if (this.state.phase === 'ended') return [];
     if (this.state.phase === 'activity') return this.activities().map((a) => ({ type: 'activity', id: a.id }));
+    if (this.state.phase === 'battle') {
+      return battleView(this.content, this.world, this.state.battle!)
+        .skills.filter((k) => k.enabled)
+        .map((k) => ({ type: 'battle', skill: k.id }));
+    }
     const sc = this.state.scene!;
     if (sc.choices.length) return sc.choices.filter((c) => c.enabled).map((c) => ({ type: 'choice', index: c.index }));
     return [{ type: 'continue' }];
@@ -357,7 +430,17 @@ export class Game {
 
   act(a: Action) {
     this.guard = 0;
+    this.state.lastBattle = undefined;
     const label = this.content.calendar.label(this.state.time);
+    if (this.state.phase === 'battle' && a.type === 'battle') {
+      const b = this.state.battle!;
+      const ok = battleView(this.content, this.world, b).skills.find((k) => k.id === a.skill && k.enabled);
+      if (!ok) throw new Error(`지금 쓸 수 없는 기술: ${a.skill}`);
+      this.state.trace.push({ time: label, kind: '전투', text: ok.name });
+      takeTurn(this.content, this.world, b, a.skill, () => this.world.random());
+      if (b.result) this.finishBattle();
+      return;
+    }
     if (this.state.phase === 'activity' && a.type === 'activity') {
       const act = this.activities().find((x) => x.id === a.id);
       if (!act) throw new Error(`지금 할 수 없는 활동: ${a.id}`);
@@ -399,6 +482,7 @@ export class Game {
         return { index: c.index, text: def.text, enabled: c.enabled, hint: def.hint };
       }),
       activities: this.state.phase === 'activity' ? this.activities().map((a) => ({ id: a.id, name: a.name, desc: a.desc })) : [],
+      battle: this.state.battle ? battleView(this.content, this.world, this.state.battle) : undefined,
     };
   }
 

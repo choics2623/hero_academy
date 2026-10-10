@@ -43,6 +43,71 @@ export interface Outcome {
   choices: Choice[];
   plants: Plant[];
   pays: string[];
+  battle?: BattleSpec;
+}
+
+// ---------------------------------------------------------------- battle
+
+export type Intent = '공격' | '강타' | '방어' | '차지' | '마법';
+export const INTENTS: Intent[] = ['공격', '강타', '방어', '차지', '마법'];
+
+export type SkillKind =
+  | 'attack' | 'heavy' | 'guard' | 'dodge' | 'magic' | 'read' | 'heal' | 'intimidate' | 'blind' | 'focus' | 'item' | 'surrender';
+export const SKILL_KINDS: SkillKind[] = [
+  'attack', 'heavy', 'guard', 'dodge', 'magic', 'read', 'heal', 'intimidate', 'blind', 'focus', 'item', 'surrender',
+];
+
+export interface BattleSpec {
+  enemy: string;
+  /** 같이 싸우는 동료의 캐릭터 id를 돌려주는 식 (예: lab.partner) */
+  ally?: Expr;
+  win?: Outcome;
+  lose?: Outcome;
+}
+
+export interface Enemy {
+  id: string;
+  name: string;
+  hp: number;
+  atk: number;
+  matk: number;
+  def: number;
+  /** 회피 난이도 */
+  acc: number;
+  /** 의도를 정확히 읽는 데 필요한 '간파' 수치 */
+  tell: number;
+  turns: number;
+  /** 행동 순서. 각 칸은 후보 목록 (여러 개면 무작위) */
+  pattern: Intent[][];
+  weak: { physical: number; magic: number };
+  tells: Partial<Record<Intent, string>>;
+  acts: Partial<Record<Intent, string>>;
+  intro: Line[];
+  /** 이 식이 참이면 의도를 항상 정확히 안다 (공략 노트, 관찰) */
+  reveal?: Expr;
+  enrage?: { below: number; pattern: Intent[][]; atk: number; line: string };
+}
+
+export interface Skill {
+  id: string;
+  name: string;
+  desc: string;
+  kind: SkillKind;
+  when?: Expr;
+  mult: number;
+  sp: number;
+  mp: number;
+  /** 판정 보너스 (간파, 회피, 위압) */
+  bonus: number;
+  /** 방어 중인 적에게도 온전한 피해 */
+  pierce: boolean;
+  /** 회피 성공 시 다음 공격 배율 */
+  counter: number;
+  /** 회복량 (최대 체력 비율) */
+  heal: number;
+  /** 방어 시 마법 피해 배율 (기본 0.6) */
+  ward: number;
+  item?: string;
 }
 
 export interface Choice extends Outcome {
@@ -157,6 +222,8 @@ export interface Character {
   met: Expr;
   /** 인연 화면의 한 줄 메모 (변형 대사) */
   memo: Line[];
+  /** 전투에서 동료로 함께할 때 */
+  assist?: { dmg: number; text: string };
 }
 
 export interface Goal {
@@ -180,6 +247,8 @@ export interface Rules {
   status: { key: string; label: string }[];
   /** 캐릭터 목록 외에 화자로 쓸 수 있는 이름 (속마음, 나, ...) */
   speakers: string[];
+  /** 전투 수치 공식: hp sp mp atk matk def dodge read persuade mp_regen */
+  battle: Record<string, Expr>;
 }
 
 export interface Content {
@@ -196,6 +265,8 @@ export interface Content {
   perks: Map<string, Perk>;
   characters: Map<string, Character>;
   goals: Map<string, Goal>;
+  enemies: Map<string, Enemy>;
+  skills: Map<string, Skill>;
   derived: Map<string, Expr>;
 }
 
@@ -224,7 +295,7 @@ function asList(v: unknown): unknown[] {
 }
 
 const OUTCOME_KEYS = new Set([
-  'when', 'lines', 'effects', 'next', 'check', 'success', 'fail', 'branch', 'choices', 'plants', 'pays',
+  'when', 'lines', 'effects', 'next', 'check', 'success', 'fail', 'branch', 'choices', 'plants', 'pays', 'battle',
 ]);
 const EVENT_KEYS = new Set([
   ...OUTCOME_KEYS, 'id', 'title', 'on', 'window', 'at', 'slots', 'priority', 'weight', 'repeat', 'free',
@@ -354,7 +425,26 @@ class Builder {
       choices: asList(o.choices).map((c, i) => this.choice(where, `${path}.choices[${i}]`, c)),
       plants,
       pays: asList(o.pays).map(String),
+      battle: isObj(o.battle)
+        ? {
+            enemy: String(o.battle.enemy),
+            ally: this.expr(where, o.battle.ally),
+            win: sub('battle.win', o.battle.win),
+            lose: sub('battle.lose', o.battle.lose),
+          }
+        : undefined,
     };
+  }
+
+  private intents(where: string, v: unknown): Intent[][] {
+    const out: Intent[][] = [];
+    for (const step of asList(v)) {
+      const opts = asList(step).map(String) as Intent[];
+      for (const i of opts) if (!INTENTS.includes(i)) this.err(where, `알 수 없는 적 행동 '${i}' (가능: ${INTENTS.join(', ')})`);
+      if (opts.length) out.push(opts);
+    }
+    if (!out.length) this.err(where, 'pattern이 비어 있음');
+    return out;
   }
 
   private choice(where: string, path: string, c: unknown): Choice {
@@ -565,6 +655,7 @@ class Builder {
           desc: c.desc as string,
           met: this.expr(where, c.met ?? `affinity.${c.id} > 0 or met.${c.id}`)!,
           memo: this.lines(where, c.memo === undefined ? [] : [{ 메모: c.memo }]),
+          assist: isObj(c.assist) ? { dmg: Number(c.assist.dmg ?? 3), text: String(c.assist.text ?? '') } : undefined,
         };
       }),
     );
@@ -581,6 +672,63 @@ class Builder {
           done: this.expr(where, g.done),
           failed: this.expr(where, g.failed),
           hints: this.lines(where, g.hint === undefined ? [] : [{ 힌트: g.hint }]),
+        };
+      }),
+    );
+
+    const enemies = byId(
+      'enemies.yaml',
+      asList(this.file('enemies.yaml')).map((e) => {
+        if (!isObj(e) || typeof e.id !== 'string') return undefined;
+        const where = `enemies.yaml#${e.id}`;
+        const strMap = (v: unknown) => (isObj(v) ? (Object.fromEntries(Object.entries(v).map(([k, x]) => [k, String(x)])) as Partial<Record<Intent, string>>) : {});
+        const weak = isObj(e.weak) ? e.weak : {};
+        const en = isObj(e.enrage) ? e.enrage : undefined;
+        return {
+          id: e.id,
+          name: String(e.name ?? e.id),
+          hp: Number(e.hp ?? 20),
+          atk: Number(e.atk ?? 4),
+          matk: Number(e.matk ?? e.atk ?? 4),
+          def: Number(e.def ?? 0),
+          acc: Number(e.acc ?? 20),
+          tell: Number(e.tell ?? 20),
+          turns: Number(e.turns ?? 12),
+          pattern: this.intents(where, e.pattern),
+          weak: { physical: Number(weak.physical ?? 1), magic: Number(weak.magic ?? 1) },
+          tells: strMap(e.tells),
+          acts: strMap(e.acts),
+          intro: this.lines(where, e.intro),
+          reveal: this.expr(where, e.reveal),
+          enrage: en
+            ? { below: Number(en.below ?? 0.5), pattern: this.intents(where, en.pattern), atk: Number(en.atk ?? 1.2), line: String(en.line ?? '') }
+            : undefined,
+        };
+      }),
+    );
+
+    const skills = byId(
+      'skills.yaml',
+      asList(this.file('skills.yaml')).map((k) => {
+        if (!isObj(k) || typeof k.id !== 'string') return undefined;
+        const where = `skills.yaml#${k.id}`;
+        const kind = String(k.kind) as SkillKind;
+        if (!SKILL_KINDS.includes(kind)) this.err(where, `알 수 없는 기술 종류 '${kind}'`);
+        return {
+          id: k.id,
+          name: String(k.name ?? k.id),
+          desc: String(k.desc ?? ''),
+          kind,
+          when: this.expr(where, k.when),
+          mult: Number(k.mult ?? (kind === 'heavy' ? 1.8 : 1)),
+          sp: Number(k.sp ?? 0),
+          mp: Number(k.mp ?? 0),
+          bonus: Number(k.bonus ?? 0),
+          pierce: k.pierce === true,
+          counter: Number(k.counter ?? 1.5),
+          heal: Number(k.heal ?? 0),
+          ward: Number(k.ward ?? 0.6),
+          item: k.item as string | undefined,
         };
       }),
     );
@@ -609,6 +757,8 @@ class Builder {
       perks,
       characters,
       goals,
+      enemies,
+      skills,
       derived,
     };
   }
@@ -647,6 +797,12 @@ class Builder {
       memoryDecay: this.expr(where, r.memory_decay),
       status,
       speakers: asList(r.speakers).map(String),
+      battle: Object.fromEntries(
+        Object.entries(isObj(r.battle) ? r.battle : {}).flatMap(([k, v]) => {
+          const e = this.expr(where, v);
+          return e ? [[k, e]] : [];
+        }),
+      ),
     };
   }
 }
@@ -662,6 +818,8 @@ export function* walkOutcomes(o: Outcome, ctx: Expr[] = []): Generator<{ node: O
   for (const b of o.branch) yield* walkOutcomes(b, conds);
   if (o.success) yield* walkOutcomes(o.success, conds);
   if (o.fail) yield* walkOutcomes(o.fail, conds);
+  if (o.battle?.win) yield* walkOutcomes(o.battle.win, conds);
+  if (o.battle?.lose) yield* walkOutcomes(o.battle.lose, conds);
   for (const c of o.choices) {
     const cc = [...conds, ...(c.when ? [c.when] : []), ...(c.requires ? [c.requires] : [])];
     yield* walkOutcomes(c, cc);
