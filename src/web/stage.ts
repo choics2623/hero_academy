@@ -359,6 +359,8 @@ export class Dialog {
   private textEl: HTMLElement;
   private nextEl: HTMLElement;
   private typing: { done: () => void; full: () => void } | null = null;
+  /** 빨리 넘기기: 글자를 한 번에 찍는다 */
+  fast = false;
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -397,7 +399,7 @@ export class Dialog {
         targets.push({ span, text: l });
       } else this.textEl.append(l);
     }
-    const speed = opts.speed ?? 22;
+    const speed = this.fast ? 0 : opts.speed ?? 24;
     if (reduceMotion() || speed <= 0) {
       for (const t of targets) t.span.textContent = t.text;
       return Promise.resolve();

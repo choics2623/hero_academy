@@ -12,6 +12,7 @@ import {
 } from '../art';
 import { artUrl } from './art';
 import { animateBar, attachRipple, loadSoundPref, reduceMotion, replay, setSound, sfx, soundOn, toast } from './fx';
+import { interlude } from './interlude';
 import { Dialog, Stage } from './stage';
 import { iconImg, portraitImg, sceneImg } from './visuals';
 
@@ -480,8 +481,18 @@ let queue: LogItem[] = [];
 let playing = false;
 let waiter: (() => void) | null = null;
 let autoPlay = false;
+let skipMode = false;
+let ctrlHeld = false;
+const skipping = () => skipMode || ctrlHeld;
 let cgActive = false;
 let prevBars: { hp: number; ehp: number; sp: number; mp: number } | undefined;
+/** 막간을 이미 보여준 시간대 */
+let lastSlotKey = '';
+
+function slotKey(): string {
+  const t = game!.state.time;
+  return `${t.y}.${t.m}.${t.w}.${cal.slotName(t)}`;
+}
 
 const sleep = (ms: number) => new Promise<void>((r) => window.setTimeout(r, reduceMotion() ? Math.min(ms, 40) : ms));
 
@@ -503,6 +514,7 @@ function showGame() {
   dialog = new Dialog($('dialog'));
   rendered = log.length;
   queue = [];
+  lastSlotKey = slotKey();
   // 이어하기: 지금 장면을 처음부터 다시 보여준다
   if (game!.state.phase === 'scene') {
     let i = log.length - 1;
@@ -571,7 +583,8 @@ function waitAdvance(autoMs?: number): Promise<void> {
       resolve();
     };
     waiter = done;
-    const ms = autoMs ?? (autoPlay ? 1900 : 0);
+    dialog.fast = skipping();
+    const ms = skipping() ? 70 : autoMs ?? (autoPlay ? 1900 : 0);
     if (ms) t = window.setTimeout(done, ms);
   });
 }
@@ -584,6 +597,10 @@ async function play() {
   c.classList.add('wait');
   try {
     while (queue.length) await runItem(queue.shift()!);
+    if (game && game.state.phase === 'activity' && slotKey() !== lastSlotKey) {
+      lastSlotKey = slotKey();
+      await runInterlude();
+    }
   } catch (e) {
     console.error(e);
   } finally {
@@ -591,6 +608,27 @@ async function play() {
     c.classList.remove('wait');
     renderControls();
     renderPanel();
+  }
+}
+
+/** 새 시간대의 막간: 장소를 깔고 두세 줄로 분위기를 잡는다 */
+async function runInterlude() {
+  const g = game!;
+  const slot = cal.slotName(g.state.time);
+  const tod = todOf(slot);
+  stage.clearActors();
+  setBg(idleBg(), tod);
+  const lines = interlude(g.state.time, slot);
+  const inner = lines.filter((l) => l.startsWith('('));
+  const narr = lines.filter((l) => !l.startsWith('('));
+  stage.title(g.view().time);
+  if (narr.length) {
+    await dialog.show({ kind: 'narr', lines: narr, onTick: () => sfx('blip') });
+    await waitAdvance();
+  }
+  if (inner.length) {
+    await dialog.show({ kind: 'inner', lines: inner, onTick: () => sfx('blip') });
+    await waitAdvance();
   }
 }
 
@@ -667,12 +705,12 @@ function paginate(lines: RenderedLine[]): Page[] {
     else if (l.speaker === '📌') out.push({ t: 'pin', text: l.text });
     else if (l.speaker === '시스템') out.push({ t: 'sys', lines: [l.text] });
     else if (l.speaker === '속마음') {
-      if (prev?.t === 'inner' && prev.lines.length < 2 && chars(prev.lines) + l.text.length < 110) prev.lines.push(l.text);
+      if (prev?.t === 'inner' && prev.lines.length < 2 && chars(prev.lines) + l.text.length < 70) prev.lines.push(l.text);
       else out.push({ t: 'inner', lines: [l.text] });
     } else if (!l.speaker) {
-      if (prev?.t === 'narr' && prev.lines.length < 3 && chars(prev.lines) + l.text.length < 140) prev.lines.push(l.text);
+      if (prev?.t === 'narr' && prev.lines.length < 2 && chars(prev.lines) + l.text.length < 80) prev.lines.push(l.text);
       else out.push({ t: 'narr', lines: [l.text] });
-    } else if (prev?.t === 'say' && prev.speaker === l.speaker && (prev.mood ?? '') === (l.mood ?? '') && prev.lines.length < 2 && chars(prev.lines) + l.text.length < 100) {
+    } else if (prev?.t === 'say' && prev.speaker === l.speaker && (prev.mood ?? '') === (l.mood ?? '') && prev.lines.length < 2 && chars(prev.lines) < 24 && l.text.length < 24) {
       prev.lines.push(l.text);
     } else out.push({ t: 'say', speaker: l.speaker, mood: l.mood, lines: [l.text] });
   }
@@ -681,6 +719,10 @@ function paginate(lines: RenderedLine[]): Page[] {
 
 async function runScene(it: Extract<LogItem, { k: 'scene' }>) {
   const tod = it.tod ?? 'day';
+  if (it.flavor && it.strip) {
+    stage.clearActors();
+    setBg(it.strip, tod);
+  }
   if (!it.cont && !it.flavor) {
     stage.clearActors();
     const first = it.lines.find((l) => l.speaker === '삽화')?.text;
@@ -798,16 +840,34 @@ async function runCheck(text: string) {
 
 // ---- 수치, 주, 달
 
-function chipFor(d: string): { icon?: string; text: string; tone: 'up' | 'down' | 'bond' } | null {
+/** 수치는 숫자 대신 감으로 보여준다: ▲ 조금 · ▲▲ 꽤 · ▲▲▲ 크게 (scale = 한 주·한 달처럼 모아 볼 때의 배율) */
+function feel(label: string, n: number, scale = 1): string {
+  const a = Math.abs(n) / scale;
+  const [t1, t2] = label === '피로' || label === '스트레스' ? [8, 20] : label === '은화' ? [10, 30] : label.endsWith(' 호감') ? [4, 9] : [1, 2];
+  const lv = a < t1 ? 1 : a < t2 ? 2 : 3;
+  if (label.endsWith(' 호감')) return n > 0 ? '♥'.repeat(lv) : '▼'.repeat(lv);
+  return (n > 0 ? '▲' : '▼').repeat(lv);
+}
+
+/** "근력 +1.2" → "근력 ▲▲" */
+function feelText(d: string, scale = 1): string {
+  const m = /^(.+?) ([+-]?[\d.]+)$/.exec(d);
+  if (!m) return d;
+  const label = m[1].replace(/ 호감$/, '');
+  return `${label} ${feel(m[1], Number(m[2]), scale)}`;
+}
+
+function chipFor(d: string, scale = 1): { icon?: string; text: string; tone: 'up' | 'down' | 'bond' } | null {
   const m = /^(.+?) ([+-]?[\d.]+)$/.exec(d);
   if (!m) return null;
   const [, label, v] = m;
   const n = Number(v);
-  if (label.endsWith(' 호감')) return { icon: 'heart', text: `${label} ${n > 0 ? '+' : ''}${v.replace(/^\+/, '')}`, tone: n > 0 ? 'bond' : 'down' };
-  if (STAT_ICON[label]) return { icon: STAT_ICON[label], text: `${label} ${n > 0 ? '+' : ''}${v.replace(/^\+/, '')}`, tone: n > 0 ? 'up' : 'down' };
+  const text = feelText(d, scale);
+  if (label.endsWith(' 호감')) return { icon: 'heart', text, tone: n > 0 ? 'bond' : 'down' };
+  if (STAT_ICON[label]) return { icon: STAT_ICON[label], text, tone: n > 0 ? 'up' : 'down' };
   const icon = ({ 피로: 'zzz', 스트레스: 'cloud', 은화: 'coin' } as Record<string, string>)[label];
   const bad = label === '피로' || label === '스트레스';
-  return { icon, text: d, tone: n > 0 !== bad ? 'up' : 'down' };
+  return { icon, text, tone: n > 0 !== bad ? 'up' : 'down' };
 }
 
 async function runChips(it: Extract<LogItem, { k: 'act' }>) {
@@ -828,10 +888,10 @@ async function runWeek(it: Extract<LogItem, { k: 'week' }>) {
   if (it.items.length) {
     const chips = el('div', 'wk-chips');
     for (const x of it.items) {
-      const c = chipFor(x);
+      const c = chipFor(x, 3);
       const s = el('span', `st-chip ${c?.tone ?? 'up'}`);
       if (c?.icon) s.append(iconImg(c.icon, 1));
-      s.append(x);
+      s.append(c?.text ?? x);
       chips.append(s);
     }
     box.append(chips);
@@ -1017,9 +1077,10 @@ function previewChips(id: string): HTMLElement {
     if (!icon) continue;
     const bad = key === 'fatigue' || key === 'stress';
     const good = delta > 0 !== bad;
+    const name = key.startsWith('stat.') ? label : ({ fatigue: '피로', stress: '스트레스', money: '은화' } as Record<string, string>)[key];
     const c = el('span', `pv-c ${good ? 'up' : 'down'}`);
-    c.title = `${key.startsWith('stat.') ? label : ({ fatigue: '피로', stress: '스트레스', money: '은화' } as Record<string, string>)[key]} ${delta > 0 ? '+' : ''}${Math.round(delta * 10) / 10}`;
-    c.append(iconImg(icon, 1), `${delta > 0 ? '+' : ''}${Math.abs(delta) >= 10 ? Math.round(delta) : Math.round(delta * 10) / 10}`);
+    c.title = `${name} ${feel(name, delta)}`;
+    c.append(iconImg(icon, 1), feel(name, delta));
     row.append(c);
   }
   return row;
@@ -1281,7 +1342,7 @@ function checkWeek() {
       title: `${t.y === 0 ? '입학 전' : `${t.y}학년`} ${t.m}월`,
       art: MONTH_ART[t.m] ?? 'campus',
       season: seasonLine(t.m, t.w),
-      items: mi.length ? [`지난달: ${mi.join(' · ')}`] : [],
+      items: mi.length ? [`지난달 · ${mi.map((x) => feelText(x, 8)).join('  ')}`] : [],
     });
     monthSnap = tracked();
   }
@@ -1302,12 +1363,12 @@ function capture(cont: boolean) {
   if (v.phase === 'scene' && v.lines.length) {
     const tod = todOf(cal.slotName(game!.state.time));
     let strip: string | undefined;
-    if (!cont && v.title && !v.lines.some((l) => l.speaker === '삽화')) {
+    if (!cont && !v.lines.some((l) => l.speaker === '삽화')) {
       const ev = content.events.get(game!.state.scene?.eventId ?? '');
       if (ev?.trigger.kind === 'activity') {
         const aid = ev.trigger.ids.includes(lastActivity) ? lastActivity : ev.trigger.ids[0];
         strip = content.activities.get(aid)?.art;
-      }
+      } else if (!ev && lastActivity) strip = content.activities.get(lastActivity)?.art;
     }
     const intros: string[] = [];
     for (const l of v.lines) {
@@ -1469,7 +1530,7 @@ function renderItem(item: LogItem): HTMLElement {
     const d = el('div', item.text ? 'act' : 'act bare');
     if (item.icon) d.append(iconImg(item.icon, 1, 'act-ic'));
     d.append(item.text);
-    if (item.deltas?.length) d.append(el('span', 'delta', item.deltas.join(' · ')));
+    if (item.deltas?.length) d.append(el('span', 'delta', item.deltas.map((x) => feelText(x)).join('  ')));
     if (item.ranks?.length) {
       const r = el('span', 'ranks');
       for (const x of item.ranks) r.append(el('span', 'rankup', `★ ${x}`));
@@ -1496,7 +1557,7 @@ function renderItem(item: LogItem): HTMLElement {
     d.append(top);
     if (item.items.length) {
       const chips = el('span', 'chips');
-      for (const x of item.items) chips.append(el('span', x.includes('-') ? 'chip down' : 'chip', x));
+      for (const x of item.items) chips.append(el('span', x.includes('-') ? 'chip down' : 'chip', feelText(x, 3)));
       d.append(chips);
     }
     if (item.season) d.append(el('p', 'season', item.season));
@@ -1794,6 +1855,34 @@ $('btn-log').addEventListener('click', openLog);
 $('drawer-close').addEventListener('click', closeLog);
 $('drawer').addEventListener('click', (e) => {
   if (e.target === $('drawer')) closeLog();
+});
+const skipBtn = $('btn-skip') as HTMLButtonElement;
+const syncSkip = () => {
+  skipBtn.setAttribute('aria-pressed', String(skipMode));
+  skipBtn.textContent = skipMode ? '빠르게 ▶▶' : '빠르게';
+  if (dialog) dialog.fast = skipping();
+};
+skipBtn.addEventListener('click', () => {
+  skipMode = !skipMode;
+  syncSkip();
+  if (skipMode) waiter?.();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Control' && !ctrlHeld) {
+    ctrlHeld = true;
+    syncSkip();
+    dialog?.complete();
+    waiter?.();
+  }
+});
+document.addEventListener('keyup', (e) => {
+  if (e.key === 'Control') {
+    ctrlHeld = false;
+    syncSkip();
+  }
+});
+window.addEventListener('blur', () => {
+  ctrlHeld = false;
 });
 const autoBtn = $('btn-auto') as HTMLButtonElement;
 autoBtn.addEventListener('click', () => {

@@ -669,7 +669,8 @@ img.mini { width: 22px; height: 22px; border-radius: 3px; box-shadow: none; }
 .pv-c.up { color: var(--ok); }
 .pv-c.down { color: var(--doom); }
 .continue { justify-self: end; }
-.toolbar { display: flex; justify-content: flex-end; gap: 6px; }
+.toolbar { display: flex; justify-content: flex-end; align-items: center; gap: 6px; }
+.tb-hint { margin-right: auto; font: 11.5px var(--font-sys); color: var(--muted); }
 .toolbar .ghost[aria-pressed="true"] { color: var(--sys); border-color: var(--sys); }
 
 /* 기록 서랍 */
@@ -705,6 +706,7 @@ img.mini { width: 22px; height: 22px; border-radius: 3px; box-shadow: none; }
   .stage { border-radius: 8px; }
   .dialog { font-size: 15.5px; min-height: 7.6em; padding: 16px 16px 14px; }
   .dialog.k-prompt, .dialog.k-battle { min-height: 0; }
+  .tb-hint { display: none; }
   .st-hud > * { font-size: 10.5px; padding: 4px 6px; }
   .hud-intent .it { display: none; }
   .activities { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -734,7 +736,7 @@ img.mini { width: 22px; height: 22px; border-radius: 3px; box-shadow: none; }
         <div class="dialog" id="dialog" aria-live="polite"></div>
       </div>
       <div class="controls" id="controls"></div>
-      <div class="toolbar"><button class="ghost" id="btn-auto" type="button" aria-pressed="false">자동</button><button class="ghost" id="btn-log" type="button">기록 (L)</button></div>
+      <div class="toolbar"><span class="tb-hint">클릭·스페이스로 넘기기 · Ctrl 누르고 있으면 빨리</span><button class="ghost" id="btn-skip" type="button" aria-pressed="false">빠르게</button><button class="ghost" id="btn-auto" type="button" aria-pressed="false">자동</button><button class="ghost" id="btn-log" type="button">기록 (L)</button></div>
     </section>
     <aside class="panel" id="panel" aria-label="상태창"></aside>
   </main>
