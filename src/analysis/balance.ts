@@ -91,8 +91,8 @@ export function balance(c: Content, runs = 40, seed = 7): BalanceReport {
         const opts = g.options();
         if (!opts.length) break;
         let pick = opts[Math.floor(rand() * opts.length)];
-        if (v.phase === 'activity') {
-          // 컨셉 능력치를 키우는 활동 쪽으로 (피로가 높으면 쉰다)
+        if (v.phase === 'activity' && rand() < 0.6) {
+          // 열에 여섯은 컨셉 능력치를 키우는 활동 쪽으로 (피로가 높으면 쉰다), 나머지는 아무거나
           const tired = Number(g.get('fatigue') ?? 0) >= 70;
           let best = -Infinity;
           for (const o of opts) {
