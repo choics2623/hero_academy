@@ -4,6 +4,15 @@
 # icon: hat shirt pants robe ring amulet sword staff boots potion herb book letter charm misc
 # checks: 판정 보정 (checks.yaml의 종류) · battle: 전투 보정 (hp sp mp atk matk def dodge read persuade)
 # 보정 크기: 장비 하나가 판정 +1~3. 전설급만 +4.
+#
+# 가격: 싼 것 5~15 · 중간 18~35 · 귀한 것 40~60 (은화). price가 없으면 선물·이야기로만 얻는다.
+# 상점은 content/events/43_shops.yaml (상점가 활동). 달마다 진열이 바뀐다:
+#   잡화점 「작은 종」  소모품
+#   재봉집 「바늘과 실」 옷·모자·신 (봄 기본 → 축제철 멋 → 장마철 검은 옷·로브)
+#   대장간 골목        무기·장화·갑옷 (신입생 첫 무기 → 기사단 중고 → 무투대회 철 상급품)
+#   골동품 노점        장신구 (+ 경매장에서 흘러나온 예복)
+# 컨셉별 장비: 검사(완력·기민·공격) 마도사(마법·학식·마나) 성직자(신성·정신력·체력) 사교가(설득·기만)
+#   그림자(은밀·회피) 학자(학식·통찰·간파) 야인(교감·기민) 철인(인내·방어·체력) 저주받은자(위압·정신력)
 
 # ---------------------------------------------------------------- 귀중품 (이야기 물건)
 - id: 일기장
@@ -41,7 +50,7 @@
   name: 강장제
   kind: use
   icon: potion
-  price: 6
+  price: 12
   desc: 쓴맛이 혀에 오래 남는 약. 전투에서 체력 40% 회복. 평소에 마시면 피로가 가신다.
   use: ["fatigue -= 15"]
 
@@ -51,7 +60,346 @@
   icon: charm
   desc: 노엘이 술값 대신 준 부적. 전투에서 타오르며 상처를 덮는다.
 
-# ---------------------------------------------------------------- 장비
+- id: 피로회복차
+  name: 피로회복차
+  kind: use
+  icon: herb
+  price: 5
+  desc: 볶은 보리와 말린 대추를 넣은 차 봉지. 우리면 구수한 김이 방 안에 퍼진다. 피로 -20.
+  use: ["fatigue -= 20"]
+
+- id: 진정허브
+  name: 진정 허브 묶음
+  kind: use
+  icon: herb
+  price: 6
+  desc: 라벤더와 레몬밤을 실로 묶은 다발. 베갯머리에 두면 숨이 느려진다. 스트레스 -15.
+  use: ["stress -= 15"]
+
+- id: 상처연고
+  name: 상처 연고
+  kind: use
+  icon: potion
+  price: 8
+  desc: 쑥 냄새가 코를 찌르는 초록 연고. 전투에서 바르면 체력 25% 회복. 뭉친 근육에 발라도 좋다.
+  use: ["fatigue -= 8"]
+
+- id: 집중의향
+  name: 집중의 향
+  kind: use
+  icon: misc
+  price: 14
+  desc: 새끼손가락만 한 향 세 개. 태우면 송진 냄새가 머리 뒤쪽을 서늘하게 비운다. 지성·의지가 조금 오른다.
+  use: ["stat.지성 += 0.8", "stat.의지 += 0.5"]
+
+- id: 기사단강장제
+  name: 기사단 보급 강장제
+  kind: use
+  icon: potion
+  price: 28
+  desc: 병목의 기사단 봉인이 반쯤 긁힌 은빛 병. 전투에서 체력 60% 회복. 평소에 마시면 밤샘 피로가 한 번에 씻긴다.
+  use: ["fatigue -= 30", "stress -= 5"]
+
+# ---------------------------------------------------------------- 장비 · 모자
+- id: 가죽머리띠
+  name: 가죽 머리띠
+  kind: equip
+  slot: 모자
+  icon: hat
+  price: 8
+  desc: 땀이 눈에 흘러들지 않게 이마에 질끈 묶는 가죽끈. 매듭을 조이면 정신이 번쩍 든다.
+  checks: { 기민: 1, 완력: 1 }
+  battle: { dodge: 1 }
+
+- id: 깃털베레모
+  name: 깃털 베레모
+  kind: equip
+  slot: 모자
+  icon: hat
+  price: 22
+  desc: 비스듬히 눌러쓰는 자주색 베레모. 꿩 깃털 하나가 고개를 끄덕일 때마다 같이 끄덕인다.
+  checks: { 설득: 2, 기만: 1 }
+  battle: { persuade: 2 }
+
+- id: 견습철모
+  name: 견습 기사 철모
+  kind: equip
+  slot: 모자
+  icon: hat
+  price: 24
+  desc: 안쪽에 펠트를 덧댄 둥근 철모. 쓰면 세상이 조금 조용해지고, 조금 용감해진다.
+  checks: { 위압: 2, 인내: 1 }
+  battle: { def: 0.5, hp: 3 }
+
+- id: 별무늬고깔
+  name: 별무늬 고깔모자
+  kind: equip
+  slot: 모자
+  icon: hat
+  price: 26
+  desc: 남색 천에 은실 별을 수놓은 고깔. 끝이 늘 한쪽으로 꺾이는데, 그쪽에 마력이 고인다고 한다.
+  checks: { 마법: 2, 학식: 1 }
+  battle: { mp: 2 }
+
+# ---------------------------------------------------------------- 장비 · 윗옷
+- id: 무명셔츠
+  name: 풀 먹인 무명 셔츠
+  kind: equip
+  slot: 윗옷
+  icon: shirt
+  price: 7
+  desc: 쌀풀을 먹여 빳빳하게 다린 흰 셔츠. 깃이 서 있으면 말에도 힘이 실린다.
+  checks: { 설득: 1 }
+  battle: { hp: 2 }
+
+- id: 사냥꾼조끼
+  name: 사냥꾼 가죽 조끼
+  kind: equip
+  slot: 윗옷
+  icon: shirt
+  price: 20
+  desc: 솔잎 냄새가 밴 사슴 가죽 조끼. 주머니마다 마른 풀씨가 조금씩 들어 있다.
+  checks: { 교감: 2, 기민: 1 }
+  battle: { dodge: 1, def: 0.5 }
+
+- id: 검은망토
+  name: 검은 후드 망토
+  kind: equip
+  slot: 윗옷
+  icon: robe
+  price: 28
+  desc: 숯물을 세 번 들인 모직 망토. 등불 빛이 닿자마자 먹혀 들어간다. 후드를 쓰면 그림자와 구분이 안 된다.
+  checks: { 은밀: 3, 기만: 1 }
+  battle: { dodge: 2 }
+
+- id: 견습기사흉갑
+  name: 견습 기사 흉갑
+  kind: equip
+  slot: 윗옷
+  icon: shirt
+  price: 34
+  desc: 가죽을 덧댄 강철 흉갑. 왼쪽 가슴에 막아 낸 칼자국이 하나 있다. 뚫린 자국이 아니라 막아 낸 자국.
+  checks: { 인내: 2, 완력: 1 }
+  battle: { def: 1, hp: 5 }
+
+- id: 사슬셔츠
+  name: 사슬 셔츠
+  kind: equip
+  slot: 윗옷
+  icon: shirt
+  price: 55
+  desc: 고리 삼천 개를 엮은 셔츠. 걸칠 때마다 빗소리 같은 쇳소리가 쏴아 하고 난다.
+  checks: { 인내: 3, 위압: 1 }
+  battle: { def: 1, hp: 6 }
+
+- id: 도로시앞치마
+  name: 도로시의 연금 앞치마
+  kind: equip
+  slot: 윗옷
+  icon: shirt
+  desc: 주머니가 열두 개 달린 범포 앞치마. 보라색 얼룩이 별자리처럼 흩어져 있다. 도로시가 '조수 1호 전용'이라며 떠안겼다.
+  checks: { 손재주: 3, 인내: 1 }
+  battle: { hp: 3 }
+
+# ---------------------------------------------------------------- 장비 · 아래옷
+- id: 면바지
+  name: 무릎 기운 면바지
+  kind: equip
+  slot: 아래옷
+  icon: pants
+  price: 6
+  desc: 무릎에 같은 천을 두 겹 덧댄 바지. 넘어져도 바지는 울지 않는다.
+  checks: { 인내: 1 }
+  battle: { hp: 2 }
+
+- id: 작업바지
+  name: 대장장이 작업 바지
+  kind: equip
+  slot: 아래옷
+  icon: pants
+  price: 14
+  desc: 불티 자국이 점점이 박힌 두꺼운 범포 바지. 구멍은 안 나고 그을리기만 한다.
+  checks: { 완력: 1, 손재주: 1 }
+  battle: { def: 0.5 }
+
+- id: 승마바지
+  name: 가죽 덧댄 승마 바지
+  kind: equip
+  slot: 아래옷
+  icon: pants
+  price: 18
+  desc: 허벅지 안쪽에 가죽을 덧댄 몸에 붙는 바지. 뛰어도 펄럭이지 않는다.
+  checks: { 기민: 2 }
+  battle: { dodge: 1 }
+
+- id: 검은천바지
+  name: 소리 없는 검은 바지
+  kind: equip
+  slot: 아래옷
+  icon: pants
+  price: 20
+  desc: 열두 번 빨아 길들인 검은 무명 바지. 무릎을 굽혀도 천 스치는 소리가 나지 않는다.
+  checks: { 은밀: 2 }
+  battle: { dodge: 1 }
+
+# ---------------------------------------------------------------- 장비 · 한벌옷 (윗옷과 아래옷 칸을 함께 쓴다)
+- id: 여행자외투
+  name: 여행자의 기름 먹인 외투
+  kind: equip
+  slot: 한벌옷
+  icon: robe
+  price: 15
+  desc: 밀랍과 기름을 열 번 먹여 비가 구슬처럼 굴러떨어지는 긴 외투. 소매 끝에서 오래된 길 냄새가 난다.
+  checks: { 인내: 2, 교감: 1 }
+  battle: { hp: 3, def: 0.5 }
+
+- id: 사제복
+  name: 수련 사제복
+  kind: equip
+  slot: 한벌옷
+  icon: robe
+  price: 32
+  desc: 목까지 단추를 채우는 흰 사제복. 밀랍 냄새가 배어 있어서, 입으면 성당 안처럼 숨이 고요해진다.
+  checks: { 신성: 2, 정신력: 2 }
+  battle: { hp: 4, mp: 1 }
+
+- id: 마법사로브
+  name: 견습 마법사 로브
+  kind: equip
+  slot: 한벌옷
+  icon: robe
+  price: 35
+  desc: 소매 안쪽에 술식 보조선을 은실로 수놓은 짙푸른 로브. 손을 들면 은실이 잠깐 빛을 머금는다.
+  checks: { 마법: 2, 학식: 2 }
+  battle: { matk: 1, mp: 3 }
+
+- id: 귀족예복
+  name: 낡은 귀족 예복
+  kind: equip
+  slot: 한벌옷
+  icon: robe
+  price: 45
+  desc: 가문 문장을 뜯어낸 자리만 색이 진한 진홍 예복. 낡았어도 어깨선이 사람을 세운다.
+  checks: { 설득: 3, 위압: 1 }
+  battle: { persuade: 3 }
+
+# ---------------------------------------------------------------- 장비 · 장신구 (두 칸)
+- id: 가죽장갑
+  name: 얇은 가죽 장갑
+  kind: equip
+  slot: 장신구
+  icon: misc
+  price: 10
+  desc: 손가락 끝까지 얇게 무두질한 염소 가죽 장갑. 끼고도 바늘 하나를 집을 수 있다. 전 주인은 자물쇠 장인.
+  checks: { 손재주: 2, 은밀: 1 }
+
+- id: 늑대이빨목걸이
+  name: 늑대 이빨 목걸이
+  kind: equip
+  slot: 장신구
+  icon: amulet
+  price: 12
+  desc: 가죽끈에 꿴 누런 송곳니. 개들은 이걸 보면 꼬리를 내리고, 고양이는 코웃음을 친다.
+  checks: { 위압: 2, 교감: 1 }
+  battle: { atk: 1 }
+
+- id: 은성표
+  name: 은 성표 목걸이
+  kind: equip
+  slot: 장신구
+  icon: amulet
+  price: 20
+  desc: 손톱만 한 은 성표. 누군가 오래 쥐고 기도한 엄지 자국이 반들반들 남아 있다.
+  checks: { 신성: 2, 정신력: 1 }
+  battle: { hp: 2 }
+
+- id: 도서관안경
+  name: 도서관 안경
+  kind: equip
+  slot: 장신구
+  icon: misc
+  price: 22
+  desc: 철사테 둥근 안경. 도서관 분실물 상자에서 흘러나왔다는데, 쓰면 글자들이 줄을 맞춰 선다.
+  checks: { 학식: 2, 통찰: 1 }
+  battle: { read: 2 }
+
+- id: 까마귀깃털부적
+  name: 까마귀 깃털 부적
+  kind: equip
+  slot: 장신구
+  icon: charm
+  price: 25
+  desc: 검은 깃털 세 개를 붉은 실로 묶은 부적. 악몽이 이걸 보면 다른 집으로 간다. 파는 사람은 손을 씻었다.
+  checks: { 위압: 2, 정신력: 1 }
+  battle: { matk: 1 }
+
+- id: 마정석반지
+  name: 마정석 반지
+  kind: equip
+  slot: 장신구
+  icon: ring
+  price: 30
+  desc: 새끼손톱만 한 푸른 마정석을 박은 은반지. 마력을 흘리면 손가락 마디가 미지근해진다.
+  checks: { 마법: 2 }
+  battle: { matk: 1, mp: 2 }
+
+- id: 정령방울
+  name: 정령 방울 발찌
+  kind: equip
+  slot: 장신구
+  icon: charm
+  price: 42
+  desc: 콩알만 한 은방울 세 개가 달린 발찌. 바람이 없는데도 가끔 혼자 딸랑 운다.
+  checks: { 교감: 3 }
+  battle: { dodge: 2 }
+
+- id: 멈춘회중시계
+  name: 멈춘 회중시계
+  kind: equip
+  slot: 장신구
+  icon: misc
+  price: 46
+  desc: 세 시 십칠 분에 멈춘 은 회중시계. 태엽을 감아도 안 가는데, 귀에 대면 째깍 소리가 난다.
+  checks: { 통찰: 3, 학식: 1 }
+  battle: { read: 3 }
+
+- id: 리아나꽃부적
+  name: 리아나의 꽃매듭 부적
+  kind: equip
+  slot: 장신구
+  icon: charm
+  desc: 마른 들꽃을 엘프식 매듭으로 엮은 손목 부적. 리아나가 숲의 노래를 흥얼거리며 한 매듭씩 묶어 줬다.
+  checks: { 교감: 3, 통찰: 1 }
+  battle: { dodge: 1 }
+
+- id: 미라벨브로치
+  name: 아델하이트의 은 브로치
+  kind: equip
+  slot: 장신구
+  icon: amulet
+  desc: 한쪽 날개가 떨어져 나간 새 문양 은 브로치. 영창 박자에 맞춰 떤다. 미라벨은 '어차피 고물'이라며 굴려 줬다.
+  checks: { 마법: 3, 학식: 1 }
+  battle: { matk: 1, mp: 2 }
+
+- id: 세라묵주
+  name: 세라의 기도 매듭
+  kind: equip
+  slot: 장신구
+  icon: charm
+  desc: 흰 실 서른세 매듭을 손으로 지은 팔찌. 세라가 산파였던 엄마에게 배운 대로, 매듭마다 기도를 하나씩 묶었다.
+  checks: { 신성: 3, 정신력: 1 }
+  battle: { hp: 3 }
+
+- id: 노엘룬반지
+  name: 노엘의 룬 반지
+  kind: equip
+  slot: 장신구
+  icon: ring
+  desc: 검게 변한 놋쇠 반지. 안쪽에 손톱으로 그은 룬 일곱 개. 노엘 말로는 거짓말을 들으면 손가락이 따끔하다.
+  checks: { 통찰: 4 }
+  battle: { read: 2, mp: 1 }
+
+# ---------------------------------------------------------------- 장비 · 무기
 - id: 브루노목검
   name: 브루노의 목검
   kind: equip
@@ -60,3 +408,122 @@
   desc: 브루노가 대장간 남은 참나무로 깎아 준 목검. 손잡이에 이니셜이 새겨져 있다.
   checks: { 완력: 1 }
   battle: { atk: 2 }
+
+- id: 참나무지팡이
+  name: 참나무 지팡이
+  kind: equip
+  slot: 무기
+  icon: staff
+  price: 12
+  desc: 옹이를 그대로 살린 참나무 지팡이. 손때 묻은 자리에 마력이 먼저 고인다.
+  checks: { 마법: 1 }
+  battle: { matk: 2 }
+
+- id: 사냥용단검
+  name: 사냥용 단검
+  kind: equip
+  slot: 무기
+  icon: sword
+  price: 15
+  desc: 손바닥 길이의 외날 단검. 칼집에서 뽑을 때 쉭 소리조차 나지 않는다.
+  checks: { 은밀: 1, 기민: 1 }
+  battle: { atk: 1, dodge: 1 }
+
+- id: 연습용세이버
+  name: 연습용 세이버
+  kind: equip
+  slot: 무기
+  icon: sword
+  price: 28
+  desc: 날을 죽인 가느다란 세이버. 휘두르면 공기가 짧게 운다. 강타를 정면으로 받으면 휜다.
+  checks: { 기민: 2, 완력: 1 }
+  battle: { atk: 2 }
+
+- id: 훈련용장검
+  name: 기사단 훈련용 장검
+  kind: equip
+  slot: 무기
+  icon: sword
+  price: 52
+  desc: 기사단 훈련소에서 열 사람이 쓰다 나온 묵직한 강철 장검. 날은 없지만 무게는 진짜다.
+  checks: { 완력: 2, 위압: 2 }
+  battle: { atk: 2, def: 0.5 }
+
+- id: 마정석지팡이
+  name: 마정석 박힌 지팡이
+  kind: equip
+  slot: 무기
+  icon: staff
+  price: 58
+  desc: 끝에 주먹만 한 마정석을 물린 흑단 지팡이. 쥐면 돌 속에서 푸른 안개가 천천히 돈다.
+  checks: { 마법: 3 }
+  battle: { matk: 2, mp: 2 }
+
+- id: 핀단봉
+  name: 핀의 빗자루 단봉
+  kind: equip
+  slot: 무기
+  icon: staff
+  desc: 부러진 빗자루 자루를 밤마다 깎아 만든 단봉. 손잡이 끝에 핀이 주방 칼로 새긴 글자가 있다. '고마어요'.
+  checks: { 기민: 3, 은밀: 1 }
+  battle: { dodge: 2, atk: 1 }
+
+# ---------------------------------------------------------------- 장비 · 신발
+- id: 순례자샌들
+  name: 순례자 샌들
+  kind: equip
+  slot: 신발
+  icon: boots
+  price: 7
+  desc: 밑창에 짚을 덧댄 가죽 샌들. 성지까지 걸어간 사람들은 다 이걸 신었다고 한다.
+  checks: { 인내: 1, 신성: 1 }
+  battle: { hp: 2 }
+
+- id: 가죽장화
+  name: 가죽 장화
+  kind: equip
+  slot: 신발
+  icon: boots
+  price: 12
+  desc: 밑창을 두 번 기운 장화. 발소리가 작다.
+  checks: { 은밀: 1, 기민: 1 }
+  battle: { def: 0.5 }
+
+- id: 광낸구두
+  name: 광낸 가죽 구두
+  kind: equip
+  slot: 신발
+  icon: boots
+  price: 20
+  desc: 얼굴이 비칠 만큼 광을 낸 구두. 굽 소리가 또각, 하고 사람들을 돌아보게 한다.
+  checks: { 설득: 1, 기만: 1 }
+  battle: { persuade: 1 }
+
+- id: 사냥꾼장화
+  name: 사냥꾼 장화
+  kind: equip
+  slot: 신발
+  icon: boots
+  price: 24
+  desc: 종아리까지 끈을 감아올리는 사슴 가죽 장화. 젖은 낙엽 위에서도 미끄러지지 않는다.
+  checks: { 기민: 2, 교감: 1 }
+  battle: { dodge: 1 }
+
+- id: 징박은군화
+  name: 징 박은 군화
+  kind: equip
+  slot: 신발
+  icon: boots
+  price: 30
+  desc: 밑창에 쇠징을 박은 무거운 군화. 한 발 구르면 돌바닥이 비명을 지른다.
+  checks: { 위압: 2, 완력: 1 }
+  battle: { atk: 1, def: 0.5 }
+
+- id: 브루노장화
+  name: 브루노의 쇠코 장화
+  kind: equip
+  slot: 신발
+  icon: boots
+  desc: 앞코에 쇠판을 두드려 씌운 작업 장화. 망치 자국이 물고기 비늘 같다. 쇳물을 쏟아도 발가락은 무사하다고 브루노가 장담했다.
+  checks: { 인내: 2, 완력: 1 }
+  battle: { def: 1, hp: 3 }
