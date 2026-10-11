@@ -13,7 +13,8 @@
     "verify": "tsx src/tools/verify.ts",
     "play": "tsx src/tools/play.ts",
     "build:web": "tsx scripts/build-web.ts",
-    "gallery": "tsx scripts/gallery.ts"
+    "gallery": "tsx scripts/gallery.ts",
+    "balance": "tsx src/tools/balance.ts"
   },
   "dependencies": {
     "yaml": "2.9.1"

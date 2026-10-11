@@ -29,7 +29,7 @@ export interface ChoiceView {
   enabled: boolean;
   hint?: string;
   /** 이 선택지가 바로 판정을 굴리면: 판정 이름, 확률(0~1), 확률을 말로, 보정 요인 */
-  check?: { label?: string; chance: number; odds: string; icon: string; factors: Factor[]; hidden: boolean };
+  check?: { label?: string; type?: string; chance: number; odds: string; icon: string; factors: Factor[]; hidden: boolean };
   /** 지난 생에서 골랐던 선택 */
   past?: boolean;
 }
@@ -766,7 +766,7 @@ export class Game {
         const v: ChoiceView = { index: c.index, text: def.text, enabled: c.enabled, hint: def.hint };
         if (def.check) {
           const ev = evalCheck(this.content, this.world, def.check);
-          v.check = { label: ev.name, chance: ev.chance, odds: ev.odds, icon: ev.icon, factors: ev.factors.slice(0, 3), hidden: ev.hidden };
+          v.check = { label: ev.name, type: ev.type, chance: ev.chance, odds: ev.odds, icon: ev.icon, factors: ev.factors.slice(0, 3), hidden: ev.hidden };
         }
         const key = this.decisionKey();
         if (key && this.state.meta.chosen.includes(`${key}#${c.index}`)) v.past = true;
