@@ -725,7 +725,8 @@ async function runScene(it: Extract<LogItem, { k: 'scene' }>) {
   }
   if (!it.cont && !it.flavor) {
     stage.clearActors();
-    const first = it.lines.find((l) => l.speaker === '삽화')?.text;
+    // 장면 맨 앞의 삽화만 첫 배경으로 쓴다 (중간의 삽화 줄은 그 자리에서 바뀐다)
+    const first = it.lines[0]?.speaker === '삽화' ? it.lines[0].text : undefined;
     const bg = first ?? it.strip;
     if (bg) setBg(bg, tod);
     else if (!stage.bgKey) setBg(idleBg(), tod);
