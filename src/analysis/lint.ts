@@ -81,6 +81,11 @@ export function lint(c: Content, g: Graph = buildGraph(c)): Finding[] {
   for (const ev of c.events.values()) {
     for (const { node } of walkOutcomes(ev)) {
       for (const l of node.lines) {
+        // 장면 중간에 배경을 바꾸는 줄: `- 삽화: home_room`
+        if (l.speaker === '삽화') {
+          for (const v of l.variants) if (!c.art.has(v.text.trim())) add('error', 'ART_MISSING', node.path, `없는 삽화 '${v.text}' (대사 중 삽화 줄)`);
+          continue;
+        }
         if (l.speaker && !speakers.has(l.speaker)) add('warn', 'SPEAKER_UNKNOWN', node.path, `알 수 없는 화자 '${l.speaker}'`);
       }
     }
