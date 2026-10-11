@@ -587,7 +587,7 @@ export function drawIcon(id: string, outline = true): Pix {
 export const ACTIVITY_ICON: Record<string, string> = {
   폐광: 'pickaxe', 고서점: 'books', 뒷골목: 'eye', 새벽연무장: 'dawn', 집안정리: 'house', 기초훈련: 'dumbbell',
   훈련장: 'sword', 도서관: 'book', 마법실습: 'wand', 성당: 'chapel', 식당: 'bowl', 산책: 'tree', 아르바이트: 'coin',
-  도시외출: 'bag', 온실: 'plant', 검술부: 'swords', 신문부: 'quill', 밤의연무장: 'moon', 휴식: 'bed',
+  도시외출: 'bag', 상점가: 'bag', 온실: 'plant', 검술부: 'swords', 신문부: 'quill', 밤의연무장: 'moon', 휴식: 'bed',
 };
 
 /** 능력치 → 아이콘 */

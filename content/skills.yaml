@@ -27,3 +27,7 @@
 - { id: split, name: 영창 분할, kind: magic, mult: 1.2, mp: 2, when: "skill.영창분할", desc: "미라벨의 기술. 적은 마나로 마법." }
 - { id: sand, name: 모래 뿌리기, kind: blind, sp: 2, when: "skill.모래뿌리기", desc: "에드릭의 비열한 수. 3턴 동안 적의 공격 반감." }
 - { id: ward, name: 엘베라의 방벽, kind: guard, ward: 0.15, when: "skill.방벽", desc: "마법까지 거의 막아내는 방벽. 기력 +2." }
+
+# ---------------------------------------------------------------- 상점 소모품 (43_shops.yaml)
+- { id: salve, name: 상처 연고, kind: item, item: 상처연고, heal: 0.25, when: "item.상처연고 >= 1", desc: "쑥 냄새 나는 연고를 상처에 문지른다. 체력 25% 회복, 기력 +3." }
+- { id: elixir, name: 기사단 보급 강장제, kind: item, item: 기사단강장제, heal: 0.6, when: "item.기사단강장제 >= 1", desc: "은빛 병을 단숨에 비운다. 체력 60% 회복, 기력 +3." }
