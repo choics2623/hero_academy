@@ -61,6 +61,8 @@ export interface CheckRules {
   monthOffset: Record<number, number>;
   /** [최소 확률, 말] 내림차순 */
   odds: [number, string][];
+  /** 능력치 기본값이 그 달의 기대치(expected)보다 over 이상 높으면 넘친 만큼에 rate를 곱한다 (몰아준 능력치가 모든 걸 집어삼키지 않게) */
+  softcap?: { expected: Record<number, number>; over: number; rate: number };
 }
 
 export const SLOTS = ['모자', '윗옷', '아래옷', '한벌옷', '장신구', '무기', '신발'] as const;
@@ -577,7 +579,13 @@ class Builder {
     }
     if (!odds.length) odds.push([0.9, '확실'], [0.65, '유리'], [0.4, '반반'], [0.15, '불리'], [0, '무모']);
     odds.sort((a, b) => b[0] - a[0]);
-    return { types, tiers, monthOffset, odds };
+    let softcap: CheckRules['softcap'];
+    if (isObj(o.softcap)) {
+      const expected: Record<number, number> = {};
+      for (const [k, v] of Object.entries(this.numMap(where, o.softcap.expected))) expected[Number(k)] = v;
+      softcap = { expected, over: Number(o.softcap.over ?? 8), rate: Number(o.softcap.rate ?? 0.35) };
+    }
+    return { types, tiers, monthOffset, odds, softcap };
   }
 
   private outcome(where: string, path: string, o: Obj, allowed: Set<string>): Outcome {

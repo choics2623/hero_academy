@@ -808,7 +808,10 @@ img.mini { width: 22px; height: 22px; border-radius: 3px; box-shadow: none; }
 .syn .syn-n { justify-self: end; font: 11px var(--font-sys); color: var(--muted); }
 .syn .syn-d { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
 .syn.on .syn-d { color: var(--ink); }
-.card .tags { font: 11px var(--font-sys); color: #8155c9; }
+.card .tbon { display: flex; flex-wrap: wrap; gap: 2px 7px; font: 600 11px var(--font-sys); }
+.card .tbon .tg { color: #8155c9; }
+.card .tbon .up { color: var(--ok); }
+.card .tbon .down { color: var(--doom); }
 .perkbox p { margin: 0 0 6px; font-size: 13px; }
 .perkbox p:last-child { margin: 0; }
 @media (max-width: 560px) { .slots { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

@@ -195,6 +195,24 @@ function previewStats(): Record<string, number> {
   return Object.fromEntries(content.rules.stats.map((s) => [s, Math.floor(Number(w.get(`stat.${s}`) ?? 0))]));
 }
 
+/** 재능이 판정에 주는 보정 (checks.yaml의 plus/minus에서) */
+function talentChecks(id: string, option?: string): [string, number][] {
+  const out: [string, number][] = [];
+  for (const ct of content.checks.types.values()) {
+    let v = 0;
+    for (const [k, x] of Object.entries(ct.plus)) {
+      const [tid, opt] = k.split('.');
+      if (tid === id && (!opt || opt === option)) v += x;
+    }
+    for (const [k, x] of Object.entries(ct.minus)) {
+      const [tid, opt] = k.split('.');
+      if (tid === id && (!opt || opt === option)) v -= x;
+    }
+    if (v) out.push([ct.name, v]);
+  }
+  return out.sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+}
+
 function setBuild(next: Build) {
   build = next;
   renderCreate();
@@ -361,7 +379,13 @@ function renderCreate() {
       const top = el('span', 'top');
       top.append(el('span', undefined, t.name), el('span', `cost ${t.cost >= 0 ? 'spend' : 'gain'}`, t.cost >= 0 ? `−${t.cost}P` : `+${-t.cost}P`));
       b.append(top, el('span', 'desc', t.desc));
-      if (t.tags.length) b.append(el('span', 'tags', t.tags.map((x) => `#${x}`).join(' ')));
+      const bon = talentChecks(t.id, sel?.option);
+      if (bon.length || t.tags.length) {
+        const row = el('span', 'tbon');
+        for (const x of t.tags) row.append(el('span', 'tg', `#${x}`));
+        for (const [type, v] of bon) row.append(el('span', v > 0 ? 'up' : 'down', `${type}${v > 0 ? (v >= 4 ? '▲▲' : '▲') : v <= -4 ? '▼▼' : '▼'}`));
+        b.append(row);
+      }
       if (why) b.append(el('span', 'why', why));
       wrap.append(b);
       if (sel && t.options) {

@@ -39,6 +39,15 @@ export function monthOffset(c: Content, w: World): number {
   return c.checks.monthOffset[w.state.time.m] ?? 0;
 }
 
+/** 몰아준 능력치의 넘친 부분은 덜 쳐준다 (checks.yaml softcap) */
+export function softcap(c: Content, w: World, base: number): number {
+  const sc = c.checks.softcap;
+  const e = sc?.expected[w.state.time.m];
+  if (!sc || e === undefined) return base;
+  const cap = e + sc.over;
+  return base <= cap ? base : cap + (base - cap) * sc.rate;
+}
+
 export function oddsWord(c: Content, chance: number): string {
   for (const [min, word] of c.checks.odds) if (chance >= min - 1e-9) return word;
   return c.checks.odds[c.checks.odds.length - 1]?.[1] ?? '';
@@ -58,7 +67,7 @@ export function evalCheck(c: Content, w: World, ch: Check): CheckEval {
   let hidden = ch.hidden === true;
   const type = ch.type ? c.checks.types.get(ch.type) : undefined;
   if (type) {
-    base = toNum(evaluate(type.value.ast, w));
+    base = softcap(c, w, toNum(evaluate(type.value.ast, w)));
     name = ch.label ?? type.name;
     icon = type.icon;
     for (const [k, v] of Object.entries(type.plus)) if (truthy(w.get(`talent.${k}`))) factors.push({ label: talentLabel(c, k), value: v, kind: 'talent' });
