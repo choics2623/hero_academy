@@ -596,7 +596,7 @@ img.mini { width: 22px; height: 22px; border-radius: 3px; box-shadow: none; }
 .res-stamp.lose { color: #ff5d73; }
 
 /* 주사위 */
-.st-dice { position: absolute; left: 50%; top: 44%; translate: -50% -50%; display: grid; justify-items: center; gap: 6px; transition: opacity 0.4s; }
+.st-dice { position: absolute; left: 50%; top: 38%; translate: -50% -50%; display: grid; justify-items: center; gap: 6px; transition: opacity 0.4s; }
 .st-dice.out { opacity: 0; }
 .st-die { position: relative; width: clamp(64px, 13vw, 104px); aspect-ratio: 1; display: grid; place-items: center; animation: dieRoll 0.7s cubic-bezier(0.25, 0.7, 0.35, 1); filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.45)); }
 .st-die img { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -765,7 +765,7 @@ img.mini { width: 22px; height: 22px; border-radius: 3px; box-shadow: none; }
 .st-dice-cap { display: inline-flex; align-items: center; gap: 5px; }
 .st-dice-cap img { width: 16px; height: 16px; }
 .st-stamp.big { font-size: clamp(30px, 6.4vw, 52px); }
-.st-key { position: absolute; top: 112%; white-space: nowrap; font: 700 13px var(--font-sys); padding: 3px 12px; border-radius: 999px; background: rgba(8, 10, 22, 0.85); animation: keyIn 0.4s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
+.st-key { position: static; margin-top: 2px; white-space: nowrap; font: 700 13px var(--font-sys); padding: 3px 12px; border-radius: 999px; background: rgba(8, 10, 22, 0.85); animation: keyIn 0.4s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
 .st-key.ok { color: #7ff0b8; }
 .st-key.ng { color: #ff8a9a; }
 @keyframes keyIn { from { opacity: 0; transform: translateY(6px) scale(0.9); } to { opacity: 1; transform: none; } }

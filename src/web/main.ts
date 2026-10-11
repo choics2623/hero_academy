@@ -878,7 +878,8 @@ function factorText(fs: { label: string; value: number }[], n = 3): string {
 async function runCheck(text: string, data?: CheckResult) {
   if (data) {
     stage.focus(null);
-    const sub = [`${data.odds}했던 판정 — ${GRADE_LABEL[data.grade]}`];
+    const was = ({ 확실: '확실했던', 유리: '유리했던', 반반: '반반이던', 불리: '불리했던', 무모: '무모했던' } as Record<string, string>)[data.odds] ?? data.odds;
+    const sub = [`${was} 판정 — ${GRADE_LABEL[data.grade]}`];
     if (data.factors.length) sub.push(factorText(data.factors, 4));
     const shown = dialog.show({ kind: 'check', name: `${data.name} 판정`, lines: sub, speed: 0 });
     const key = data.key ? (data.ok ? `${data.key.label} 덕분에!` : `${data.key.label}에 발목 잡혔다`) : undefined;
