@@ -1,22 +1,26 @@
-# 재능 52개. cost > 0 은 포인트 소모, cost < 0 은 포인트 획득.
+# 재능 86개 (+ 진화 전용 2개). cost > 0 은 포인트 소모, cost < 0 은 포인트 획득.
 # effects는 캐릭터 생성 시 한 번 적용된다. 성장률(growth.X)은 이후 stat.X 상승량에 곱해진다.
-# 효과가 비어 있는 재능은 이벤트 조건(talent.X)으로만 작동한다.
+# 판정 보너스는 checks.yaml의 plus/minus에 있다 (선택형 재능은 `서번트.검`처럼).
+# tags: 같은 태그가 2개·3개 모이면 시너지가 깨어난다 (synergies.yaml).
+#   검 · 마법 · 신성 · 사교 · 은밀 · 학자 · 야생 · 강인 · 저주
+# 효과도 판정 보너스도 없는 재능은 이벤트 조건(talent.X)으로만 작동한다.
 
 # ---------------------------------------------------------------- 신체
-- { id: 강골, name: 강골(強骨), cost: 3, category: 신체, excludes: [병약, 유리몸],
+- { id: 강골, name: 강골(強骨), cost: 3, category: 신체, tags: [강인], excludes: [병약, 유리몸],
     desc: "부상 확률 -30%, 근력 성장 +15%", effects: ["growth.근력 += 0.15", "mod.injury -= 0.3"] }
-- { id: 질긴힘줄, name: 질긴 힘줄, cost: 2, category: 신체, excludes: [저질체력],
+- { id: 질긴힘줄, name: 질긴 힘줄, cost: 2, category: 신체, tags: [강인], excludes: [저질체력],
     desc: "훈련 피로 -20%", effects: ["mod.fatigue -= 0.2"] }
-- { id: 만독불침, name: 만독불침(萬毒不侵), cost: 5, category: 신체,
+- { id: 만독불침, name: 만독불침(萬毒不侵), cost: 5, category: 신체, tags: [강인],
     desc: "독 면역, 저주 저항. 독성 영약도 부작용 없이 섭취" }
-- { id: 천생신력, name: 천생신력(天生神力), cost: 5, category: 신체,
+- { id: 천생신력, name: 천생신력(天生神力), cost: 5, category: 신체, tags: [강인, 검],
     desc: "근력 +15, 근력 성장 +25%. 섬세한 작업 -20%", effects: ["stat.근력 += 15", "growth.근력 += 0.25", "growth.마력제어 -= 0.2"] }
-- { id: 고양이반사신경, name: 고양이 반사신경, cost: 3, category: 신체,
+- { id: 고양이반사신경, name: 고양이 반사신경, cost: 3, category: 신체, tags: [은밀],
     desc: "민첩 성장 +20%", effects: ["growth.민첩 += 0.2"] }
-- { id: 빠른회복, name: 빠른 회복, cost: 2, category: 신체, desc: "부상 회복 기간 절반" }
-- { id: 대식가, name: 대식가, cost: 1, category: 신체, desc: "식사 효과 2배, 식비 2배" }
-- { id: 무통증, name: 무통증, cost: 3, category: 신체, desc: "고통 패널티 무시. 숨은 부상을 자각하지 못함" }
-- { id: 거구, name: 거구, cost: 2, category: 신체, excludes: [키작음],
+- { id: 빠른회복, name: 빠른 회복, cost: 2, category: 신체, tags: [강인], excludes: [오래된상처],
+    desc: "상처가 빨리 아문다. 인내 +3, 부상 -20%, 피로 -10%", effects: ["mod.injury -= 0.2", "mod.fatigue -= 0.1"] }
+- { id: 대식가, name: 대식가, cost: 1, category: 신체, tags: [강인], desc: "식사 효과 2배, 식비 2배" }
+- { id: 무통증, name: 무통증, cost: 3, category: 신체, tags: [강인], desc: "고통 패널티 무시. 숨은 부상을 자각하지 못함" }
+- { id: 거구, name: 거구, cost: 2, category: 신체, tags: [강인], excludes: [키작음, 그림자걸음],
     desc: "근력·체질 +5, 민첩 -5", effects: ["stat.근력 += 5", "stat.체질 += 5", "stat.민첩 -= 5"] }
 - { id: 병약, name: 병약(病弱), cost: -4, category: 신체, excludes: [강골],
     desc: "체질 성장 -30%. 가끔 앓아누움", effects: ["growth.체질 -= 0.3"] }
@@ -25,76 +29,157 @@
 - { id: 허약한심장, name: 허약한 심장, cost: -3, category: 신체, desc: "장기전에서 능력치 하락" }
 - { id: 저질체력, name: 저질 체력, cost: -2, category: 신체, excludes: [질긴힘줄],
     desc: "피로 축적 +30%", effects: ["mod.fatigue += 0.3"] }
-- { id: 키작음, name: 키 작음, cost: -1, category: 신체, excludes: [거구],
+- { id: 키작음, name: 키 작음, cost: -1, category: 신체, tags: [은밀], excludes: [거구],
     desc: "민첩 +5. 일부 대사가 바뀜", effects: ["stat.민첩 += 5"] }
+# 새 신체 재능 — 검 · 은밀 · 야생 · 강인
+- { id: 굳은살, name: 굳은살, cost: 1, category: 신체, tags: [검],
+    desc: "검을 쥐어 온 손. 완력·인내 +2" }
+- { id: 검무, name: 검무(劍舞), cost: 3, category: 신체, tags: [검],
+    desc: "칼끝이 춤춘다. 기민 +4, 완력 +2, 민첩 성장 +10%", effects: ["growth.민첩 += 0.1"] }
+- { id: 쌍검감각, name: 쌍검 감각, cost: 2, category: 신체, tags: [검],
+    desc: "양손이 따로 움직인다. 기민 +3, 통찰 +2" }
+- { id: 그림자걸음, name: 그림자 걸음, cost: 3, category: 신체, tags: [은밀], excludes: [거구],
+    desc: "발소리가 나지 않는다. 은밀 +5, 기민 +2" }
+- { id: 손버릇, name: 손버릇, cost: 1, category: 신체, tags: [은밀], excludes: [덜렁이],
+    desc: "남의 주머니가 가볍다. 손재주 +3, 은밀 +1" }
+- { id: 밤눈, name: 밤눈, cost: 2, category: 신체, tags: [은밀, 야생], excludes: [야맹증],
+    desc: "어둠 속에서도 또렷하다. 은밀 +3, 통찰 +2" }
+- { id: 사냥꾼의눈, name: 사냥꾼의 눈, cost: 2, category: 신체, tags: [야생], excludes: [길치],
+    desc: "짐승을 쫓던 눈. 통찰 +3, 은밀 +2" }
+- { id: 강철위장, name: 강철 위장, cost: 2, category: 신체, tags: [강인, 야생], excludes: [결벽증],
+    desc: "상한 고기도 삭인다. 인내 +4" }
+- { id: 잠귀밝음, name: 잠귀 밝음, cost: 1, category: 신체, tags: [야생], excludes: [게으름],
+    desc: "작은 기척에도 눈을 뜬다. 통찰 +2, 기민 +1" }
+- { id: 야맹증, name: 야맹증, cost: -1, category: 신체, excludes: [밤눈],
+    desc: "해가 지면 눈앞이 캄캄하다. 은밀·통찰 -2" }
+- { id: 오래된상처, name: 오래된 상처, cost: -3, category: 신체, excludes: [빠른회복],
+    desc: "비 오면 쑤시는 무릎. 민첩 -3, 기민 -3, 부상 +20%", effects: ["stat.민첩 -= 3", "mod.injury += 0.2"] }
 
 # ---------------------------------------------------------------- 마력
-- { id: 마나탱크, name: 마나 탱크, cost: 4, category: 마력, excludes: [마나회로손상],
+- { id: 마나탱크, name: 마나 탱크, cost: 4, category: 마력, tags: [마법], excludes: [마나회로손상],
     desc: "마력량 +20", effects: ["stat.마력량 += 20"] }
-- { id: 마도학재능, name: 마도학 재능, cost: 3, category: 마력,
+- { id: 마도학재능, name: 마도학 재능, cost: 3, category: 마력, tags: [마법, 학자],
     desc: "마법 이론 효율 +30%", effects: ["growth.지성 += 0.1", "growth.마력제어 += 0.2"] }
-- { id: 자연친화력, name: 자연 친화력, cost: 2, category: 마력, excludes: [혐오스러운분위기],
+- { id: 자연친화력, name: 자연 친화력, cost: 2, category: 마력, tags: [야생], excludes: [혐오스러운분위기],
     desc: "정령과 동물이 호감을 가짐" }
-- { id: 마력감응, name: 마력 감응, cost: 3, category: 마력, excludes: [마력둔감],
+- { id: 마력감응, name: 마력 감응, cost: 3, category: 마력, tags: [마법], excludes: [마력둔감],
     desc: "타인의 잠재 재능을 느낌으로 감지" }
-- { id: 섬세한제어, name: 섬세한 제어, cost: 3, category: 마력, excludes: [마력폭주체질],
+- { id: 섬세한제어, name: 섬세한 제어, cost: 3, category: 마력, tags: [마법], excludes: [마력폭주체질],
     desc: "마력제어 성장 +25%", effects: ["growth.마력제어 += 0.25"] }
-- { id: 원소친화, name: 원소 친화, cost: 2, category: 마력, options: [화, 수, 풍, 지, 뇌],
-    desc: "택1 원소 위력 +30%" }
-- { id: 성흔, name: 성흔(聖痕), cost: 4, category: 마력, excludes: [마왕의흔적], desc: "신성력 사용 가능" }
-- { id: 무영창소질, name: 무영창 소질, cost: 6, category: 마력, desc: "하급 마법 영창 생략" }
-- { id: 마나회로손상, name: 마나 회로 손상, cost: -5, category: 마력, excludes: [마나탱크],
-    desc: "마법 습득 -70%. 투기 루트 해금", effects: ["growth.마력제어 -= 0.7", "growth.마력량 -= 0.7"] }
-- { id: 마력폭주체질, name: 마력 폭주 체질, cost: -3, category: 마력, excludes: [섬세한제어],
+- { id: 원소친화, name: 원소 친화, cost: 2, category: 마력, tags: [마법], options: [화, 수, 풍, 지, 뇌],
+    desc: "마법 +3, 제어 성장 +10%. 원소별 +2: 화 위압·수 교감·풍 기민·지 인내·뇌 통찰",
+    effects: ["growth.마력제어 += 0.1"] }
+- { id: 성흔, name: 성흔(聖痕), cost: 4, category: 마력, tags: [신성], excludes: [마왕의흔적, 저주술소질], desc: "신성력 사용 가능" }
+- { id: 무영창소질, name: 무영창 소질, cost: 6, category: 마력, tags: [마법], desc: "하급 마법 영창 생략" }
+- { id: 마나회로손상, name: 마나 회로 손상, cost: -5, category: 마력, tags: [검], excludes: [마나탱크],
+    desc: "마법 -6, 마법 습득 -70%. 투기 루트 해금(완력 +2)", effects: ["growth.마력제어 -= 0.7", "growth.마력량 -= 0.7"] }
+- { id: 마력폭주체질, name: 마력 폭주 체질, cost: -3, category: 마력, tags: [마법], excludes: [섬세한제어],
     desc: "감정이 흔들리면 마법 폭주" }
-- { id: 마력둔감, name: 마력 둔감, cost: -2, category: 마력, excludes: [마력감응], desc: "마법 함정 감지 실패" }
+- { id: 마력둔감, name: 마력 둔감, cost: -2, category: 마력, excludes: [마력감응],
+    desc: "마법·통찰 -2, 마력 성장 -10%. 환각엔 강함(정신력 +2)", effects: ["growth.마력제어 -= 0.1", "growth.마력량 -= 0.1"] }
 - { id: 속성부적합, name: 속성 부적합, cost: -1, category: 마력, options: [화, 수, 풍, 지, 뇌],
-    desc: "택1 원소 사용 불가" }
+    desc: "택1 원소 마법 불가. 마법 -2, 제어 성장 -5%", effects: ["growth.마력제어 -= 0.05"] }
+# 새 마력 재능 — 학자 · 저주 · 신성
+- { id: 연금술사의손, name: 연금술사의 손, cost: 3, category: 마력, tags: [학자], excludes: [덜렁이],
+    desc: "섞고 달이는 손. 손재주 +5, 학식 +1, 제어 성장 +10%", effects: ["growth.마력제어 += 0.1"] }
+- { id: 저주술소질, name: 저주술 소질, cost: 3, category: 마력, tags: [저주, 마법], excludes: [성흔, 치유의손],
+    desc: "해치는 술식이 손에 붙는다. 위압 +4, 마법 +3, 신성 -3" }
+- { id: 치유의손, name: 치유의 손, cost: 3, category: 마력, tags: [신성], excludes: [저주술소질],
+    desc: "손을 얹으면 아픔이 가라앉는다. 신성 +4, 교감 +2, 인내 +1" }
 
 # ---------------------------------------------------------------- 정신
-- { id: 강철멘탈, name: 강철 멘탈, cost: 3, category: 정신, excludes: [겁쟁이],
+- { id: 강철멘탈, name: 강철 멘탈, cost: 3, category: 정신, tags: [강인], excludes: [겁쟁이],
     desc: "스트레스 -40%, 의지 +5", effects: ["mod.stress -= 0.4", "stat.의지 += 5"] }
-- { id: 직감, name: 직감, cost: 2, category: 정신, desc: "위험한 선택지에 경고" }
+- { id: 직감, name: 직감, cost: 2, category: 정신, tags: [야생], desc: "위험한 선택지에 경고" }
 - { id: 서번트, name: 서번트, cost: 4, category: 정신, options: [검, 마법, 연금, 교육, 신성],
-    desc: "한 분야 성장 +60%, 나머지 -15%" }
-- { id: 최적동선, name: 최적 동선, cost: 3, category: 정신,
+    desc: "택1 분야 판정 +4~5, 그 능력치 성장 +30%. 매력 성장 -15%",
+    effects: [
+      "growth.근력 += 0.3 * talent.서번트.검", "growth.민첩 += 0.2 * talent.서번트.검",
+      "growth.마력제어 += 0.3 * talent.서번트.마법", "growth.마력량 += 0.2 * talent.서번트.마법",
+      "growth.마력제어 += 0.2 * talent.서번트.연금", "growth.지성 += 0.2 * talent.서번트.연금",
+      "growth.지성 += 0.3 * talent.서번트.교육", "growth.의지 += 0.2 * talent.서번트.교육",
+      "growth.의지 += 0.3 * talent.서번트.신성", "growth.마력량 += 0.2 * talent.서번트.신성",
+      "growth.매력 -= 0.15"] }
+- { id: 최적동선, name: 최적 동선, cost: 3, category: 정신, excludes: [길치],
     desc: "스피드러너의 습관. 피로 누적 -25%", effects: ["mod.fatigue -= 0.25"] }
-- { id: 집중력, name: 집중력, cost: 2, category: 정신, excludes: [산만함],
+- { id: 집중력, name: 집중력, cost: 2, category: 정신, tags: [학자], excludes: [산만함],
     desc: "수업 효율 +15%", effects: ["growth.지성 += 0.15"] }
-- { id: 완전기억, name: 완전기억, cost: 4, category: 정신, excludes: [망각증], desc: "공략 노트 기억 풍화 없음" }
-- { id: 겁쟁이, name: 겁쟁이, cost: -2, category: 정신, excludes: [강철멘탈],
+- { id: 완전기억, name: 완전기억, cost: 4, category: 정신, tags: [학자], excludes: [망각증], desc: "공략 노트 기억 풍화 없음" }
+- { id: 겁쟁이, name: 겁쟁이, cost: -2, category: 정신, excludes: [강철멘탈, 냉혈],
     desc: "강적 앞 행동 실패. 극복하면 「용기」", effects: ["stat.의지 -= 5"] }
 - { id: 트라우마, name: 트라우마, cost: -2, category: 정신, options: [불, 물, 어둠, 피],
-    desc: "택1 상황에서 행동 불가. 극복하면 「각성」" }
+    desc: "정신력 -3, 스트레스 +15%. 택1 상황 판정 -2~3. 극복하면 「각성」",
+    effects: ["mod.stress += 0.15"] }
 - { id: 산만함, name: 산만함, cost: -2, category: 정신, excludes: [집중력],
     desc: "수업 효율 -15%", effects: ["growth.지성 -= 0.15"] }
-- { id: 게으름, name: 게으름, cost: -1, category: 정신, desc: "아침에 자주 늦잠" }
+- { id: 게으름, name: 게으름, cost: -1, category: 정신, excludes: [잠귀밝음], desc: "아침에 자주 늦잠" }
 - { id: 망각증, name: 망각증, cost: -3, category: 정신, excludes: [완전기억], desc: "기억 풍화 2배" }
+# 새 정신 재능 — 학자 · 신성 · 검 · 은밀 · 야생
+- { id: 속독, name: 속독(速讀), cost: 2, category: 정신, tags: [학자],
+    desc: "책장이 바람처럼 넘어간다. 학식 +4, 지성 성장 +10%", effects: ["growth.지성 += 0.1"] }
+- { id: 고문자해독, name: 고문자 해독, cost: 2, category: 정신, tags: [학자],
+    desc: "죽은 글자도 읽힌다. 학식 +3, 통찰 +2, 마법 +1" }
+- { id: 약초지식, name: 약초 지식, cost: 2, category: 정신, tags: [야생, 학자],
+    desc: "먹는 풀과 죽는 풀을 안다. 손재주 +3, 인내 +2" }
+- { id: 냉혈, name: 냉혈(冷血), cost: 2, category: 정신, tags: [은밀], excludes: [겁쟁이],
+    desc: "심장이 느리게 뛴다. 기만 +4, 정신력 +2, 교감 -2" }
+- { id: 맹세, name: 맹세, cost: 2, category: 정신, tags: [검, 신성],
+    desc: "검에 건 맹세. 정신력 +3, 신성 +2, 기만 -2" }
+- { id: 기도하는손, name: 기도하는 손, cost: 2, category: 정신, tags: [신성],
+    desc: "기도가 손에 익었다. 신성 +4, 스트레스 -10%", effects: ["mod.stress -= 0.1"] }
+- { id: 맹신, name: 맹신(盲信), cost: -1, category: 정신, tags: [신성],
+    desc: "의심할 줄 모른다. 신성 +2, 통찰 -4, 기만 -3" }
+- { id: 길치, name: 길치, cost: -1, category: 정신, excludes: [최적동선, 사냥꾼의눈],
+    desc: "지도를 거꾸로 든다. 통찰·은밀 -2" }
+- { id: 덜렁이, name: 덜렁이, cost: -2, category: 정신, excludes: [연금술사의손, 손버릇],
+    desc: "쥔 것을 꼭 떨어뜨린다. 손재주 -4, 은밀 -2, 기민 -1" }
+- { id: 결벽증, name: 결벽증, cost: -1, category: 정신, excludes: [강철위장],
+    desc: "흙먼지 한 톨도 못 참는다. 인내·교감 -2" }
+- { id: 고소공포증, name: 고소공포증, cost: -1, category: 정신,
+    desc: "높은 곳에서 다리가 굳는다. 기민·정신력 -2" }
+- { id: 고집불통, name: 고집불통, cost: -1, category: 정신,
+    desc: "한번 정하면 안 바꾼다. 설득 -3, 통찰 -2, 정신력 +1" }
 
 # ---------------------------------------------------------------- 사회
-- { id: 귀공자의품격, name: 귀공자의 품격, cost: 2, category: 사회, desc: "귀족 첫인상 +" }
-- { id: 사람좋은얼굴, name: 사람 좋은 얼굴, cost: 2, category: 사회, desc: "평민·아이 호감 +" }
-- { id: 달변, name: 달변, cost: 3, category: 사회, excludes: [말더듬],
+- { id: 귀공자의품격, name: 귀공자의 품격, cost: 2, category: 사회, tags: [사교], excludes: [거리의말투], desc: "귀족 첫인상 +" }
+- { id: 사람좋은얼굴, name: 사람 좋은 얼굴, cost: 2, category: 사회, tags: [사교], desc: "평민·아이 호감 +" }
+- { id: 달변, name: 달변, cost: 3, category: 사회, tags: [사교], excludes: [말더듬],
     desc: "설득 판정 +, 매력 +3", effects: ["stat.매력 += 3"] }
-- { id: 카리스마, name: 카리스마, cost: 4, category: 사회, desc: "파티 사기 +, 매력 +5", effects: ["stat.매력 += 5"] }
-- { id: 미모, name: 미모, cost: 3, category: 사회, desc: "첫인상 크게 +, 매력 +8", effects: ["stat.매력 += 8"] }
-- { id: 혐오스러운분위기, name: 혐오스러운 분위기, cost: -3, category: 사회, excludes: [자연친화력],
+- { id: 카리스마, name: 카리스마, cost: 4, category: 사회, tags: [사교], desc: "파티 사기 +, 매력 +5", effects: ["stat.매력 += 5"] }
+- { id: 미모, name: 미모, cost: 3, category: 사회, tags: [사교], desc: "첫인상 크게 +, 매력 +8", effects: ["stat.매력 += 8"] }
+- { id: 혐오스러운분위기, name: 혐오스러운 분위기, cost: -3, category: 사회, tags: [저주], excludes: [자연친화력],
     desc: "첫인상 크게 -, 동물이 도망감. 위압 +, 마족 호감 +", effects: ["stat.매력 -= 8"] }
 - { id: 눈치없음, name: 눈치 없음, cost: -2, category: 사회, desc: "숨은 감정 힌트가 안 보임" }
-- { id: 악명높은가문, name: 악명 높은 가문, cost: -3, category: 사회, desc: "시작 평판 최악", effects: ["reputation -= 30"] }
+- { id: 악명높은가문, name: 악명 높은 가문, cost: -3, category: 사회, tags: [저주], desc: "시작 평판 최악", effects: ["reputation -= 30"] }
 - { id: 말더듬, name: 말더듬, cost: -1, category: 사회, excludes: [달변], desc: "발표 판정 -" }
 - { id: 음치, name: 음치, cost: -1, category: 사회, desc: "축제 개그" }
+# 새 사회 재능 — 사교 · 은밀
+- { id: 거리의말투, name: 거리의 말투, cost: 2, category: 사회, tags: [사교, 은밀], excludes: [귀공자의품격],
+    desc: "골목에서 배운 말. 기만 +3, 위압 +2" }
+- { id: 흥정꾼, name: 흥정꾼, cost: 2, category: 사회, tags: [사교],
+    desc: "값은 깎으라고 있다. 설득 +3, 시작 돈 +20", effects: ["money += 20"] }
+- { id: 허세, name: 허세, cost: 1, category: 사회, tags: [사교],
+    desc: "없는 것도 있는 척. 위압 +3, 통찰 -1" }
+- { id: 수다쟁이, name: 수다쟁이, cost: -1, category: 사회, tags: [사교], excludes: [외톨이],
+    desc: "입이 쉬지 않는다. 설득 +1, 은밀 -3, 기만 -2" }
+- { id: 외톨이, name: 외톨이, cost: -1, category: 사회, excludes: [수다쟁이],
+    desc: "아무도 내 이름을 모른다. 설득 -3, 교감 -2, 은밀 +1" }
+- { id: 빚쟁이, name: 빚쟁이, cost: -2, category: 사회,
+    desc: "갚을 돈이 산더미다. 시작 돈 -15, 매달 용돈 -4", effects: ["money -= 15", "allowance -= 4"] }
 
 # ---------------------------------------------------------------- 특수
 - { id: 행운아, name: 행운아, cost: 3, category: 특수, excludes: [불운], desc: "랜덤 판정 보정", effects: ["luck += 2"] }
-- { id: 짐승의혈통, name: 짐승의 혈통, cost: 5, category: 특수, desc: "야성 감각, 수인족 호감", effects: ["stat.민첩 += 3"] }
+- { id: 짐승의혈통, name: 짐승의 혈통, cost: 5, category: 특수, tags: [야생], desc: "야성 감각, 수인족 호감", effects: ["stat.민첩 += 3"] }
 - { id: 영웅의그릇, name: 영웅의 그릇, cost: 7, category: 특수, desc: "모든 능력치 상한 +10 (2회차 해금)",
     locked: "meta.clears < 1" }
-- { id: 불운, name: 불운, cost: -2, category: 특수, excludes: [행운아], desc: "랜덤 판정 불리", effects: ["luck -= 2"] }
-- { id: 마왕의흔적, name: 마왕의 흔적, cost: -4, category: 특수, excludes: [성흔],
+- { id: 불운, name: 불운, cost: -2, category: 특수, tags: [저주], excludes: [행운아], desc: "랜덤 판정 불리", effects: ["luck -= 2"] }
+- { id: 마왕의흔적, name: 마왕의 흔적, cost: -4, category: 특수, tags: [저주], excludes: [성흔],
     desc: "마기 보유. 교회의 의심. 마족 루트 해금" }
-- { id: 몸주인의잔재, name: 몸 주인의 잔재, cost: -2, category: 특수, desc: "원래 몸 주인의 기억이 튀어나옴" }
+- { id: 몸주인의잔재, name: 몸 주인의 잔재, cost: -2, category: 특수, tags: [저주], desc: "원래 몸 주인의 기억이 튀어나옴" }
+# 새 특수 재능 — 저주
+- { id: 망자의목소리, name: 망자의 목소리, cost: 2, category: 특수, tags: [저주],
+    desc: "죽은 자가 귓가에 속삭인다. 통찰 +4, 정신력 -1" }
 
 # ---------------------------------------------------------------- 진화 전용 (캐릭터 생성에서는 고를 수 없음)
-- { id: 불굴, name: 불굴(不屈), cost: 0, category: 특수, evolved: true, desc: "병약을 극복한 몸. 체질 성장 +20%" }
-- { id: 용기, name: 용기, cost: 0, category: 특수, evolved: true, desc: "겁쟁이를 극복했다. 공포 저항" }
+- { id: 불굴, name: 불굴(不屈), cost: 0, category: 특수, tags: [강인], evolved: true, desc: "병약을 극복한 몸. 체질 성장 +20%" }
+- { id: 용기, name: 용기, cost: 0, category: 특수, tags: [강인], evolved: true, desc: "겁쟁이를 극복했다. 공포 저항" }
