@@ -11,7 +11,6 @@ export function tiny(files: Record<string, unknown> = {}): Content {
         speakers: ['속마음'],
       },
       'origins.yaml': [{ id: '평민', points: 5 }],
-      'perks.yaml': [{ id: '기억', cost: 3 }, { id: '눈', cost: 2 }],
       'talents.yaml': [
         { id: '강골', cost: 3, excludes: ['병약'], effects: ['growth.힘 += 0.5'] },
         { id: '병약', cost: -4, excludes: ['강골'] },
@@ -27,4 +26,4 @@ export function tiny(files: Record<string, unknown> = {}): Content {
   });
 }
 
-export const BUILD = { name: '나', origin: '평민', perks: ['기억'], talents: [] };
+export const BUILD = { name: '나', origin: '평민', talents: [] };

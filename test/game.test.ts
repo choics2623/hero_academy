@@ -5,16 +5,16 @@ import { BUILD, tiny } from './fixture';
 
 describe('캐릭터 생성', () => {
   const c = tiny();
-  it('포인트 계산: 가장 비싼 특전 하나는 무료', () => {
-    const r = checkBuild(c, { ...BUILD, perks: ['기억', '눈'], talents: [{ id: '강골' }] });
-    expect(r.spent).toBe(2 + 3);
-    expect(r.remaining).toBe(0);
+  it('포인트 계산', () => {
+    const r = checkBuild(c, { ...BUILD, talents: [{ id: '강골' }] });
+    expect(r.spent).toBe(3);
+    expect(r.remaining).toBe(2);
     expect(r.ok).toBe(true);
   });
   it('상호 배제, 음수 상한, 포인트 부족', () => {
     expect(checkBuild(c, { ...BUILD, talents: [{ id: '강골' }, { id: '병약' }] }).errors.join()).toMatch(/같이 고를 수 없음/);
     expect(checkBuild(c, { ...BUILD, talents: [{ id: '불운' }] }).errors.join()).toMatch(/최대 12점/);
-    expect(checkBuild(c, { ...BUILD, perks: ['기억', '눈'], talents: [{ id: '강골' }], alloc: { 힘: 1 } }).ok).toBe(false);
+    expect(checkBuild(c, { ...BUILD, talents: [{ id: '강골' }], alloc: { 힘: 3 } }).ok).toBe(false);
   });
   it('성장률은 생성 이후의 상승에만 곱해진다', () => {
     const g = Game.create(c, { ...BUILD, talents: [{ id: '강골' }] });

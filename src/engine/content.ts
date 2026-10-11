@@ -22,11 +22,80 @@ export interface Line {
   variants: Variant[];
 }
 
+export interface CheckMod {
+  when?: Expr;
+  value: number;
+  label: string;
+}
+
 export interface Check {
-  value: Expr;
+  /** 옛 형식: 직접 쓴 판정 공식 */
+  value?: Expr;
+  /** 새 형식: checks.yaml의 판정 종류 */
+  type?: string;
+  /** 숫자 난이도 (tier가 있으면 그 이름의 기준값, 달마다 오른다) */
   dc: number;
-  /** 화면에 보일 판정 이름 (예: "근력 판정"). 없으면 판정 결과를 숨긴다 */
+  tier?: string;
+  /** 화면에 보일 판정 이름 (예: "근력 판정"). 옛 형식에서 없으면 판정 결과를 숨긴다 */
   label?: string;
+  hidden?: boolean;
+  mods: CheckMod[];
+}
+
+/** 판정 종류 (checks.yaml) */
+export interface CheckType {
+  id: string;
+  name: string;
+  icon: string;
+  desc: string;
+  value: Expr;
+  /** 재능 이름(talent. 뒤) → 보너스 */
+  plus: Record<string, number>;
+  minus: Record<string, number>;
+}
+
+export interface CheckRules {
+  types: Map<string, CheckType>;
+  tiers: Record<string, number>;
+  /** 달 → 난이도 가산 */
+  monthOffset: Record<number, number>;
+  /** [최소 확률, 말] 내림차순 */
+  odds: [number, string][];
+}
+
+export const SLOTS = ['모자', '윗옷', '아래옷', '한벌옷', '장신구', '무기', '신발'] as const;
+export type Slot = (typeof SLOTS)[number];
+/** 실제 장착 칸 (장신구는 두 칸) */
+export const EQUIP_SLOTS = ['모자', '윗옷', '아래옷', '한벌옷', '장신구1', '장신구2', '무기', '신발'] as const;
+export type EquipSlot = (typeof EQUIP_SLOTS)[number];
+export const GEAR_STATS = ['hp', 'sp', 'mp', 'atk', 'matk', 'def', 'dodge', 'read', 'persuade'] as const;
+
+export interface Item {
+  id: string;
+  name: string;
+  kind: 'equip' | 'use' | 'key';
+  slot?: Slot;
+  icon: string;
+  price?: number;
+  desc: string;
+  checks: Record<string, number>;
+  battle: Record<string, number>;
+  use: Effect[];
+}
+
+export interface SynergyTier {
+  need: number;
+  desc: string;
+  checks: Record<string, number>;
+  battle: Record<string, number>;
+}
+
+export interface Synergy {
+  id: string;
+  name: string;
+  tag: string;
+  desc: string;
+  tiers: SynergyTier[];
 }
 
 export interface Plant {
@@ -50,6 +119,10 @@ export interface Outcome {
   battle?: BattleSpec;
   /** 이 결과가 펼쳐질 때 보여줄 삽화 (art.yaml의 id) */
   art?: string;
+  /** 대성공일 때 success 뒤에 덧붙는 결과 */
+  great?: Outcome;
+  /** 대실패일 때 fail 뒤에 덧붙는 결과 */
+  fumble?: Outcome;
 }
 
 // ---------------------------------------------------------------- battle
@@ -120,6 +193,8 @@ export interface Choice extends Outcome {
   text: string;
   requires?: Expr;
   hint?: string;
+  /** 기억의 파편으로도 미래가 보이지 않는다 (반전 보호) */
+  veiled?: boolean;
 }
 
 export type Trigger = { kind: 'auto' } | { kind: 'none' } | { kind: 'activity'; ids: string[] };
@@ -212,6 +287,8 @@ export interface Talent {
   desc: string;
   excludes: string[];
   effects: Effect[];
+  /** 시너지 태그 (검 마법 신성 사교 은밀 학자 야생 강인 저주) */
+  tags: string[];
   options?: string[];
   locked?: Expr;
   /** 진화로만 얻는 재능 (캐릭터 생성 화면에 나오지 않음) */
@@ -224,14 +301,6 @@ export interface Origin {
   points: number;
   desc: string;
   talents: string[];
-  effects: Effect[];
-}
-
-export interface Perk {
-  id: string;
-  name: string;
-  cost: number;
-  desc: string;
   effects: Effect[];
 }
 
@@ -283,7 +352,9 @@ export interface Content {
   foreshadows: Map<string, Foreshadow>;
   talents: Map<string, Talent>;
   origins: Map<string, Origin>;
-  perks: Map<string, Perk>;
+  checks: CheckRules;
+  items: Map<string, Item>;
+  synergies: Map<string, Synergy>;
   characters: Map<string, Character>;
   goals: Map<string, Goal>;
   enemies: Map<string, Enemy>;
@@ -317,13 +388,14 @@ function asList(v: unknown): unknown[] {
 }
 
 const OUTCOME_KEYS = new Set([
-  'when', 'lines', 'effects', 'next', 'check', 'success', 'fail', 'branch', 'choices', 'plants', 'pays', 'battle', 'art',
+  'when', 'lines', 'effects', 'next', 'check', 'success', 'fail', 'great', 'fumble', 'branch', 'choices', 'plants', 'pays',
+  'battle', 'art',
 ]);
 const EVENT_KEYS = new Set([
   ...OUTCOME_KEYS, 'id', 'title', 'on', 'window', 'at', 'slots', 'priority', 'weight', 'repeat', 'free',
   'chance', 'cooldown', 'announce', 'pool',
 ]);
-const CHOICE_KEYS = new Set([...OUTCOME_KEYS, 'text', 'requires', 'hint']);
+const CHOICE_KEYS = new Set([...OUTCOME_KEYS, 'text', 'requires', 'hint', 'veiled']);
 
 /** 대사 한 줄의 화자로 쓸 수 없는 예약어 */
 const LINE_RESERVED = new Set(['when']);
@@ -331,6 +403,7 @@ const LINE_RESERVED = new Set(['when']);
 class Builder {
   problems: string[] = [];
   private calendar!: Calendar;
+  private checkRules!: CheckRules;
 
   constructor(private raw: RawContent) {}
 
@@ -418,12 +491,93 @@ class Builder {
 
   private check(where: string, src: unknown): Check | undefined {
     if (src === undefined) return undefined;
-    if (!isObj(src) || src.value === undefined || typeof src.dc !== 'number') {
-      this.err(where, `check는 {value: 식, dc: 숫자} 형태여야 함`);
+    if (!isObj(src)) {
+      this.err(where, `check 형식이 이상함`);
+      return undefined;
+    }
+    for (const k of Object.keys(src)) {
+      if (!['type', 'value', 'dc', 'label', 'hidden', 'mods'].includes(k)) this.err(where, `check에 알 수 없는 항목 '${k}'`);
+    }
+    const label = typeof src.label === 'string' ? src.label : undefined;
+    const mods: CheckMod[] = [];
+    for (const m of asList(src.mods)) {
+      if (!isObj(m) || typeof m.value !== 'number' || typeof m.label !== 'string') {
+        this.err(where, `check.mods는 {when: 식, value: 숫자, label: 이름} 형태여야 함`);
+        continue;
+      }
+      mods.push({ when: this.expr(where, m.when), value: m.value, label: m.label });
+    }
+    let dc = 0;
+    let tier: string | undefined;
+    if (typeof src.dc === 'number') dc = src.dc;
+    else if (typeof src.dc === 'string' && src.dc in this.checkRules.tiers) {
+      tier = src.dc;
+      dc = this.checkRules.tiers[src.dc];
+    } else this.err(where, `check.dc는 숫자나 난이도 이름(${Object.keys(this.checkRules.tiers).join('/')})이어야 함`);
+    if (typeof src.type === 'string') {
+      if (!this.checkRules.types.has(src.type)) this.err(where, `없는 판정 종류 '${src.type}' (checks.yaml)`);
+      if (src.value !== undefined) this.err(where, `check에 type과 value를 함께 쓸 수 없음`);
+      return { type: src.type, dc, tier, label, hidden: src.hidden === true, mods };
+    }
+    if (src.value === undefined) {
+      this.err(where, `check에는 type(판정 종류)이나 value(식)가 있어야 함`);
       return undefined;
     }
     const value = this.expr(where, src.value);
-    return value ? { value, dc: src.dc, label: typeof src.label === 'string' ? src.label : undefined } : undefined;
+    return value ? { value, dc, tier, label, hidden: src.hidden === true, mods } : undefined;
+  }
+
+  private numMap(where: string, v: unknown): Record<string, number> {
+    if (v === undefined) return {};
+    if (!isObj(v)) {
+      this.err(where, `{이름: 숫자} 형태여야 함`);
+      return {};
+    }
+    const out: Record<string, number> = {};
+    for (const [k, x] of Object.entries(v)) {
+      if (typeof x !== 'number') this.err(where, `'${k}'의 값이 숫자가 아님`);
+      else out[k] = x;
+    }
+    return out;
+  }
+
+  private checkRulesOf(src: unknown): CheckRules {
+    const where = 'checks.yaml';
+    const o = isObj(src) ? src : {};
+    const types = new Map<string, CheckType>();
+    for (const t of asList(o.types)) {
+      if (!isObj(t) || typeof t.id !== 'string') {
+        this.err(where, `판정 종류에 id가 없음`);
+        continue;
+      }
+      const w = `${where}#${t.id}`;
+      const value = this.expr(w, t.value);
+      if (!value) {
+        this.err(w, `value(공식)가 없음`);
+        continue;
+      }
+      if (types.has(t.id)) this.err(w, `중복 판정 종류`);
+      types.set(t.id, {
+        id: t.id,
+        name: String(t.name ?? t.id),
+        icon: String(t.icon ?? 'dice'),
+        desc: String(t.desc ?? ''),
+        value,
+        plus: this.numMap(w, t.plus),
+        minus: this.numMap(w, t.minus),
+      });
+    }
+    const tiers = this.numMap(where, o.tiers ?? { 쉬움: 24, 보통: 29, 어려움: 34, 극한: 40 });
+    const monthOffset: Record<number, number> = {};
+    for (const [k, v] of Object.entries(this.numMap(where, o.month_offset))) monthOffset[Number(k)] = v;
+    const odds: [number, string][] = [];
+    for (const x of asList(o.odds)) {
+      if (Array.isArray(x) && typeof x[0] === 'number' && typeof x[1] === 'string') odds.push([x[0], x[1]]);
+      else this.err(where, `odds는 [[최소확률, 말], ...] 형태여야 함`);
+    }
+    if (!odds.length) odds.push([0.9, '확실'], [0.65, '유리'], [0.4, '반반'], [0.15, '불리'], [0, '무모']);
+    odds.sort((a, b) => b[0] - a[0]);
+    return { types, tiers, monthOffset, odds };
   }
 
   private outcome(where: string, path: string, o: Obj, allowed: Set<string>): Outcome {
@@ -436,6 +590,9 @@ class Builder {
     }
     const sub = (key: string, v: unknown) =>
       isObj(v) ? this.outcome(where, `${path}.${key}`, v, OUTCOME_KEYS) : undefined;
+    if ((o.great !== undefined || o.fumble !== undefined) && o.check === undefined) {
+      this.err(where, `great/fumble은 check가 있는 곳에만 쓸 수 있음 (${path})`);
+    }
     return {
       path,
       when: this.expr(where, o.when),
@@ -445,6 +602,8 @@ class Builder {
       check: this.check(where, o.check),
       success: sub('success', o.success),
       fail: sub('fail', o.fail),
+      great: sub('great', o.great),
+      fumble: sub('fumble', o.fumble),
       branch: asList(o.branch).map((b, i) =>
         this.outcome(where, `${path}.branch[${i}]`, isObj(b) ? b : {}, OUTCOME_KEYS),
       ),
@@ -482,6 +641,7 @@ class Builder {
       text: String(o.text ?? '???'),
       requires: this.expr(where, o.requires),
       hint: o.hint as string | undefined,
+      veiled: o.veiled === true ? true : undefined,
     };
   }
 
@@ -527,6 +687,7 @@ class Builder {
     if (!isObj(rulesRaw) || !isObj(rulesRaw.calendar)) throw new ContentError(['rules.yaml에 calendar가 없음']);
     this.calendar = new Calendar(rulesRaw.calendar as unknown as CalendarDef);
     const rules = this.rules(rulesRaw);
+    this.checkRules = this.checkRulesOf(this.file('checks.yaml'));
 
     const byId = <T extends { id: string }>(file: string, items: (T | undefined)[]): Map<string, T> => {
       const m = new Map<string, T>();
@@ -636,6 +797,7 @@ class Builder {
           desc: String(t.desc ?? ''),
           excludes: asList(t.excludes).map(String),
           effects: this.effects(where, t.effects),
+          tags: asList(t.tags).map(String),
           options: t.options === undefined ? undefined : asList(t.options).map(String),
           locked: this.expr(where, t.evolved === true ? 'true' : t.locked),
           evolved: t.evolved === true,
@@ -658,17 +820,54 @@ class Builder {
       }),
     );
 
-    const perks = byId(
-      'perks.yaml',
-      asList(this.file('perks.yaml')).map((p) => {
-        if (!isObj(p) || typeof p.id !== 'string') return undefined;
+    const items = byId(
+      'items.yaml',
+      asList(this.file('items.yaml')).map((it): Item | undefined => {
+        if (!isObj(it) || typeof it.id !== 'string') return undefined;
+        const where = `items.yaml#${it.id}`;
+        for (const k of Object.keys(it)) {
+          if (!['id', 'name', 'kind', 'slot', 'icon', 'price', 'desc', 'checks', 'battle', 'use'].includes(k)) this.err(where, `알 수 없는 항목 '${k}'`);
+        }
+        const kind = String(it.kind ?? (it.slot ? 'equip' : 'key')) as Item['kind'];
+        if (!['equip', 'use', 'key'].includes(kind)) this.err(where, `kind는 equip/use/key 중 하나`);
+        const slot = it.slot === undefined ? undefined : (String(it.slot) as Slot);
+        if (slot && !(SLOTS as readonly string[]).includes(slot)) this.err(where, `없는 장비 칸 '${slot}' (가능: ${SLOTS.join(', ')})`);
+        if (kind === 'equip' && !slot) this.err(where, `장비(equip)에는 slot이 있어야 함`);
+        const battle = this.numMap(where, it.battle);
+        for (const k of Object.keys(battle)) {
+          if (!(GEAR_STATS as readonly string[]).includes(k)) this.err(where, `battle에 없는 능력 '${k}' (가능: ${GEAR_STATS.join(' ')})`);
+        }
         return {
-          id: p.id,
-          name: String(p.name ?? p.id),
-          cost: Number(p.cost ?? 0),
-          desc: String(p.desc ?? ''),
-          effects: this.effects(`perks.yaml#${p.id}`, p.effects),
+          id: it.id,
+          name: String(it.name ?? it.id),
+          kind,
+          slot,
+          icon: String(it.icon ?? 'misc'),
+          price: typeof it.price === 'number' ? it.price : undefined,
+          desc: String(it.desc ?? ''),
+          checks: this.numMap(where, it.checks),
+          battle,
+          use: this.effects(where, it.use),
         };
+      }),
+    );
+
+    const synergies = byId(
+      'synergies.yaml',
+      asList(this.file('synergies.yaml')).map((sy): Synergy | undefined => {
+        if (!isObj(sy) || typeof sy.id !== 'string') return undefined;
+        const where = `synergies.yaml#${sy.id}`;
+        const tiers = asList(sy.tiers).map((t) => {
+          const o = isObj(t) ? t : {};
+          const battle = this.numMap(where, o.battle);
+          for (const k of Object.keys(battle)) {
+            if (!(GEAR_STATS as readonly string[]).includes(k)) this.err(where, `battle에 없는 능력 '${k}'`);
+          }
+          return { need: Number(o.need ?? 2), desc: String(o.desc ?? ''), checks: this.numMap(where, o.checks), battle };
+        });
+        tiers.sort((a, b) => a.need - b.need);
+        if (!tiers.length) this.err(where, `tiers가 비어 있음`);
+        return { id: sy.id, name: String(sy.name ?? sy.id), tag: String(sy.tag ?? ''), desc: String(sy.desc ?? ''), tiers };
       }),
     );
 
@@ -809,7 +1008,9 @@ class Builder {
       foreshadows,
       talents,
       origins,
-      perks,
+      checks: this.checkRules,
+      items,
+      synergies,
       characters,
       goals,
       enemies,
@@ -874,6 +1075,8 @@ export function* walkOutcomes(o: Outcome, ctx: Expr[] = []): Generator<{ node: O
   for (const b of o.branch) yield* walkOutcomes(b, conds);
   if (o.success) yield* walkOutcomes(o.success, conds);
   if (o.fail) yield* walkOutcomes(o.fail, conds);
+  if (o.great) yield* walkOutcomes(o.great, conds);
+  if (o.fumble) yield* walkOutcomes(o.fumble, conds);
   if (o.battle?.win) yield* walkOutcomes(o.battle.win, conds);
   if (o.battle?.lose) yield* walkOutcomes(o.battle.lose, conds);
   for (const c of o.choices) {

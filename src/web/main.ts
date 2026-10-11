@@ -178,7 +178,6 @@ function exampleBuild(): Build {
   return {
     name: '한결',
     origin: '평민장학생',
-    perks: ['고인물의기억'],
     talents: [{ id: '병약' }, { id: '마나탱크' }, { id: '마도학재능' }, { id: '직감' }],
     alloc: { 지성: 2, 의지: 1 },
   };
@@ -309,32 +308,16 @@ function renderCreate() {
   sOrigin.append(oc);
   main.append(sOrigin);
 
-  // 특전
+  // 빙의자 기본기 (고르는 게 아니라 원래 갖고 있다)
   const sPerk = el('section', 'step');
-  const hPerk = el('h3', undefined, '빙의자 특전');
-  hPerk.append(el('small', undefined, '고른 것 중 가장 비싼 하나는 무료'));
-  sPerk.append(hPerk);
-  const pc = el('div', 'cards');
-  const perkCosts = build.perks.map((id) => content.perks.get(id)!.cost);
-  const freeCost = perkCosts.length ? Math.max(...perkCosts) : -1;
-  let freeUsed = false;
-  for (const p of content.perks.values()) {
-    const on = build.perks.includes(p.id);
-    const b = button('card', '', () => {
-      setBuild({ ...build, perks: on ? build.perks.filter((x) => x !== p.id) : [...build.perks, p.id] });
-    }, `perk-${p.id}`);
-    b.setAttribute('aria-pressed', String(on));
-    let costEl: HTMLElement;
-    if (on && !freeUsed && p.cost === freeCost) {
-      freeUsed = true;
-      costEl = el('span', 'cost free', '무료');
-    } else costEl = el('span', 'cost spend', `−${p.cost}P`);
-    const top = el('span', 'top');
-    top.append(el('span', undefined, p.name), costEl);
-    b.append(top, el('span', 'desc', p.desc));
-    pc.append(b);
-  }
-  sPerk.append(pc);
+  sPerk.append(el('h3', undefined, '빙의자 기본기'));
+  const pk = el('div', 'window perkbox');
+  pk.append(
+    el('p', undefined, '3,000시간의 기억 — 원작의 사건, 위키의 공략, 데이터 파일 속 숨은 이름까지 안다.'),
+    el('p', undefined, '기억의 파편 — 갈림길 앞에서 미래를 엿본다. 매달 하나씩, 원작을 바꿀 때마다 하나씩 차오른다 (최대 3).'),
+    el('p', undefined, '회귀 — 죽으면 그 달 1주차로 돌아간다. 본 미래와 고른 길은 잊지 않는다.'),
+  );
+  sPerk.append(pk);
   main.append(sPerk);
 
   // 재능
@@ -430,7 +413,6 @@ function renderCreate() {
   main.append(sAlloc);
 
   // 포인트 장부
-  const perkCost = perkCosts.length ? perkCosts.reduce((a, x) => a + x, 0) - freeCost : 0;
   const allocated = Object.values(build.alloc ?? {}).reduce((a, x) => a + x, 0);
   const win = el('div', 'window');
   win.append(el('h4', undefined, '[포인트 장부]'));
@@ -442,8 +424,7 @@ function renderCreate() {
     return v;
   };
   row('출신', `+${chk.total}`);
-  row('특전', perkCost ? `−${perkCost}` : '0');
-  row('재능 (소모)', `−${chk.spent - perkCost}`);
+  row('재능 (소모)', `−${chk.spent}`);
   row(`재능 (획득, 최대 ${content.rules.creation.negativeCap})`, `+${chk.gained}`);
   row('능력치 분배', allocated ? `−${allocated}` : '0');
   const left = row('남은 포인트', String(chk.remaining), 'total');
@@ -1699,13 +1680,6 @@ function renderPanel() {
       chips.append(el('span', bloom ? 'chip bloom' : 'chip', `${t.name}${opt ? `(${opt})` : ''}${lv >= 2 ? ' · 개화' : t.evolved ? ' · 진화' : ''}`));
     }
     tw.append(chips);
-    const perks = [...content.perks.values()].filter((x) => g.state.vars[`perk.${x.id}`]);
-    if (perks.length) {
-      tw.append(el('h4', undefined, '[빙의자 특전]'));
-      const pc = el('div', 'chips');
-      for (const x of perks) pc.append(el('span', 'chip', x.name));
-      tw.append(pc);
-    }
     pane.append(tw);
   } else if (tab === 'people') {
     if (!people.length) pane.append(el('p', 'empty', '아직 인연을 맺은 사람이 없다.'));

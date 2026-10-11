@@ -9,9 +9,10 @@
 // 상태는 전부 직렬화 가능한 값이라서 clone()이 싸다. 시뮬레이터와 목표 탐색기가 이걸 이용한다.
 
 import { battleView, startBattle, takeTurn, type BattleLine, type BattleState, type BattleView } from './battle';
+import { evalCheck, gradeOf, GRADE_WORD, keyFactor, type CheckEval, type Factor } from './checks';
 import { applyBuild, checkBuild, type Build } from './creation';
-import type { Activity, Choice, Content, EventDef, Note, Outcome } from './content';
-import { evaluate, test, toNum, truthy } from './expr';
+import { EQUIP_SLOTS, type Activity, type Check, type Choice, type Content, type EquipSlot, type EventDef, type Item, type Note, type Outcome } from './content';
+import { evaluate, test, toNum, truthy, type Value } from './expr';
 import { pickVariant, renderLines, renderTemplate, type RenderedLine } from './text';
 import { World, type WorldState } from './world';
 
@@ -19,15 +20,59 @@ export type Action =
   | { type: 'activity'; id: string }
   | { type: 'choice'; index: number }
   | { type: 'continue' }
-  | { type: 'battle'; skill: string };
+  | { type: 'battle'; skill: string }
+  | { type: 'regress' };
 
 export interface ChoiceView {
   index: number;
   text: string;
   enabled: boolean;
   hint?: string;
-  /** 이 선택지가 바로 판정을 굴리면: 판정 이름과 성공 확률(0~1) */
-  check?: { label?: string; chance: number };
+  /** 이 선택지가 바로 판정을 굴리면: 판정 이름, 확률(0~1), 확률을 말로, 보정 요인 */
+  check?: { label?: string; chance: number; odds: string; icon: string; factors: Factor[]; hidden: boolean };
+  /** 지난 생에서 골랐던 선택 */
+  past?: boolean;
+}
+
+/** 기억의 파편으로 본 미래 한 갈래 */
+export interface FutureBranch {
+  /** 판정이 있으면: 성공 / 실패 */
+  label?: string;
+  chance?: number;
+  /** 바뀌는 값: 숫자면 delta, 아니면 value */
+  changes: { key: string; delta?: number; value?: Value }[];
+  /** 이어지는 사건 제목 */
+  events: string[];
+  battle?: string;
+  death?: string;
+  /** 그 뒤에 또 고를 일이 있다 */
+  more?: boolean;
+}
+
+export interface FutureOption {
+  /** 선택지 번호 또는 활동 id */
+  id: string;
+  text: string;
+  veiled?: boolean;
+  disabled?: boolean;
+  branches: FutureBranch[];
+}
+
+export interface Foresight {
+  key: string;
+  options: FutureOption[];
+}
+
+/** 죽어도 남는 것 (회귀해도 되돌아가지 않는다) */
+export interface Meta {
+  deaths: number;
+  causes: string[];
+  /** 기억의 파편으로 미래를 본 결정 자리 */
+  foreseen: string[];
+  /** 골랐던 선택 (지난 생 표시용) */
+  chosen: string[];
+  /** 그 달 1주차 첫 칸의 자동 저장 */
+  checkpoint?: Omit<GameState, 'meta'>;
 }
 
 export interface View {
@@ -38,6 +83,9 @@ export interface View {
   choices: ChoiceView[];
   activities: { id: string; name: string; desc?: string }[];
   battle?: BattleView;
+  /** 기억의 파편: 가진 수, 최대, 지금 미래를 보는 데 드는 값 (없으면 볼 수 없는 때) */
+  memory: { shard: number; max: number; cost?: number; deaths: number };
+  dead?: { cause: string };
 }
 
 interface SceneState {
@@ -61,13 +109,17 @@ export interface BattleEnd {
 }
 
 export interface GameState extends WorldState {
-  phase: 'activity' | 'scene' | 'battle' | 'ended';
+  phase: 'activity' | 'scene' | 'battle' | 'dead' | 'ended';
   scene?: SceneState;
   battle?: BattleState;
   lastBattle?: BattleEnd;
   queue: string[];
   slotFired: string[];
   trace: { time: string; kind: string; text: string }[];
+  dead?: { cause: string };
+  /** 지금 결정에 대해 본 미래 (결정이 바뀌면 쓸모없어진다) */
+  foresight?: Foresight;
+  meta: Meta;
 }
 
 export interface Observer {
@@ -112,8 +164,14 @@ export class Game {
   /** 이 인스턴스에서 결과가 갈릴 수 있었던 판정 수 (목표 탐색기가 주사위를 분기점으로 쓰려고 센다. 상태 아님) */
   uncertainRolls = 0;
 
+  /** 미래 보기용 복제본: 슬롯이 끝나는 순간 멈춘다 */
+  private stopAtSlotEnd = false;
+  /** 미래 보기용: 다음 판정 결과를 정해 둔다 */
+  private forced: boolean[] = [];
+
   private constructor(readonly content: Content, readonly state: GameState) {
     this.world = new World(content, state);
+    state.meta ??= { deaths: 0, causes: [], foreseen: [], chosen: [] };
   }
 
   static create(content: Content, build: Build, seed = 1, observer?: Observer): Game {
@@ -127,6 +185,7 @@ export class Game {
       queue: [],
       slotFired: [],
       trace: [],
+      meta: { deaths: 0, causes: [], foreseen: [], chosen: [] },
     });
     g.observer = observer;
     applyBuild(g.world, build);
@@ -204,6 +263,9 @@ export class Game {
   // ------------------------------------------------------------ slot flow
 
   private beginSlot() {
+    const t = this.state.time;
+    // 자동 저장: 그 달 1주차 첫 칸 (또는 아직 저장이 없으면 지금)
+    if (!this.state.meta.checkpoint || (t.w === 1 && t.s === 0)) this.saveCheckpoint();
     this.state.slotFired = [];
     this.world.set('time.roll', this.world.random());
     this.refreshNotes();
@@ -254,11 +316,13 @@ export class Game {
     const w = this.world;
     const lines = renderLines(o.lines, w);
     if (o.art) lines.unshift({ speaker: '삽화', text: o.art });
+    const before = this.watchBefore();
     w.applyAll(o.effects);
+    lines.push(...this.watchAfter(before));
     for (const p of o.plants) {
       w.set(`fs.${p.id}.seen`, 1);
       if (truthy(w.get(`fs.${p.id}.noticed`))) continue;
-      if (!p.notice || this.roll(p.notice.value, p.notice.dc)) {
+      if (!p.notice || this.roll(p.notice)) {
         w.set(`fs.${p.id}.noticed`, 1);
         lines.push({ speaker: '📌', text: `복선 기록 — ${this.content.foreshadows.get(p.id)?.title ?? p.id}` });
       }
@@ -276,17 +340,32 @@ export class Game {
     let battle: string | undefined;
     const subs: Outcome[] = [];
     if (o.check) {
-      const r = this.rollDetail(o.check.value, o.check.dc);
-      const ok = r.ok;
-      w.set('check.last', ok ? 1 : 0);
-      if (o.check.label) {
+      const r = this.rollCheck(o.check);
+      w.set('check.last', r.ok ? 1 : 0);
+      w.set('check.grade', r.grade);
+      if (!r.ev.hidden) {
+        const key = keyFactor(r.ev.factors, r.ok);
         lines.push({
           speaker: '판정',
-          text: `${o.check.label} · ${Math.floor(r.value)} + 주사위 ${r.d20} = ${Math.floor(r.value) + r.d20} / 목표 ${o.check.dc} · ${ok ? '성공' : '실패'}`,
+          text: `${r.ev.name} · ${GRADE_WORD[r.grade]} (주사위 ${r.d20})${key ? ` · ${key.label}${r.ok ? ' 덕분에' : '에 발목'}` : ''}`,
+          check: {
+            name: r.ev.name,
+            icon: r.ev.icon,
+            d20: r.d20,
+            total: Math.floor(r.ev.value) + r.d20,
+            dc: r.ev.dc,
+            ok: r.ok,
+            grade: r.grade,
+            odds: r.ev.odds,
+            factors: r.ev.factors,
+            key,
+          },
         });
       }
-      const s = ok ? o.success : o.fail;
+      const s = r.ok ? o.success : o.fail;
       if (s) subs.push(s);
+      if (r.grade === 'great' && o.great) subs.push(o.great);
+      if (r.grade === 'fumble' && o.fumble) subs.push(o.fumble);
     }
     if (o.branch.length) {
       const b = pickVariant(o.branch, (x) => test(x.when, w));
@@ -302,19 +381,207 @@ export class Game {
     return { lines, owner: battle ? undefined : owner, next, battle };
   }
 
-  /** 판정: 값 + d20 >= 난이도 */
-  private roll(value: { ast: Parameters<typeof evaluate>[0] }, dc: number): boolean {
-    return this.rollDetail(value, dc).ok;
+  /** 복선 알아채기 같은 숨은 판정: 값 + d20 >= 난이도 */
+  private roll(ch: Check): boolean {
+    const d20 = 1 + Math.floor(this.world.random() * 20);
+    const ev = evalCheck(this.content, this.world, ch);
+    const v = Math.floor(ev.value);
+    if (v + 1 < ev.dc && v + 20 >= ev.dc) this.uncertainRolls++;
+    return v + d20 >= ev.dc;
   }
 
-  private rollDetail(value: { ast: Parameters<typeof evaluate>[0] }, dc: number) {
-    const d20 = 1 + Math.floor(this.world.random() * 20);
-    const v = toNum(evaluate(value.ast, this.world));
-    if (Math.floor(v) + 1 < dc && Math.floor(v) + 20 >= dc) this.uncertainRolls++;
-    return { ok: Math.floor(v) + d20 >= dc, value: v, d20 };
+  /** 선택지·결과의 판정 (보정 요인 포함) */
+  private rollCheck(ch: Check): { ok: boolean; grade: ReturnType<typeof gradeOf>; d20: number; ev: CheckEval } {
+    const ev = evalCheck(this.content, this.world, ch);
+    let d20 = 1 + Math.floor(this.world.random() * 20);
+    const v = Math.floor(ev.value);
+    if (v + 1 < ev.dc && v + 20 >= ev.dc) this.uncertainRolls++;
+    const f = this.forced.shift();
+    if (f !== undefined) {
+      // 미래 보기: 결과를 정해 두고 그에 맞는 눈을 고른다
+      const need = Math.max(1, Math.min(20, ev.dc - v));
+      d20 = f ? Math.max(need, Math.min(20, need + 5)) : Math.max(1, need - 6);
+      if (f && v + d20 < ev.dc) d20 = 20;
+      if (!f && v + d20 >= ev.dc) d20 = 1;
+    }
+    const ok = f ?? v + d20 >= ev.dc;
+    const grade = f === undefined ? gradeOf(d20, v + d20, ev.dc) : ok ? 'ok' : 'fail';
+    return { ok, grade, d20, ev };
+  }
+
+  // ------------------------------------------------------------ 변화 감시 (물건 획득, 원작 변화, 장비)
+
+  private watchBefore(): { cross: Map<string, Value>; items: Map<string, number> } {
+    const cross = new Map<string, Value>();
+    for (const c of this.content.crossroads.values()) cross.set(c.key, this.state.vars[c.key]);
+    const items = new Map<string, number>();
+    for (const id of this.content.items.keys()) items.set(id, toNum(this.state.vars[`item.${id}`]));
+    return { cross, items };
+  }
+
+  private watchAfter(b: ReturnType<Game['watchBefore']>): RenderedLine[] {
+    const w = this.world;
+    const out: RenderedLine[] = [];
+    // 갈림길을 원작과 다르게 바꾸면 기억의 파편 +1
+    for (const c of this.content.crossroads.values()) {
+      const now = this.state.vars[c.key];
+      if (b.cross.get(c.key) === undefined && now !== undefined && now !== c.canon) {
+        const had = toNum(w.get('shard'));
+        w.add('shard', 1);
+        out.push({ speaker: '💠', text: toNum(w.get('shard')) > had ? `원작이 바뀌었다 · 기억의 파편 +1` : `원작이 바뀌었다` });
+      }
+    }
+    // 물건을 얻으면 알리고, 빈 칸에 맞는 장비는 바로 찬다
+    for (const [id, was] of b.items) {
+      const n = toNum(this.state.vars[`item.${id}`]);
+      if (n > was) {
+        const it = this.content.items.get(id)!;
+        out.push({ speaker: '🎒', text: `${it.name}${n - was > 1 ? ` ×${n - was}` : ''}` });
+        if (it.kind === 'equip' && it.slot) {
+          const slot = this.slotFor(it);
+          if (slot && !this.state.vars[`equip.${slot}`] && !(it.slot !== '한벌옷' && this.state.vars['equip.한벌옷'] && (it.slot === '윗옷' || it.slot === '아래옷'))) {
+            this.setEquip(it, slot);
+          }
+        }
+      }
+    }
+    this.sanitizeGear();
+    return out;
+  }
+
+  // ------------------------------------------------------------ 가방과 장비
+
+  private slotFor(it: Item, prefer?: EquipSlot): EquipSlot | undefined {
+    if (!it.slot) return undefined;
+    if (it.slot !== '장신구') return it.slot as EquipSlot;
+    if (prefer === '장신구1' || prefer === '장신구2') return prefer;
+    return !this.state.vars['equip.장신구1'] ? '장신구1' : !this.state.vars['equip.장신구2'] ? '장신구2' : '장신구1';
+  }
+
+  private setEquip(it: Item, slot: EquipSlot) {
+    if (slot === '한벌옷') {
+      delete this.state.vars['equip.윗옷'];
+      delete this.state.vars['equip.아래옷'];
+    } else if (slot === '윗옷' || slot === '아래옷') delete this.state.vars['equip.한벌옷'];
+    this.world.set(`equip.${slot}`, it.id);
+  }
+
+  /** 가진 수보다 많이 차고 있으면 벗긴다 (물건을 잃었을 때) */
+  private sanitizeGear() {
+    const used = new Map<string, number>();
+    for (const slot of EQUIP_SLOTS) {
+      const id = this.state.vars[`equip.${slot}`];
+      if (typeof id !== 'string') continue;
+      const n = (used.get(id) ?? 0) + 1;
+      if (n > toNum(this.state.vars[`item.${id}`])) delete this.state.vars[`equip.${slot}`];
+      else used.set(id, n);
+    }
+  }
+
+  /** 가방을 만질 수 있는 때 (전투 중, 죽은 뒤엔 안 된다) */
+  canManage(): boolean {
+    return this.state.phase === 'activity' || this.state.phase === 'scene';
+  }
+
+  inventory(): { item: Item; count: number; equipped: string[] }[] {
+    const out: { item: Item; count: number; equipped: string[] }[] = [];
+    for (const it of this.content.items.values()) {
+      const count = toNum(this.state.vars[`item.${it.id}`]);
+      if (count <= 0) continue;
+      const equipped = EQUIP_SLOTS.filter((s) => this.state.vars[`equip.${s}`] === it.id);
+      out.push({ item: it, count, equipped });
+    }
+    return out;
+  }
+
+  equip(itemId: string, prefer?: EquipSlot) {
+    if (!this.canManage()) throw new Error('지금은 장비를 바꿀 수 없음');
+    const it = this.content.items.get(itemId);
+    if (!it || it.kind !== 'equip') throw new Error(`장비가 아님: ${itemId}`);
+    const count = toNum(this.state.vars[`item.${itemId}`]);
+    const worn = EQUIP_SLOTS.filter((s) => this.state.vars[`equip.${s}`] === itemId).length;
+    const slot = this.slotFor(it, prefer)!;
+    if (this.state.vars[`equip.${slot}`] !== itemId && worn >= count) throw new Error(`가진 ${it.name}이(가) 모자람`);
+    this.setEquip(it, slot);
+  }
+
+  unequip(slot: EquipSlot) {
+    if (!this.canManage()) throw new Error('지금은 장비를 바꿀 수 없음');
+    delete this.state.vars[`equip.${slot}`];
+  }
+
+  useItem(itemId: string): RenderedLine[] {
+    if (!this.canManage()) throw new Error('지금은 물건을 쓸 수 없음');
+    const it = this.content.items.get(itemId);
+    if (!it || it.kind !== 'use' || toNum(this.state.vars[`item.${itemId}`]) < 1) throw new Error(`쓸 수 없는 물건: ${itemId}`);
+    this.world.add(`item.${itemId}`, -1);
+    this.world.applyAll(it.use);
+    this.sanitizeGear();
+    this.state.trace.push({ time: this.content.calendar.label(this.state.time), kind: '물건', text: it.name });
+    return [{ speaker: '🎒', text: `${it.name}을(를) 썼다` }];
+  }
+
+  /** 시뮬레이터용: 칸마다 보정 합이 가장 큰 장비를 찬다 */
+  autoEquip() {
+    if (!this.canManage()) return;
+    const score = (it: Item) =>
+      Object.values(it.checks).reduce((a, x) => a + x, 0) + Object.values(it.battle).reduce((a, x) => a + x, 0);
+    const inv = this.inventory().filter((x) => x.item.kind === 'equip');
+    for (const slot of EQUIP_SLOTS) {
+      const want = slot.startsWith('장신구') ? '장신구' : slot;
+      const cands = inv.filter((x) => x.item.slot === want).sort((a, b) => score(b.item) - score(a.item));
+      const pick = slot === '장신구2' ? cands.find((x) => x.item.id !== this.state.vars['equip.장신구1'] || x.count > 1) : cands[0];
+      if (pick && this.state.vars[`equip.${slot}`] !== pick.item.id) {
+        try {
+          this.equip(pick.item.id, slot);
+        } catch {
+          /* 모자라면 그만 */
+        }
+      }
+    }
+  }
+
+  // ------------------------------------------------------------ 죽음과 회귀
+
+  private saveCheckpoint() {
+    const { meta, ...rest } = this.state;
+    void meta;
+    this.state.meta.checkpoint = structuredClone({ ...rest, foresight: undefined });
+  }
+
+  private die(cause: string) {
+    const m = this.state.meta;
+    m.deaths++;
+    if (!m.causes.includes(cause)) m.causes.push(cause);
+    this.state.phase = 'dead';
+    this.state.dead = { cause };
+    this.state.scene = undefined;
+    this.state.foresight = undefined;
+    this.state.trace.push({ time: this.content.calendar.label(this.state.time), kind: '죽음', text: cause });
+  }
+
+  /** 그 달 1주차 첫 칸으로 돌아간다. 기억(meta)은 남는다. */
+  private regress() {
+    const meta = this.state.meta;
+    const cp = meta.checkpoint;
+    if (!cp) throw new Error('돌아갈 자동 저장이 없음');
+    const fresh = structuredClone(cp) as GameState;
+    for (const k of Object.keys(this.state)) delete (this.state as unknown as Record<string, unknown>)[k];
+    Object.assign(this.state, fresh, { meta });
+    // 같은 주사위가 반복되지 않게 섞는다
+    this.state.rng = (this.state.rng ^ Math.imul(meta.deaths, 0x9e3779b9)) >>> 0 || 1;
+    const w = this.world;
+    w.set('loop.count', meta.deaths);
+    for (const c of meta.causes) w.set(`died.${c}`, 1);
+    w.set('loop.just', 1);
+    this.state.trace.push({ time: this.content.calendar.label(this.state.time), kind: '회귀', text: `${meta.deaths}번째` });
+    this.state.phase = 'activity';
+    this.beginSlot();
   }
 
   private proceed() {
+    const cause = this.state.vars['death'];
+    if (typeof cause === 'string' && cause) return this.die(cause);
     const sc = this.state.scene!;
     if (sc.battle) return this.beginBattle(sc);
     if (sc.next) {
@@ -364,6 +631,11 @@ export class Game {
   }
 
   private endSlot() {
+    if (this.stopAtSlotEnd) {
+      this.state.phase = 'ended';
+      this.state.scene = undefined;
+      return;
+    }
     const c = this.content;
     const w = this.world;
     w.applyAll(c.rules.hooks.slot_end);
@@ -424,6 +696,7 @@ export class Game {
 
   options(): Action[] {
     if (this.state.phase === 'ended') return [];
+    if (this.state.phase === 'dead') return [{ type: 'regress' }];
     if (this.state.phase === 'activity') return this.activities().map((a) => ({ type: 'activity', id: a.id }));
     if (this.state.phase === 'battle') {
       return battleView(this.content, this.world, this.state.battle!)
@@ -438,7 +711,9 @@ export class Game {
   act(a: Action) {
     this.guard = 0;
     this.state.lastBattle = undefined;
+    this.state.foresight = undefined;
     const label = this.content.calendar.label(this.state.time);
+    if (this.state.phase === 'dead' && a.type === 'regress') return this.regress();
     if (this.state.phase === 'battle' && a.type === 'battle') {
       const b = this.state.battle!;
       const ok = battleView(this.content, this.world, b).skills.find((k) => k.id === a.skill && k.enabled);
@@ -464,6 +739,8 @@ export class Game {
       if (!shown || !shown.enabled) throw new Error(`고를 수 없는 선택지: ${a.index}`);
       const choice = outcomeIndex(this.content).get(sc.owner!)!.choices[a.index] as Choice;
       this.state.trace.push({ time: label, kind: '선택', text: choice.text });
+      const ck = `${this.decisionKey()}#${a.index}`;
+      if (!this.state.meta.chosen.includes(ck)) this.state.meta.chosen.push(ck);
       this.observer?.onChoose?.(sc.owner!, a.index);
       const r = this.enter(choice);
       return this.showScene({ eventId: sc.eventId, title: sc.title, then: sc.then }, { ...r, next: r.next ?? sc.next });
@@ -488,14 +765,122 @@ export class Game {
         const def = owner!.choices[c.index];
         const v: ChoiceView = { index: c.index, text: def.text, enabled: c.enabled, hint: def.hint };
         if (def.check) {
-          const need = def.check.dc - Math.floor(toNum(evaluate(def.check.value.ast, this.world)));
-          v.check = { label: def.check.label, chance: Math.max(0, Math.min(20, 21 - Math.max(1, need))) / 20 };
+          const ev = evalCheck(this.content, this.world, def.check);
+          v.check = { label: ev.name, chance: ev.chance, odds: ev.odds, icon: ev.icon, factors: ev.factors.slice(0, 3), hidden: ev.hidden };
         }
+        const key = this.decisionKey();
+        if (key && this.state.meta.chosen.includes(`${key}#${c.index}`)) v.past = true;
         return v;
       }),
       activities: this.state.phase === 'activity' ? this.activities().map((a) => ({ id: a.id, name: a.name, desc: a.desc })) : [],
       battle: this.state.battle ? battleView(this.content, this.world, this.state.battle) : undefined,
+      memory: {
+        shard: toNum(this.world.get('shard')),
+        max: toNum(this.world.get('shard.max')) || 3,
+        cost: this.foresightCost(),
+        deaths: this.state.meta.deaths,
+      },
+      dead: this.state.dead && this.state.phase === 'dead' ? this.state.dead : undefined,
     };
+  }
+
+  // ------------------------------------------------------------ 기억의 파편: 미래 보기
+
+  /** 지금 결정 자리의 이름. 회귀해서 같은 자리에 오면 같은 이름이 된다. */
+  decisionKey(): string | undefined {
+    const st = this.state;
+    if (st.phase === 'activity') {
+      const t = st.time;
+      return `a:${t.y}.${t.m}.${t.w}.${t.s}`;
+    }
+    if (st.phase === 'scene' && st.scene?.owner && st.scene.choices.length) {
+      return `c:${st.scene.owner}:${toNum(st.vars[`fired.${st.scene.eventId}`])}`;
+    }
+    return undefined;
+  }
+
+  /** 미래를 보는 데 드는 파편 수 (0 = 이미 본 자리). 볼 수 없는 때면 undefined */
+  foresightCost(): number | undefined {
+    const key = this.decisionKey();
+    if (!key) return undefined;
+    return this.state.meta.foreseen.includes(key) ? 0 : 1;
+  }
+
+  /** 기억의 파편을 써서 (이미 본 자리면 공짜로) 지금 결정의 미래를 본다 */
+  foresee(): Foresight {
+    const key = this.decisionKey();
+    if (!key) throw new Error('지금은 미래를 볼 수 없음');
+    if (this.state.foresight?.key === key) return this.state.foresight;
+    if (!this.state.meta.foreseen.includes(key)) {
+      if (toNum(this.world.get('shard')) < 1) throw new Error('기억의 파편이 없음');
+      this.world.add('shard', -1);
+      this.state.meta.foreseen.push(key);
+    }
+    const options: FutureOption[] = [];
+    if (this.state.phase === 'activity') {
+      for (const a of this.activities()) {
+        options.push({ id: a.id, text: a.name, branches: [this.future((g) => g.act({ type: 'activity', id: a.id }))] });
+      }
+    } else {
+      const sc = this.state.scene!;
+      const owner = outcomeIndex(this.content).get(sc.owner!)!;
+      for (const c of sc.choices) {
+        const def = owner.choices[c.index] as Choice;
+        const opt: FutureOption = { id: String(c.index), text: def.text, branches: [] };
+        if (def.veiled) opt.veiled = true;
+        else if (!c.enabled) opt.disabled = true;
+        else if (def.check) {
+          const ev = evalCheck(this.content, this.world, def.check);
+          opt.branches.push({ ...this.future((g) => g.act({ type: 'choice', index: c.index }), true), label: '성공', chance: ev.chance });
+          opt.branches.push({ ...this.future((g) => g.act({ type: 'choice', index: c.index }), false), label: '실패', chance: 1 - ev.chance });
+        } else opt.branches.push(this.future((g) => g.act({ type: 'choice', index: c.index })));
+        options.push(opt);
+      }
+    }
+    this.state.foresight = { key, options };
+    return this.state.foresight;
+  }
+
+  /** 복제본에서 실제로 한 번 해 보고 무엇이 바뀌는지 본다 (슬롯이 끝나거나 다음 결정이 오면 멈춤) */
+  private future(run: (g: Game) => void, forced?: boolean): FutureBranch {
+    const g = this.clone();
+    g.stopAtSlotEnd = true;
+    if (forced !== undefined) g.forced = [forced];
+    const fired: string[] = [];
+    g.observer = { onEvent: (id) => fired.push(id) };
+    const before = { ...g.state.vars };
+    const here = this.state.scene?.eventId;
+    try {
+      run(g);
+      for (let i = 0; i < 60 && g.state.phase === 'scene' && !g.state.scene!.choices.length; i++) g.act({ type: 'continue' });
+    } catch {
+      /* 미래가 깨지면 본 데까지만 */
+    }
+    const changes: FutureBranch['changes'] = [];
+    const cross = new Set([...this.content.crossroads.values()].map((c) => c.key));
+    const keys = new Set([...Object.keys(before), ...Object.keys(g.state.vars)]);
+    for (const k of keys) {
+      const a = before[k];
+      const b = g.state.vars[k];
+      if (a === b) continue;
+      const interesting =
+        cross.has(k) ||
+        /^(stat|affinity|item|talent|skill)\./.test(k) ||
+        /^note\.[^.]+\.known$/.test(k) ||
+        ['money', 'fatigue', 'stress', 'shard'].includes(k);
+      if (!interesting) continue;
+      if (typeof a !== 'string' && typeof b !== 'string' && !cross.has(k)) {
+        const d = toNum(b) - toNum(a);
+        if (Math.abs(d) >= 0.05) changes.push({ key: k, delta: Math.round(d * 100) / 100 });
+      } else changes.push({ key: k, value: b });
+    }
+    const events = [...new Set(fired.filter((id) => id !== here).map((id) => this.content.events.get(id)?.title).filter((x): x is string => !!x))];
+    const br: FutureBranch = { changes, events };
+    if (g.state.phase === 'battle') br.battle = this.content.enemies.get(g.state.battle!.enemy)?.name;
+    const death = g.state.vars['death'];
+    if (typeof death === 'string' && death) br.death = death;
+    if (g.state.phase === 'scene' && g.state.scene!.choices.length) br.more = true;
+    return br;
   }
 
   /** 활동을 고르면 바로 바뀌는 수치 (지금 상태로 계산한 값) */

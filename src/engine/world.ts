@@ -3,7 +3,7 @@
 //   stat.근력, affinity.liana, trust.liana, mood.liana.불안, fate.sera, item.월광초, fired.<이벤트>, ...
 // 평평하게 두면 복제/비교/분석이 쉬워진다 (원작과의 차이 계산, 상태 해시, 린트).
 
-import type { Content, Crossroad, Note } from './content';
+import { EQUIP_SLOTS, type Content, type Crossroad, type Item, type Note, type Synergy } from './content';
 import { evaluate, toNum, truthy, type Effect, type Env, type Value } from './expr';
 import { nextRandom } from './rng';
 import type { Time } from './time';
@@ -48,6 +48,11 @@ export class World implements Env {
       case 'time.slot':
         return this.content.calendar.slotName(this.state.time);
     }
+    if (name.startsWith('synergy.')) {
+      const sy = this.content.synergies.get(name.slice(8));
+      return sy ? this.synergyTier(sy) : 0;
+    }
+    if (name.startsWith('gear.')) return this.gear(name.slice(5));
     return this.state.vars[name];
   }
 
@@ -87,6 +92,43 @@ export class World implements Env {
 
   add(name: string, delta: number) {
     this.set(name, toNum(this.get(name)) + delta);
+  }
+
+  // ---- 시너지와 장비
+
+  /** 태그가 같은 재능이 모이면 깨어나는 컨셉 단계 (0 = 없음) */
+  synergyTier(sy: Synergy): number {
+    let n = 0;
+    for (const t of this.content.talents.values()) {
+      if (t.tags.includes(sy.tag) && truthy(this.state.vars[`talent.${t.id}`])) n++;
+    }
+    let tier = 0;
+    sy.tiers.forEach((x, i) => {
+      if (n >= x.need) tier = i + 1;
+    });
+    return tier;
+  }
+
+  /** 지금 장착한 물건들 (칸 이름과 함께) */
+  equipped(): { slot: string; item: Item }[] {
+    const out: { slot: string; item: Item }[] = [];
+    for (const slot of EQUIP_SLOTS) {
+      const id = this.state.vars[`equip.${slot}`];
+      const item = typeof id === 'string' ? this.content.items.get(id) : undefined;
+      if (item) out.push({ slot, item });
+    }
+    return out;
+  }
+
+  /** 장비와 시너지가 주는 전투 보정 */
+  gear(stat: string): number {
+    let sum = 0;
+    for (const { item } of this.equipped()) sum += item.battle[stat] ?? 0;
+    for (const sy of this.content.synergies.values()) {
+      const tier = this.synergyTier(sy);
+      if (tier) sum += sy.tiers[tier - 1].battle[stat] ?? 0;
+    }
+    return sum;
   }
 
   // ---- 원작 붕괴도: 원작(갈림길 기본값)과 지금 세계의 차이

@@ -78,12 +78,12 @@ describe('실제 콘텐츠', () => {
   });
 
   it('집중 육성하면 무투대회에서 우승할 수 있다', () => {
-    const r = seek(c, { name: '나', origin: '엑스트라', perks: ['고인물의기억'], talents: [{ id: '강골' }, { id: '천생신력' }] }, "tourney.winner == 'me'", { beam: 32 });
+    const r = seek(c, { name: '나', origin: '엑스트라', talents: [{ id: '강골' }, { id: '천생신력' }] }, "tourney.winner == 'me'", { beam: 32 });
     expect(r.found).toBe(true);
   });
 
   it('세라를 구하는 경로가 존재한다', () => {
-    const r = seek(c, { name: '나', origin: '평민장학생', perks: ['고인물의기억'], talents: [] }, "fate.sera == 'saved'");
+    const r = seek(c, { name: '나', origin: '평민장학생', talents: [] }, "fate.sera == 'saved'");
     expect(r.found).toBe(true);
   });
 });

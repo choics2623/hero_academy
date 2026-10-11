@@ -3,6 +3,7 @@
 //    작가는 기본 대사를 먼저 쓰고, 특정 상황용 대사를 나중에 "덧붙이기만" 하면 된다.
 // 2) 인라인 템플릿: {{식}}, {{if 조건}}...{{elif 조건}}...{{else}}...{{/if}}
 
+import type { CheckResult } from './checks';
 import type { Line } from './content';
 import { compile, evaluate, test, toNum, truthy, type Env } from './expr';
 
@@ -10,6 +11,8 @@ export interface RenderedLine {
   speaker?: string;
   mood?: string;
   text: string;
+  /** speaker가 '판정'일 때: 주사위 연출용 정보 */
+  check?: CheckResult;
 }
 
 export function pickVariant<T extends { when?: { spec: number } }>(

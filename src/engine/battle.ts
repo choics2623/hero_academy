@@ -108,7 +108,8 @@ interface Stats {
 }
 
 export function battleStats(c: Content, w: World): Stats {
-  const f = (k: string, d: number) => (c.rules.battle[k] ? toNum(evaluate(c.rules.battle[k].ast, w)) : d);
+  // 장비·시너지의 전투 보정(gear.X)은 공식 밖에서 더한다
+  const f = (k: string, d: number) => (c.rules.battle[k] ? toNum(evaluate(c.rules.battle[k].ast, w)) : d) + w.gear(k);
   return {
     hp: Math.round(f('hp', 30)),
     sp: Math.round(f('sp', 8)),

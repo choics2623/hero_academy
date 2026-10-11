@@ -1,0 +1,24 @@
+# 시너지: 같은 태그의 재능이 모이면 컨셉이 깨어난다 (docs/08 2절).
+# 출신 기본 재능, 진화로 얻은 재능도 센다. 이벤트 조건에서 synergy.<id> (0/1/2 단계)로 읽는다.
+# 각 단계의 checks/battle은 누적이 아니라 그 단계의 값이다.
+
+- id: 검사
+  tag: 검
+  desc: 칼을 쥐면 몸이 먼저 안다
+  tiers:
+    - { need: 2, desc: "완력·기민 +2, 공격 +1", checks: { 완력: 2, 기민: 2 }, battle: { atk: 1 } }
+    - { need: 3, desc: "완력·기민 +4, 공격 +2, 간파 +3", checks: { 완력: 4, 기민: 4 }, battle: { atk: 2, read: 3 } }
+
+- id: 마도사
+  tag: 마법
+  desc: 마력이 말을 알아듣는다
+  tiers:
+    - { need: 2, desc: "마법·학식 +2, 마법 공격 +1", checks: { 마법: 2, 학식: 2 }, battle: { matk: 1 } }
+    - { need: 3, desc: "마법·학식 +4, 마법 공격 +2, 마나 +3", checks: { 마법: 4, 학식: 4 }, battle: { matk: 2, mp: 3 } }
+
+- id: 사교가
+  tag: 사교
+  desc: 말 한마디로 길을 연다
+  tiers:
+    - { need: 2, desc: "설득·기만 +2", checks: { 설득: 2, 기만: 2 } }
+    - { need: 3, desc: "설득·기만 +4, 전투 설득 +4", checks: { 설득: 4, 기만: 4 }, battle: { persuade: 4 } }

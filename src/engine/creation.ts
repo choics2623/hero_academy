@@ -1,4 +1,5 @@
-// 캐릭터 생성: 출신 + 빙의자 특전 + 재능 포인트 + 능력치 분배.
+// 캐릭터 생성: 출신 + 재능 포인트 + 능력치 분배.
+// 빙의자 기본기(원작 지식)는 고르는 게 아니라 rules.yaml의 initial에 들어 있다.
 
 import type { Content } from './content';
 import { test } from './expr';
@@ -7,7 +8,6 @@ import type { World } from './world';
 export interface Build {
   name: string;
   origin: string;
-  perks: string[];
   talents: { id: string; option?: string }[];
   /** 남은 포인트를 능력치에 분배 (포인트 단위) */
   alloc?: Record<string, number>;
@@ -30,23 +30,12 @@ export function checkBuild(c: Content, b: Build, meta?: { get(n: string): unknow
   if (!origin) errors.push(`없는 출신: ${b.origin}`);
   const total = origin?.points ?? 0;
 
-  // 특전: 가장 비싼 하나가 무료
-  let perkCost = 0;
-  const perkCosts: number[] = [];
-  for (const id of b.perks) {
-    const p = c.perks.get(id);
-    if (!p) errors.push(`없는 특전: ${id}`);
-    else perkCosts.push(p.cost);
-  }
-  if (new Set(b.perks).size !== b.perks.length) errors.push('같은 특전을 두 번 고름');
-  if (perkCosts.length) perkCost = perkCosts.reduce((a, x) => a + x, 0) - Math.max(...perkCosts);
-
   const chosen = b.talents.map((t) => t.id);
   const all = [...(origin?.talents ?? []), ...chosen];
   if (new Set(all).size !== all.length) errors.push('같은 재능이 중복됨 (출신 기본 재능 포함)');
   if (all.length > c.rules.creation.maxTalents) errors.push(`재능은 최대 ${c.rules.creation.maxTalents}개`);
 
-  let spent = perkCost;
+  let spent = 0;
   let gained = 0;
   for (const t of b.talents) {
     const def = c.talents.get(t.id);
@@ -98,10 +87,6 @@ export function applyBuild(w: World, b: Build) {
     if (t.option) w.set(`talent.${t.id}.${t.option}`, 1);
     w.applyAll(c.talents.get(t.id)!.effects, opt);
   }
-  for (const id of b.perks) {
-    w.set(`perk.${id}`, 1);
-    w.applyAll(c.perks.get(id)!.effects, opt);
-  }
   for (const [k, v] of Object.entries(b.alloc ?? {})) {
     w.add(`stat.${k}`, v * c.rules.creation.statPerPoint);
   }
@@ -112,12 +97,6 @@ export function randomBuild(c: Content, rand: () => number, name = '나'): Build
   const pick = <T>(xs: T[]): T => xs[Math.floor(rand() * xs.length)];
   for (let attempt = 0; attempt < 500; attempt++) {
     const origin = pick([...c.origins.values()]);
-    const perkIds = [...c.perks.keys()];
-    const perks = [pick(perkIds)];
-    if (rand() < 0.3) {
-      const extra = pick(perkIds);
-      if (!perks.includes(extra)) perks.push(extra);
-    }
     const pool = [...c.talents.values()].filter((t) => !t.locked && !origin.talents.includes(t.id));
     const talents: Build['talents'] = [];
     const n = 2 + Math.floor(rand() * 5);
@@ -126,7 +105,7 @@ export function randomBuild(c: Content, rand: () => number, name = '나'): Build
       if (talents.some((x) => x.id === t.id)) continue;
       talents.push({ id: t.id, option: t.options ? pick(t.options) : undefined });
     }
-    const b: Build = { name, origin: origin.id, perks, talents };
+    const b: Build = { name, origin: origin.id, talents };
     const chk = checkBuild(c, b);
     if (!chk.ok) continue;
     const alloc: Record<string, number> = {};

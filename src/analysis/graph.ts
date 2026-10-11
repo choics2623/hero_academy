@@ -131,10 +131,6 @@ export function buildGraph(c: Content): Graph {
     for (const o of t.options ?? []) write({ source: `재능:${t.id}`, target: `talent.${t.id}.${o}`, op: 'implicit', ...initial });
     writeEffects(`재능:${t.id}`, t.effects, initial);
   }
-  for (const p of c.perks.values()) {
-    write({ source: `특전:${p.id}`, target: `perk.${p.id}`, op: 'implicit', ...initial });
-    writeEffects(`특전:${p.id}`, p.effects, initial);
-  }
   writeEffects('규칙:initial', c.rules.initial, initial);
   for (const [hook, es] of Object.entries(c.rules.hooks)) writeEffects(`규칙:${hook}`, es, { conds: [] });
   read('규칙:memory_decay', c.rules.memoryDecay);
@@ -234,7 +230,11 @@ export function buildGraph(c: Content): Graph {
       }
       if (node.check) {
         write({ ...base, source: src, target: 'check.last', op: 'implicit' });
+        write({ ...base, source: src, target: 'check.grade', op: 'implicit' });
         read(src, node.check.value, window);
+        for (const m of node.check.mods) read(src, m.when, window);
+        const ct = node.check.type ? c.checks.types.get(node.check.type) : undefined;
+        if (ct) read(src, ct.value, window);
       }
       if (node.battle) {
         for (const t of ['battle.result', 'battle.turns', `beat.${node.battle.enemy}`, 'fatigue']) {
@@ -262,7 +262,9 @@ export function buildGraph(c: Content): Graph {
 export function isVirtual(c: Content, name: string): boolean {
   return (
     c.derived.has(name) ||
-    ['world.collapse', 'world.collapse_bonus', 'time.year', 'time.month', 'time.week', 'time.slot', 'time.roll'].includes(name)
+    ['world.collapse', 'world.collapse_bonus', 'time.year', 'time.month', 'time.week', 'time.slot', 'time.roll'].includes(name) ||
+    /^(synergy|gear)\./.test(name) ||
+    /^(loop\.(count|just)|died\..+|equip\..+)$/.test(name)
   );
 }
 

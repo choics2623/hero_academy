@@ -17,6 +17,7 @@ clamps:
   fatigue: [0, 100]
   stress: [0, 100]
   money: [0, 9999]
+  shard: [0, 3]
 
 creation:
   max_talents: 8
@@ -26,6 +27,13 @@ creation:
 initial:
   - "money = 20"
   - "allowance = 10"
+  # 빙의자 기본기: 3,000시간 고인물의 원작 지식 (예전엔 특전으로 골랐다)
+  - "perk.고인물의기억 = 1"
+  - "perk.공략위키편집자 = 1"
+  - "perk.데이터마이너 = 1"
+  # 기억의 파편: 미래를 엿보는 데 쓴다 (docs/08)
+  - "shard = 1"
+  - "shard.max = 3"
 
 hooks:
   week_end:
@@ -33,6 +41,7 @@ hooks:
     - "stress -= 5"
   month_end:
     - "money += allowance"
+    - "shard += 1"
 
 # 해가 바뀔 때 ★★★ 기억이 ★★로 흐려질 확률
 memory_decay: "0.3 * (1 - talent.완전기억) * (1 + talent.망각증) * (1 - 0.5 * perk.고인물의기억)"
@@ -61,7 +70,7 @@ battle:
   hp: "20 + stat.체질 * 0.8 + stat.근력 * 0.2 + stat.마력량 * 0.15 + 10 * talent.불굴 - 5 * talent.병약"
   sp: "6 + stat.의지 * 0.15"
   mp: "stat.마력량 * 0.3"
-  atk: "4 + stat.근력 * 0.25 + 2 * item.브루노목검"
+  atk: "4 + stat.근력 * 0.25"
   matk: "4 + stat.마력제어 * 0.2 + stat.마력량 * 0.1"
   def: "stat.체질 * 0.08"
   dodge: "stat.민첩 + 10 * talent.고양이반사신경 + luck"

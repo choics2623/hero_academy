@@ -57,6 +57,8 @@
 - { id: 직감, name: 직감, cost: 2, category: 정신, desc: "위험한 선택지에 경고" }
 - { id: 서번트, name: 서번트, cost: 4, category: 정신, options: [검, 마법, 연금, 교육, 신성],
     desc: "한 분야 성장 +60%, 나머지 -15%" }
+- { id: 최적동선, name: 최적 동선, cost: 3, category: 정신,
+    desc: "스피드러너의 습관. 피로 누적 -25%", effects: ["mod.fatigue -= 0.25"] }
 - { id: 집중력, name: 집중력, cost: 2, category: 정신, excludes: [산만함],
     desc: "수업 효율 +15%", effects: ["growth.지성 += 0.15"] }
 - { id: 완전기억, name: 완전기억, cost: 4, category: 정신, excludes: [망각증], desc: "공략 노트 기억 풍화 없음" }

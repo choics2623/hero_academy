@@ -18,7 +18,8 @@ export interface Finding {
 const NAMESPACES: { prefix: string; kind: string; has: (c: Content, id: string) => boolean }[] = [
   { prefix: 'fired.', kind: '이벤트', has: (c, id) => c.events.has(id) },
   { prefix: 'talent.', kind: '재능', has: (c, id) => c.talents.has(id.split('.')[0]) },
-  { prefix: 'perk.', kind: '특전', has: (c, id) => c.perks.has(id) },
+  { prefix: 'item.', kind: '아이템', has: (c, id) => c.items.has(id) },
+  { prefix: 'synergy.', kind: '시너지', has: (c, id) => c.synergies.has(id) },
   { prefix: 'count.', kind: '활동', has: (c, id) => c.activities.has(id) },
   { prefix: 'fs.', kind: '복선', has: (c, id) => c.foreshadows.has(id.split('.')[0]) },
   { prefix: 'note.', kind: '공략 노트', has: (c, id) => c.notes.has(id.split('.')[0]) },
@@ -27,7 +28,7 @@ const NAMESPACES: { prefix: string; kind: string; has: (c: Content, id: string) 
 ];
 
 /** 쓰이기만 하고 안 읽혀도 괜찮은 변수 (수치형 자원) */
-const QUIET_PREFIXES = ['beat.', 'battle.', 'last.', 'met.', 'stat.', 'growth.', 'mod.', 'fired.', 'count.', 'fs.', 'note.', 'check.', 'crossroad.', 'talent.', 'perk.', 'time.'];
+const QUIET_PREFIXES = ['beat.', 'battle.', 'last.', 'met.', 'stat.', 'growth.', 'mod.', 'fired.', 'count.', 'fs.', 'note.', 'check.', 'crossroad.', 'talent.', 'perk.', 'time.', 'item.', 'equip.', 'shard', 'loop.', 'died.', 'synergy.', 'gear.'];
 
 export function lint(c: Content, g: Graph = buildGraph(c)): Finding[] {
   const out: Finding[] = [];
@@ -74,6 +75,41 @@ export function lint(c: Content, g: Graph = buildGraph(c)): Finding[] {
   }
   for (const a of c.activities.values()) {
     if (a.art && !c.art.has(a.art)) add('error', 'ART_MISSING', a.id, `없는 삽화 '${a.art}' (art.yaml에 없음)`);
+  }
+
+  // ---- 판정 종류, 시너지, 장비
+  const talentKey = (k: string) => c.talents.has(k.split('.')[0]);
+  for (const t of c.checks.types.values()) {
+    for (const k of [...Object.keys(t.plus), ...Object.keys(t.minus)]) {
+      if (!talentKey(k)) add('error', 'TALENT_MISSING', `checks.yaml#${t.id}`, `없는 재능 '${k}'`);
+    }
+  }
+  const tags = new Set([...c.talents.values()].flatMap((t) => t.tags));
+  for (const sy of c.synergies.values()) {
+    if (!tags.has(sy.tag)) add('warn', 'SYNERGY_NO_TALENT', sy.id, `태그 '${sy.tag}'를 가진 재능이 없음`);
+    for (const tier of sy.tiers) {
+      for (const k of Object.keys(tier.checks)) if (!c.checks.types.has(k)) add('error', 'CHECK_TYPE_MISSING', sy.id, `없는 판정 종류 '${k}'`);
+    }
+  }
+  for (const it of c.items.values()) {
+    for (const k of Object.keys(it.checks)) if (!c.checks.types.has(k)) add('error', 'CHECK_TYPE_MISSING', it.id, `없는 판정 종류 '${k}'`);
+  }
+  // 죽음 원인은 died.<원인>으로 읽히므로 띄어쓰기가 없어야 한다
+  for (const ev of c.events.values()) {
+    for (const { node } of walkOutcomes(ev)) {
+      for (const e of node.effects) {
+        if (e.target === 'death' && e.value.ast.k === 'str' && /\s/.test(e.value.ast.v)) {
+          add('error', 'DEATH_CAUSE_SPACE', node.path, `죽음 원인에 띄어쓰기가 있음: '${e.value.ast.v}' (died.원인으로 읽을 수 없음)`);
+        }
+        if (e.target === 'death' && node.choices.length) add('warn', 'DEATH_WITH_CHOICES', node.path, '죽는 결과에 선택지가 있음 (선택지는 무시되고 바로 죽음)');
+      }
+    }
+    if (ev.when && ev.when.refs.includes('loop.just') && !ev.effects.some((e) => e.target === 'loop.just')) {
+      add('error', 'LOOP_JUST_STUCK', ev.id, "회귀 직후 장면은 효과에 'loop.just = 0'이 있어야 함 (없으면 계속 반복됨)");
+    }
+    if (ev.when && ev.when.refs.includes('loop.just') && !ev.free) {
+      add('warn', 'LOOP_JUST_NOT_FREE', ev.id, '회귀 직후 장면은 free: true여야 그 칸의 활동을 빼앗지 않음');
+    }
   }
 
   // ---- 화자 이름 오타

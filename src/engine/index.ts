@@ -6,3 +6,4 @@ export * from './game';
 export * from './text';
 export * from './time';
 export * from './world';
+export * from './checks';
