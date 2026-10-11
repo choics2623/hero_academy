@@ -16,9 +16,51 @@
     - { need: 2, desc: "마법·학식 +2, 마법 공격 +1", checks: { 마법: 2, 학식: 2 }, battle: { matk: 1 } }
     - { need: 3, desc: "마법·학식 +4, 마법 공격 +2, 마나 +3", checks: { 마법: 4, 학식: 4 }, battle: { matk: 2, mp: 3 } }
 
+- id: 성직자
+  tag: 신성
+  desc: 기도가 닿는 곳이 있다
+  tiers:
+    - { need: 2, desc: "신성·정신력 +2", checks: { 신성: 2, 정신력: 2 } }
+    - { need: 3, desc: "신성·정신력 +4, 교감 +2, 체력 +4", checks: { 신성: 4, 정신력: 4, 교감: 2 }, battle: { hp: 4 } }
+
 - id: 사교가
   tag: 사교
   desc: 말 한마디로 길을 연다
   tiers:
     - { need: 2, desc: "설득·기만 +2", checks: { 설득: 2, 기만: 2 } }
-    - { need: 3, desc: "설득·기만 +4, 전투 설득 +4", checks: { 설득: 4, 기만: 4 }, battle: { persuade: 4 } }
+    - { need: 3, desc: "설득·기만 +4, 위압 +2, 전투 설득 +4", checks: { 설득: 4, 기만: 4, 위압: 2 }, battle: { persuade: 4 } }
+
+- id: 그림자
+  tag: 은밀
+  desc: 아무도 내가 거기 있었다는 걸 모른다
+  tiers:
+    - { need: 2, desc: "은밀·기민 +2", checks: { 은밀: 2, 기민: 2 } }
+    - { need: 3, desc: "은밀 +5, 기민·기만 +2, 회피 +3", checks: { 은밀: 5, 기민: 2, 기만: 2 }, battle: { dodge: 3 } }
+
+- id: 학자
+  tag: 학자
+  desc: 읽은 것은 잊지 않고, 모르는 것은 찾아낸다
+  tiers:
+    - { need: 2, desc: "학식·통찰 +2", checks: { 학식: 2, 통찰: 2 } }
+    - { need: 3, desc: "학식 +5, 통찰·손재주 +2, 간파 +3", checks: { 학식: 5, 통찰: 2, 손재주: 2 }, battle: { read: 3 } }
+
+- id: 야인
+  tag: 야생
+  desc: 숲이 집이었고 짐승이 이웃이었다
+  tiers:
+    - { need: 2, desc: "교감·기민 +2", checks: { 교감: 2, 기민: 2 } }
+    - { need: 3, desc: "교감 +5, 기민·통찰 +2, 회피 +2", checks: { 교감: 5, 기민: 2, 통찰: 2 }, battle: { dodge: 2 } }
+
+- id: 철인
+  tag: 강인
+  desc: 쓰러져도 일어난다. 몇 번이든
+  tiers:
+    - { need: 2, desc: "인내·완력 +2, 체력 +3", checks: { 인내: 2, 완력: 2 }, battle: { hp: 3 } }
+    - { need: 3, desc: "인내 +5, 완력·정신력 +2, 체력 +6, 방어 +1", checks: { 인내: 5, 완력: 2, 정신력: 2 }, battle: { hp: 6, def: 1 } }
+
+- id: 저주받은자
+  tag: 저주
+  desc: 남들이 피하는 것이 나를 피하지 않는다
+  tiers:
+    - { need: 2, desc: "위압 +3, 정신력 +2", checks: { 위압: 3, 정신력: 2 } }
+    - { need: 3, desc: "위압 +5, 정신력·통찰 +2, 마법 공격 +2", checks: { 위압: 5, 정신력: 2, 통찰: 2 }, battle: { matk: 2 } }
