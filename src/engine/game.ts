@@ -71,6 +71,8 @@ export interface Meta {
   foreseen: string[];
   /** 골랐던 선택 (지난 생 표시용) */
   chosen: string[];
+  /** 가장 최근 죽음의 원인 */
+  last?: string;
   /** 그 달 1주차 첫 칸의 자동 저장 */
   checkpoint?: Omit<GameState, 'meta'>;
 }
@@ -197,7 +199,7 @@ export class Game {
     // 자동 저장(checkpoint)은 만들어진 뒤 바뀌지 않으므로 복제본끼리 나눠 쓴다 (깊은 복사는 비싸다)
     const { meta, ...rest } = this.state;
     const st = structuredClone(rest) as GameState;
-    st.meta = { deaths: meta.deaths, causes: [...meta.causes], foreseen: [...meta.foreseen], chosen: [...meta.chosen], checkpoint: meta.checkpoint };
+    st.meta = { deaths: meta.deaths, causes: [...meta.causes], foreseen: [...meta.foreseen], chosen: [...meta.chosen], last: meta.last, checkpoint: meta.checkpoint };
     return new Game(this.content, st);
   }
 
@@ -556,6 +558,7 @@ export class Game {
   private die(cause: string) {
     const m = this.state.meta;
     m.deaths++;
+    m.last = cause;
     if (!m.causes.includes(cause)) m.causes.push(cause);
     this.state.phase = 'dead';
     this.state.dead = { cause };
@@ -577,6 +580,7 @@ export class Game {
     const w = this.world;
     w.set('loop.count', meta.deaths);
     for (const c of meta.causes) w.set(`died.${c}`, 1);
+    if (meta.last) w.set('loop.last', meta.last);
     w.set('loop.just', 1);
     this.state.trace.push({ time: this.content.calendar.label(this.state.time), kind: '회귀', text: `${meta.deaths}번째` });
     this.state.phase = 'activity';

@@ -264,7 +264,7 @@ export function isVirtual(c: Content, name: string): boolean {
     c.derived.has(name) ||
     ['world.collapse', 'world.collapse_bonus', 'time.year', 'time.month', 'time.week', 'time.slot', 'time.roll'].includes(name) ||
     /^(synergy|gear)\./.test(name) ||
-    /^(loop\.(count|just)|died\..+|equip\..+)$/.test(name)
+    /^(loop\.(count|just|last)|died\..+|equip\..+)$/.test(name)
   );
 }
 
