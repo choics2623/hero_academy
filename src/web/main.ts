@@ -89,7 +89,7 @@ function deadlineText(label: string): string {
 // ---- 그림
 
 const byName = new Map([...content.characters.values()].map((c) => [c.name, c.id]));
-const CROWD = new Set(['학생들', '관중']);
+const CROWD = new Set(['학생들', '관중', '목소리', '???']);
 const NO_FACE = new Set(['속마음', '시스템', '판정', '📌', '삽화']);
 
 /** 화자 이름 → 초상화 외형 (없으면 null) */
