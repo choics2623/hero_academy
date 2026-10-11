@@ -407,10 +407,171 @@ const lock: Draw = (p) => {
   p.rect(7, 10, 2, 2, C.wood3);
 };
 
+
+// ---- 판정 종류
+const talk: Draw = (p) => {
+  p.ellipse(8, 7, 6.5, 5, C.mist2);
+  p.ellipse(8, 7, 6.5, 5, (x, y) => (y > 9 || x > 12 ? C.mist1 : C.white));
+  p.line(5, 11, 3, 14, C.mist1);
+  p.line(6, 11, 4, 14, C.white);
+  for (const x of [5, 8, 11]) p.set(x, 7, C.slate1);
+};
+
+const mask: Draw = (p) => {
+  p.ellipse(8, 8, 7, 4.5, (x, y) => (y > 9 ? C.violet3 : C.violet2));
+  p.rect(3, 6, 4, 3, C.ink);
+  p.rect(9, 6, 4, 3, C.ink);
+  p.set(4, 7, C.violet0);
+  p.set(10, 7, C.violet0);
+  p.hline(7, 9, 9, C.violet1);
+  p.line(1, 7, 0, 11, C.red1);
+  p.line(15, 7, 15, 11, C.red1);
+};
+
+const fist: Draw = (p) => {
+  p.rect(3, 5, 10, 8, C.skin1);
+  p.rect(3, 11, 10, 2, C.skin2);
+  for (const x of [5, 8, 11]) p.vline(x, 5, 8, C.skin2);
+  p.rect(1, 7, 3, 4, C.skin2);
+  p.rect(4, 13, 8, 3, C.red1);
+  p.hline(4, 11, 15, C.red2);
+};
+
+const paw: Draw = (p) => {
+  p.ellipse(8, 11, 4, 3.5, C.wood1);
+  p.ellipse(8, 11.5, 2.5, 2, C.pink1);
+  for (const [x, y] of [[3, 6], [6, 3], [10, 3], [13, 6]] as const) {
+    p.ellipse(x, y, 1.8, 2, C.wood1);
+    p.set(x, y, C.pink1);
+  }
+};
+
+// ---- 장비와 물건
+const hat: Draw = (p) => {
+  p.ellipse(8, 12, 7.5, 2.2, C.wood2);
+  p.rect(4, 5, 8, 7, C.wood1);
+  p.rect(4, 5, 8, 1, C.wood0);
+  p.rect(4, 9, 8, 2, C.red1);
+  p.vline(11, 5, 11, C.wood2);
+};
+
+const shirt: Draw = (p) => {
+  p.rect(4, 4, 8, 11, C.mist2);
+  p.rect(1, 4, 3, 6, C.mist2);
+  p.rect(12, 4, 3, 6, C.mist2);
+  p.rect(6, 3, 4, 2, C.mist1);
+  p.vline(8, 5, 14, C.mist1);
+  for (const y of [7, 10, 13]) p.set(8, y, C.slate1);
+  p.vline(11, 5, 14, C.mist1);
+};
+
+const pants: Draw = (p) => {
+  p.rect(3, 2, 10, 3, C.wood3);
+  p.rect(3, 5, 4, 10, C.blue2);
+  p.rect(9, 5, 4, 10, C.blue2);
+  p.rect(7, 5, 2, 3, C.blue2);
+  p.vline(6, 5, 14, C.blue3);
+  p.vline(12, 5, 14, C.blue3);
+  p.set(8, 3, C.gold1);
+};
+
+const robe: Draw = (p) => {
+  p.rect(5, 2, 6, 3, C.violet2);
+  p.line(5, 5, 2, 15, C.violet2);
+  p.line(10, 5, 13, 15, C.violet3);
+  for (let y = 5; y <= 15; y++) p.hline(Math.round(5 - (y - 5) * 0.3), Math.round(10 + (y - 5) * 0.3), y, y > 12 ? C.violet3 : C.violet2);
+  p.vline(8, 4, 15, C.gold1);
+  p.hline(3, 12, 15, C.gold2);
+};
+
+const ring: Draw = (p) => {
+  for (let a = 0; a < 32; a++) {
+    const t = (a / 32) * Math.PI * 2;
+    p.set(8 + Math.cos(t) * 4.5, 10 + Math.sin(t) * 4, a < 16 ? C.gold2 : C.gold1);
+  }
+  p.ellipse(8, 5, 2.5, 2.5, C.sky1);
+  p.set(7, 4, C.white);
+};
+
+const amulet: Draw = (p) => {
+  p.line(3, 1, 7, 8, C.gold2);
+  p.line(13, 1, 9, 8, C.gold2);
+  p.ellipse(8, 11, 3.5, 4, C.gold1);
+  p.ellipse(8, 11, 2, 2.5, C.teal1);
+  p.set(7, 10, C.teal0);
+};
+
+const staff: Draw = (p) => {
+  p.line(3, 15, 11, 4, C.wood2);
+  p.line(4, 15, 12, 4, C.wood1);
+  p.ellipse(12, 3, 2.6, 2.6, C.violet1);
+  p.set(11, 2, C.violet0);
+  p.set(14, 6, C.gold1);
+  p.set(9, 1, C.gold1);
+};
+
+const boots: Draw = (p) => {
+  p.rect(3, 3, 5, 9, C.wood2);
+  p.rect(3, 11, 9, 4, C.wood2);
+  p.rect(3, 3, 5, 2, C.wood1);
+  p.hline(3, 12, 15, C.wood4);
+  p.rect(9, 5, 4, 7, C.wood1);
+  p.rect(9, 11, 6, 4, C.wood1);
+  p.hline(9, 15, 15, C.wood3);
+};
+
+const herb: Draw = (p) => {
+  p.line(8, 15, 8, 6, C.leaf3);
+  p.ellipse(5, 8, 3, 1.6, C.leaf1);
+  p.ellipse(11, 6, 3, 1.6, C.leaf2);
+  p.ellipse(6, 4, 2.4, 1.4, C.leaf1);
+  p.ellipse(10, 11, 2.6, 1.4, C.leaf2);
+  p.set(8, 3, C.red1);
+  p.set(9, 2, C.red0);
+};
+
+const letter: Draw = (p) => {
+  p.rect(1, 4, 14, 9, C.gold0);
+  p.line(1, 4, 8, 9, C.blond2);
+  p.line(14, 4, 8, 9, C.blond2);
+  p.rect(7, 8, 2, 2, C.red1);
+};
+
+const charm: Draw = (p) => {
+  p.vline(8, 0, 3, C.red1);
+  p.rect(5, 3, 6, 11, C.red1);
+  p.rect(6, 4, 4, 9, C.gold0);
+  p.vline(8, 5, 11, C.red2);
+  p.hline(6, 9, 8, C.red2);
+  p.hline(6, 9, 14, C.red2);
+};
+
+const misc: Draw = (p) => {
+  p.rect(2, 6, 12, 8, C.wood1);
+  p.rect(2, 4, 12, 3, C.wood0);
+  p.vline(8, 4, 13, C.wood2);
+  p.rect(7, 8, 2, 2, C.gold1);
+};
+
+/** 기억의 파편 */
+const shard: Draw = (p) => {
+  p.line(8, 1, 3, 8, C.sky1);
+  p.line(8, 1, 13, 8, C.violet1);
+  p.line(3, 8, 8, 15, C.violet2);
+  p.line(13, 8, 8, 15, C.violet3);
+  for (let y = 2; y <= 14; y++) {
+    const w = y <= 8 ? (y - 1) * 0.72 : (15 - y) * 0.72;
+    p.hline(Math.round(8 - w), Math.round(8 + w), y, y < 6 ? C.sky0 : y < 10 ? C.violet0 : C.violet1);
+  }
+  p.vline(8, 2, 13, C.white);
+  p.set(6, 5, C.white);
+};
+
 export const ICONS: Record<string, Draw> = {
   sword, swords, book, books, wand, chapel, bowl, coin, tree, bag, plant, quill, moon, bed, pickaxe, eye, dawn, house,
   sun: sunIcon, dumbbell, wing, heart, crystal, orb, flame, star, hammer, shield, charge, burst, dice, hourglass, skull, zzz, cloud,
   target, signpost, potion, rune, scroll, people, lock,
+  talk, mask, fist, paw, hat, shirt, pants, robe, ring, amulet, staff, boots, herb, letter, charm, misc, shard,
 };
 
 export type IconId = keyof typeof ICONS;

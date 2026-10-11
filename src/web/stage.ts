@@ -220,7 +220,7 @@ export class Stage {
     this.root.classList.add(c);
   }
 
-  flash(color: 'white' | 'red' | 'gold' | 'blue') {
+  flash(color: 'white' | 'red' | 'gold' | 'blue' | 'violet') {
     if (reduceMotion()) return;
     const f = el('div', `st-flash ${color}`);
     this.fxEl.append(f);
@@ -310,7 +310,9 @@ export class Stage {
   }
 
   /** 주사위가 굴러와서 멈춘다. 반환: 멈춘 뒤 */
-  async dice(final: number, ok: boolean, label: string): Promise<void> {
+  /** 판정 주사위: 굴러가다 멈추고, 결과 도장과 결정적 요인이 뜬다 */
+  async dice(final: number, grade: 'great' | 'ok' | 'fail' | 'fumble', label: string, key?: string, icon = 'dice'): Promise<void> {
+    const ok = grade === 'great' || grade === 'ok';
     const box = el('div', 'st-dice');
     const die = el('div', 'st-die');
     const im = el('img', 'px');
@@ -318,7 +320,11 @@ export class Stage {
     im.alt = '';
     const num = el('b', undefined, '?');
     die.append(im, num);
-    const cap = el('div', 'st-dice-cap', label);
+    const cap = el('div', 'st-dice-cap');
+    const ci = el('img', 'px');
+    ci.src = iconUrl(icon);
+    ci.alt = '';
+    cap.append(ci, label);
     box.append(die, cap);
     this.fxEl.append(box);
     sfx('dice');
@@ -331,18 +337,27 @@ export class Stage {
     num.textContent = String(final);
     box.classList.add('landed');
     await sleep(160);
-    const stamp = el('div', `st-stamp ${ok ? 'ok' : 'ng'}`, final === 20 && ok ? '대성공' : final === 1 && !ok ? '대실패' : ok ? '성공' : '실패');
+    const word = { great: '대성공', ok: '성공', fail: '실패', fumble: '대실패' }[grade];
+    const stamp = el('div', `st-stamp ${ok ? 'ok' : 'ng'}${grade === 'great' || grade === 'fumble' ? ' big' : ''}`, word);
     box.append(stamp);
-    if (final === 20 && ok) {
+    if (key) {
+      await sleep(reduceMotion() ? 0 : 260);
+      box.append(el('div', `st-key ${ok ? 'ok' : 'ng'}`, key));
+    }
+    if (grade === 'great') {
       this.flash('gold');
       this.burst(50, 42, '#ffd36b', 16);
       sfx('crit');
+    } else if (grade === 'fumble') {
+      this.flash('red');
+      this.shake('big');
+      sfx('hurt');
     } else if (!ok) {
       this.shake('small');
       sfx('hurt');
     } else sfx('pick');
-    window.setTimeout(() => box.classList.add('out'), 2200);
-    window.setTimeout(() => box.remove(), 2600);
+    window.setTimeout(() => box.classList.add('out'), 2400);
+    window.setTimeout(() => box.remove(), 2800);
   }
 
   clearFx() {

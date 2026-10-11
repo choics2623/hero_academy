@@ -716,13 +716,109 @@ img.mini { width: 22px; height: 22px; border-radius: 3px; box-shadow: none; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .float { display: none; }
 }
+
+/* ---- 판정 확률: 말 + 요인 */
+.choice { flex-wrap: wrap; }
+.choice .ct { flex: 1 1 60%; min-width: 0; }
+.odds { flex-wrap: wrap; row-gap: 2px; max-width: 100%; }
+.odds b { font-weight: 700; }
+.odds .fx { font: 600 11px var(--font-sys); padding: 0 5px; border-radius: 999px; background: color-mix(in srgb, currentColor 10%, transparent); }
+.odds .fx.up { color: var(--ok); }
+.odds .fx.down { color: var(--doom); }
+.choice .past { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 3px; font: 600 11px var(--font-sys); color: #b98af0; border: 1px solid #b98af0; vertical-align: 1px; }
+
+/* ---- 기억의 파편 */
+.shards { display: inline-flex; align-items: center; gap: 1px; margin-left: 10px; }
+.shards .sh, .memory .sh { width: 16px; height: 16px; }
+.sh.off { opacity: 0.25; filter: grayscale(1); }
+.shards .loopn { margin-left: 4px; font: 700 11px var(--font-sys); color: #b98af0; }
+.memory { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 8px; }
+.memory .gems { display: inline-flex; gap: 1px; }
+.memory .mtxt { font: 13px var(--font-story); color: #8d6fd6; }
+.remember { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border: 1px solid #8155c9; border-radius: 999px; background: color-mix(in srgb, #8155c9 10%, var(--page)); color: #8155c9; font: 600 13px var(--font-ui); cursor: pointer; }
+.remember:hover:not(:disabled) { background: color-mix(in srgb, #8155c9 20%, var(--page)); }
+.remember:disabled { opacity: 0.45; cursor: not-allowed; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .remember { color: #c9a6ff; border-color: #b98af0; } :root:not([data-theme="light"]) .memory .mtxt { color: #c9a6ff; } }
+:root[data-theme="dark"] .remember { color: #c9a6ff; border-color: #b98af0; }
+:root[data-theme="dark"] .memory .mtxt { color: #c9a6ff; }
+.future { display: grid; gap: 3px; margin-top: 6px; padding: 6px 8px; border-left: 2px solid #b98af0; background: color-mix(in srgb, #b98af0 8%, transparent); border-radius: 0 4px 4px 0; font: 12px/1.5 var(--font-ui); animation: futureIn 0.5s ease both; }
+@keyframes futureIn { from { opacity: 0; transform: translateX(-6px); filter: blur(2px); } to { opacity: 1; transform: none; filter: none; } }
+.future .fb { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 6px; }
+.future .fl { font: 700 11px var(--font-sys); padding: 0 6px; border-radius: 3px; }
+.future .fl.ok { color: var(--ok); border: 1px solid var(--ok); }
+.future .fl.ng { color: var(--doom); border: 1px solid var(--doom); }
+.future .fc { display: inline-flex; align-items: center; gap: 3px; font: 600 11.5px var(--font-sys); color: var(--muted); }
+.future .fc img { width: 14px; height: 14px; }
+.future .fc.up { color: var(--ok); }
+.future .fc.down { color: var(--doom); }
+.future .fc.bond { color: #e0559a; }
+.future .fc.gain { color: var(--gold); }
+.future .fc.fate { color: #8155c9; }
+.future .fc.ev { color: var(--sys); font-weight: 500; }
+.future .fc.war { color: var(--doom); }
+.future .fc.death { color: #fff; background: var(--doom); padding: 0 6px; border-radius: 3px; }
+.future .fc.more { color: var(--muted); font-weight: 400; }
+.future .fv { color: var(--muted); font-style: italic; }
+.choice.seen, .activity.seen { border-color: #b98af0; }
+
+/* ---- 판정 주사위: 결정적 요인 */
+.st-dice-cap { display: inline-flex; align-items: center; gap: 5px; }
+.st-dice-cap img { width: 16px; height: 16px; }
+.st-stamp.big { font-size: clamp(30px, 6.4vw, 52px); }
+.st-key { position: absolute; top: 112%; white-space: nowrap; font: 700 13px var(--font-sys); padding: 3px 12px; border-radius: 999px; background: rgba(8, 10, 22, 0.85); animation: keyIn 0.4s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
+.st-key.ok { color: #7ff0b8; }
+.st-key.ng { color: #ff8a9a; }
+@keyframes keyIn { from { opacity: 0; transform: translateY(6px) scale(0.9); } to { opacity: 1; transform: none; } }
+.st-flash.violet { background: radial-gradient(circle, rgba(233, 198, 255, 0.85), rgba(129, 85, 201, 0.2)); }
+
+/* ---- 죽음과 회귀 */
+.stage.dead .st-bg, .stage.dead .st-actors { filter: grayscale(1) brightness(0.35); transition: filter 1.2s ease; }
+.deathbox { display: grid; gap: 8px; justify-items: start; padding: 4px 2px; }
+.deathbox .dt { margin: 0; font: 400 26px var(--font-title); color: var(--doom); letter-spacing: 0.2em; }
+.deathbox p { margin: 0; font: 15px var(--font-story); }
+.regress { background: #4f3190 !important; color: #fff !important; }
+.deathlog { padding: 8px 12px; border: 1px solid var(--doom); color: var(--doom); font: 700 13px var(--font-sys); border-radius: var(--r); }
+.looplog { padding: 8px 12px; border: 1px solid #b98af0; color: #8155c9; font: 700 13px var(--font-sys); border-radius: var(--r); }
+.mo.loop .mo-k { color: #e9c6ff; }
+.toast.shard { color: #8155c9; border-color: #b98af0; }
+
+/* ---- 가방 */
+.slots { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.slot { display: grid; justify-items: center; gap: 1px; padding: 6px 4px; border: 1px dashed var(--line); border-radius: var(--r); background: var(--page); font: 11px var(--font-ui); color: var(--muted); cursor: pointer; min-width: 0; }
+.slot.on { border-style: solid; border-color: var(--sys-line); color: var(--ink); }
+.slot:disabled { cursor: default; }
+.slot .ghost { opacity: 0.3; filter: grayscale(1); }
+.slot .sl { font: 600 10.5px var(--font-sys); color: var(--sys); }
+.slot .sn { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inv { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.inv:last-child { border-bottom: 0; }
+.inv .ib { display: grid; gap: 1px; min-width: 0; }
+.inv .ib b { font-size: 13.5px; }
+.inv .idesc { font-size: 12px; line-height: 1.45; color: var(--muted); }
+.bonus { display: flex; flex-wrap: wrap; gap: 3px; }
+.bonus .bc { font: 600 11px var(--font-sys); color: var(--ok); }
+.bonus .bc.war { color: var(--gold); }
+.ibtn { padding: 4px 10px; border: 1px solid var(--sys-line); border-radius: 999px; background: var(--page); color: var(--sys); font: 600 12px var(--font-ui); cursor: pointer; }
+
+/* ---- 컨셉 (시너지) */
+.syn { display: grid; grid-template-columns: auto 1fr; gap: 0 8px; padding: 4px 0; border-bottom: 1px dashed var(--line); }
+.syn:last-child { border-bottom: 0; }
+.syn b { font-size: 13px; color: var(--muted); }
+.syn.on b { color: var(--gold); }
+.syn .syn-n { justify-self: end; font: 11px var(--font-sys); color: var(--muted); }
+.syn .syn-d { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
+.syn.on .syn-d { color: var(--ink); }
+.card .tags { font: 11px var(--font-sys); color: #8155c9; }
+.perkbox p { margin: 0 0 6px; font-size: 13px; }
+.perkbox p:last-child { margin: 0; }
+@media (max-width: 560px) { .slots { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 </style>
 
 <div id="ambience" aria-hidden="true"></div>
 <div id="app">
   <header class="bar">
     <div class="brand">멸망까지 10년</div>
-    <div class="clock" id="clock" hidden><span id="time"></span><span class="doom" id="doom"></span></div>
+    <div class="clock" id="clock" hidden><span id="time"></span><span class="doom" id="doom"></span><span class="shards" id="shards" hidden></span></div>
     <div class="meter-wrap" id="meter" hidden><span class="ml">원작 붕괴도</span><span class="ms" aria-hidden="true">붕괴</span><div class="meter"><i id="collapse-fill" style="width:0%"></i></div><b id="collapse-val">0%</b></div>
     <button class="ghost" id="sound" type="button" aria-pressed="false">소리 끔</button>
     <button class="ghost" id="panel-toggle" type="button" hidden>상태창</button>

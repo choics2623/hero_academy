@@ -1,7 +1,7 @@
 // 브라우저 플레이 화면. 엔진은 터미널 버전과 똑같은 것을 쓴다.
 // 콘텐츠(YAML)는 빌드 시 JSON으로 바뀌어 window.__HERO_CONTENT__로 들어온다.
 
-import { buildContent, checkBuild, randomBuild, test, type Action, type BattleLine, type BattleView, type Build, type Content } from '../engine';
+import { EQUIP_SLOTS, buildContent, checkBuild, randomBuild, test, type Action, type BattleLine, type BattleView, type Build, type CheckResult, type Content, type EquipSlot, type FutureBranch, type FutureOption, type Item } from '../engine';
 import { applyBuild } from '../engine/creation';
 import { Game, type GameState } from '../engine/game';
 import type { RenderedLine } from '../engine/text';
@@ -24,6 +24,8 @@ declare global {
 }
 
 type LogItem =
+  | { k: 'death'; cause: string }
+  | { k: 'loop'; n: number; when: string }
   | { k: 'scene'; when: string; title?: string; lines: RenderedLine[]; cont?: boolean; flavor?: boolean; tod?: string; strip?: string; intros?: string[] }
   | { k: 'act'; text: string; deltas?: string[]; ranks?: string[]; icon?: string }
   | { k: 'week'; title: string; items: string[]; season?: string }
@@ -39,7 +41,7 @@ interface Save {
   monthSnap?: Record<string, number>;
   introduced?: string[];
 }
-type Tab = 'goals' | 'status' | 'people' | 'notes' | 'fate';
+type Tab = 'goals' | 'status' | 'bag' | 'people' | 'notes' | 'fate';
 
 const content: Content = buildContent({ files: window.__HERO_CONTENT__ });
 const cal = content.calendar;
@@ -91,7 +93,7 @@ function deadlineText(label: string): string {
 
 const byName = new Map([...content.characters.values()].map((c) => [c.name, c.id]));
 const CROWD = new Set(['학생들', '관중', '목소리', '???']);
-const NO_FACE = new Set(['속마음', '시스템', '판정', '📌', '삽화']);
+const NO_FACE = new Set(['속마음', '시스템', '판정', '📌', '💠', '🎒', '삽화']);
 
 /** 화자 이름 → 초상화 외형 (없으면 null) */
 function lookOf(speaker: string): { key: string; look: Look } | null {
@@ -359,6 +361,7 @@ function renderCreate() {
       const top = el('span', 'top');
       top.append(el('span', undefined, t.name), el('span', `cost ${t.cost >= 0 ? 'spend' : 'gain'}`, t.cost >= 0 ? `−${t.cost}P` : `+${-t.cost}P`));
       b.append(top, el('span', 'desc', t.desc));
+      if (t.tags.length) b.append(el('span', 'tags', t.tags.map((x) => `#${x}`).join(' ')));
       if (why) b.append(el('span', 'why', why));
       wrap.append(b);
       if (sel && t.options) {
@@ -412,6 +415,27 @@ function renderCreate() {
   sAlloc.append(ac);
   main.append(sAlloc);
 
+  // 컨셉 미리보기
+  const mine = new Set([...(content.origins.get(build.origin)?.talents ?? []), ...build.talents.map((x) => x.id)]);
+  const syn = el('div', 'window synprev');
+  syn.append(el('h4', undefined, '[컨셉]'));
+  let anySyn = false;
+  for (const sy of content.synergies.values()) {
+    const n = [...mine].filter((id) => content.talents.get(id)?.tags.includes(sy.tag)).length;
+    if (!n) continue;
+    anySyn = true;
+    let tier = 0;
+    sy.tiers.forEach((x, i) => {
+      if (n >= x.need) tier = i + 1;
+    });
+    const next = sy.tiers[tier];
+    const r = el('div', `syn${tier ? ' on' : ''}`);
+    r.append(el('b', undefined, `${sy.name}${tier ? ` ${'★'.repeat(tier)}` : ''}`), el('span', 'syn-n', `#${sy.tag} ${n}${next ? `/${next.need}` : ''}`));
+    r.append(el('span', 'syn-d', tier ? sy.tiers[tier - 1].desc : `${next!.need}개면 · ${next!.desc}`));
+    syn.append(r);
+  }
+  if (!anySyn) syn.append(el('div', 'legend', '같은 #갈래의 재능을 모으면 컨셉이 깨어난다 (2개, 3개).'));
+
   // 포인트 장부
   const allocated = Object.values(build.alloc ?? {}).reduce((a, x) => a + x, 0);
   const win = el('div', 'window');
@@ -429,7 +453,7 @@ function renderCreate() {
   row('능력치 분배', allocated ? `−${allocated}` : '0');
   const left = row('남은 포인트', String(chk.remaining), 'total');
   if (chk.remaining < 0) left.className = 'bad';
-  ledger.append(win);
+  ledger.append(win, syn);
   if (chk.errors.length) {
     const ul = el('ul', 'errors');
     for (const e of chk.errors) ul.append(el('li', undefined, e));
@@ -619,6 +643,8 @@ async function runItem(it: LogItem) {
   if (it.k === 'month') return runMonth(it);
   if (it.k === 'scene') return runScene(it);
   if (it.k === 'battle') return it.start ? runBattleStart(it) : runBattleTurn(it);
+  if (it.k === 'death') return runDeathItem(it);
+  if (it.k === 'loop') return runLoop(it);
 }
 
 // ---- 배경
@@ -669,8 +695,8 @@ function sheetUrl(key: string, look: Look, mood: string): string {
 
 type Page =
   | { t: 'art'; id: string }
-  | { t: 'check'; text: string }
-  | { t: 'pin'; text: string }
+  | { t: 'check'; text: string; data?: CheckResult }
+  | { t: 'pin'; text: string; kind?: string }
   | { t: 'say'; speaker: string; mood?: string; lines: string[] }
   | { t: 'narr' | 'inner' | 'sys'; lines: string[] };
 
@@ -682,8 +708,8 @@ function paginate(lines: RenderedLine[]): Page[] {
   for (const l of lines) {
     const prev = out[out.length - 1];
     if (l.speaker === '삽화') out.push({ t: 'art', id: l.text });
-    else if (l.speaker === '판정') out.push({ t: 'check', text: l.text });
-    else if (l.speaker === '📌') out.push({ t: 'pin', text: l.text });
+    else if (l.speaker === '판정') out.push({ t: 'check', text: l.text, data: l.check });
+    else if (l.speaker === '📌' || l.speaker === '💠' || l.speaker === '🎒') out.push({ t: 'pin', text: l.text, kind: l.speaker });
     else if (l.speaker === '시스템') out.push({ t: 'sys', lines: [l.text] });
     else if (l.speaker === '속마음') {
       if (prev?.t === 'inner' && prev.lines.length < 2 && chars(prev.lines) + l.text.length < 70) prev.lines.push(l.text);
@@ -725,8 +751,8 @@ async function runScene(it: Extract<LogItem, { k: 'scene' }>) {
       if (b.key === stage.bgKey) continue;
       setBg(pg.id, tod, 'flash');
       await sleep(420);
-    } else if (pg.t === 'check') await runCheck(pg.text);
-    else if (pg.t === 'pin') pinToast(pg.text);
+    } else if (pg.t === 'check') await runCheck(pg.text, pg.data);
+    else if (pg.t === 'pin') pinToast(pg.text, pg.kind);
     else await runPage(pg, intros);
   }
 }
@@ -782,9 +808,23 @@ function introBanner(name: string) {
   window.setTimeout(() => b.remove(), 3500);
 }
 
-function pinToast(text: string) {
-  const [kind, rest] = text.split(' — ');
-  toast(`${kind} · ${rest ?? ''}`, 'pin', iconImg(kind.includes('회수') ? 'target' : 'eye', 1));
+function pinToast(text: string, kind = '📌') {
+  if (kind === '💠') {
+    toast(text, 'shard', iconImg('shard', 1));
+    stage.flash('violet');
+    stage.burst(50, 40, '#b98af0', 12);
+    sfx('learn');
+    renderHeader();
+    return;
+  }
+  if (kind === '🎒') {
+    const it = [...content.items.values()].find((x) => text.startsWith(x.name));
+    toast(text.includes('썼다') ? text : `획득 · ${text}`, 'learn', iconImg(it?.icon ?? 'bag', 1));
+    sfx('learn');
+    return;
+  }
+  const [k, rest] = text.split(' — ');
+  toast(`${k} · ${rest ?? ''}`, 'pin', iconImg(k.includes('회수') ? 'target' : 'eye', 1));
   sfx('learn');
 }
 
@@ -804,7 +844,25 @@ function sysEffects(t: string) {
   }
 }
 
-async function runCheck(text: string) {
+const GRADE_LABEL: Record<CheckResult['grade'], string> = { great: '대성공', ok: '성공', fail: '실패', fumble: '대실패' };
+
+/** "달변▲ 말더듬▼" */
+function factorText(fs: { label: string; value: number }[], n = 3): string {
+  return fs.slice(0, n).map((f) => `${f.label}${f.value > 0 ? (f.value >= 4 ? '▲▲' : '▲') : f.value <= -4 ? '▼▼' : '▼'}`).join('  ');
+}
+
+async function runCheck(text: string, data?: CheckResult) {
+  if (data) {
+    stage.focus(null);
+    const sub = [`${data.odds}했던 판정 — ${GRADE_LABEL[data.grade]}`];
+    if (data.factors.length) sub.push(factorText(data.factors, 4));
+    const shown = dialog.show({ kind: 'check', name: `${data.name} 판정`, lines: sub, speed: 0 });
+    const key = data.key ? (data.ok ? `${data.key.label} 덕분에!` : `${data.key.label}에 발목 잡혔다`) : undefined;
+    await stage.dice(data.d20, data.grade, data.name, key, data.icon);
+    await shown;
+    await waitAdvance();
+    return;
+  }
   const ok = text.endsWith('성공');
   const m = /^(.*?) · (-?\d+) \+ 주사위 (\d+) = (-?\d+) \/ 목표 (\d+)/.exec(text);
   stage.focus(null);
@@ -815,7 +873,7 @@ async function runCheck(text: string) {
   }
   const [, label, value, die, sum, dc] = m;
   const shown = dialog.show({ kind: 'check', name: `${label} 판정`, lines: [`능력 ${value} + 주사위 ${die} = ${sum}   ·   목표 ${dc}`], speed: 0 });
-  await stage.dice(Number(die), ok, label);
+  await stage.dice(Number(die), ok ? 'ok' : 'fail', label);
   await shown;
   await waitAdvance();
 }
@@ -896,6 +954,34 @@ async function runMonth(it: Extract<LogItem, { k: 'month' }>) {
   for (const x of it.items) box.append(el('p', 'mo-r', x));
   stage.card(box, 'month');
   $('play').classList.add('carding');
+  sfx('learn');
+  await waitAdvance(autoPlay ? 2200 : 3600);
+  stage.hideCard();
+  $('play').classList.remove('carding');
+  await sleep(200);
+}
+
+// ---- 죽음과 회귀
+
+async function runDeathItem(it: Extract<LogItem, { k: 'death' }>) {
+  stage.clearActors();
+  stage.flash('red');
+  stage.shake('big');
+  sfx('hurt');
+  stage.root.classList.add('dead');
+  void it;
+  await sleep(reduceMotion() ? 0 : 700);
+}
+
+async function runLoop(it: Extract<LogItem, { k: 'loop' }>) {
+  stage.root.classList.remove('dead');
+  stage.clearActors();
+  setBg(idleBg(), 'dawn');
+  const box = el('div', 'mo loop');
+  box.append(el('span', 'mo-k', `회귀 ${it.n}`), el('h2', undefined, it.when), el('p', 'mo-s', '기억은 남아 있다. 다시, 이 아침부터.'));
+  stage.card(box, 'month');
+  $('play').classList.add('carding');
+  stage.flash('violet');
   sfx('learn');
   await waitAdvance(autoPlay ? 2200 : 3600);
   stage.hideCard();
@@ -1044,6 +1130,13 @@ function renderHeader() {
   const tod = todOf(cal.slotName(g.state.time));
   $('time').prepend(iconImg(tod === 'night' ? 'moon' : tod === 'dawn' ? 'dawn' : 'sun', 1, 'tod-ic'));
   $('doom').textContent = doomText();
+  const mem = g.view().memory;
+  const sh = $('shards');
+  sh.replaceChildren();
+  sh.hidden = false;
+  sh.title = `기억의 파편 ${mem.shard}/${mem.max}${mem.deaths ? ` · 회귀 ${mem.deaths}번` : ''}`;
+  for (let i = 0; i < mem.max; i++) sh.append(iconImg('shard', 1, i < mem.shard ? 'sh on' : 'sh off'));
+  if (mem.deaths) sh.append(el('span', 'loopn', `↺${mem.deaths}`));
   const collapse = g.world.collapse();
   ($('collapse-fill') as HTMLElement).style.width = `${collapse}%`;
   $('collapse-val').textContent = `${collapse}%`;
@@ -1068,6 +1161,233 @@ function previewChips(id: string): HTMLElement {
   return row;
 }
 
+
+// ---- 가방과 장비
+
+const SLOT_ICON: Record<string, string> = { 모자: 'hat', 윗옷: 'shirt', 아래옷: 'pants', 한벌옷: 'robe', 장신구1: 'ring', 장신구2: 'amulet', 무기: 'sword', 신발: 'boots' };
+
+function bonusChips(it: Item): HTMLElement {
+  const row = el('span', 'bonus');
+  const lv = (n: number) => (n > 0 ? '▲'.repeat(Math.min(3, Math.max(1, Math.round(n)))) : '▼');
+  for (const [k, v] of Object.entries(it.checks)) row.append(el('span', 'bc', `${k} ${lv(v)}`));
+  for (const [k, v] of Object.entries(it.battle)) row.append(el('span', 'bc war', `${GEAR_LABEL[k] ?? k} ${lv(v)}`));
+  return row;
+}
+
+function afterBag() {
+  writeSave();
+  renderPanel();
+  if (game && (game.state.phase === 'activity' || game.state.phase === 'scene')) renderControls();
+}
+
+function renderBag(pane: HTMLElement) {
+  const g = game!;
+  const can = g.canManage();
+  const inv = g.inventory();
+  const gear = window_('[장비]');
+  const grid = el('div', 'slots');
+  for (const slot of EQUIP_SLOTS) {
+    const id = g.state.vars[`equip.${slot}`];
+    const it = typeof id === 'string' ? content.items.get(id) : undefined;
+    const covered = !it && (slot === '윗옷' || slot === '아래옷') && g.state.vars['equip.한벌옷'];
+    const cell = el('button', `slot${it ? ' on' : ''}`);
+    cell.type = 'button';
+    cell.append(iconImg(it?.icon ?? SLOT_ICON[slot], 2, it ? '' : 'ghost'));
+    cell.append(el('span', 'sl', slot.replace(/\d$/, '')), el('span', 'sn', it ? it.name : covered ? '(한벌옷)' : '비어 있음'));
+    cell.disabled = !it || !can;
+    if (it) cell.title = `${it.name} — 눌러서 벗기`;
+    cell.addEventListener('click', () => {
+      if (!it) return;
+      g.unequip(slot as EquipSlot);
+      sfx('click');
+      afterBag();
+    });
+    grid.append(cell);
+  }
+  gear.append(grid);
+  if (!can) gear.append(el('div', 'legend', '지금은 장비를 바꿀 수 없다.'));
+  pane.append(gear);
+
+  const groups: [string, Item['kind']][] = [['[장비품]', 'equip'], ['[소모품]', 'use'], ['[귀중품]', 'key']];
+  for (const [title, kind] of groups) {
+    const xs = inv.filter((x) => x.item.kind === kind);
+    if (!xs.length) continue;
+    const w = window_(title);
+    for (const { item, count, equipped } of xs) {
+      const r = el('div', 'inv');
+      r.append(iconImg(item.icon, 2));
+      const body = el('div', 'ib');
+      body.append(el('b', undefined, `${item.name}${count > 1 ? ` ×${count}` : ''}${equipped.length ? ' · 착용 중' : ''}`));
+      if (item.desc) body.append(el('span', 'idesc', item.desc));
+      if (Object.keys(item.checks).length || Object.keys(item.battle).length) body.append(bonusChips(item));
+      r.append(body);
+      if (kind === 'equip' && can && equipped.length < count) {
+        r.append(button('ibtn', '착용', () => {
+          try {
+            g.equip(item.id);
+          } catch {
+            return;
+          }
+          sfx('pick');
+          afterBag();
+        }));
+      }
+      if (kind === 'use' && can && item.use.length) {
+        r.append(button('ibtn', '사용', () => {
+          const lines = g.useItem(item.id);
+          pinToast(lines[0]?.text ?? item.name, '🎒');
+          afterBag();
+          renderHeader();
+        }));
+      }
+      w.append(r);
+    }
+    pane.append(w);
+  }
+  if (!inv.length) pane.append(el('p', 'empty', '가방이 비어 있다. 상점가에서 사거나, 누군가에게 받을 수 있다.'));
+}
+
+// ---- 기억의 파편: 미래 보기
+
+const GEAR_LABEL: Record<string, string> = {
+  hp: '체력', sp: '기력', mp: '마나', atk: '공격', matk: '마법 공격', def: '방어', dodge: '회피', read: '간파', persuade: '전투 설득',
+};
+
+/** 미래에 바뀌는 값 하나 → 칩 */
+function futureChip(ch: FutureBranch['changes'][number]): HTMLElement | null {
+  const k = ch.key;
+  const d = ch.delta ?? 0;
+  const chip = (text: string, tone: string, icon?: string) => {
+    const c = el('span', `fc ${tone}`);
+    if (icon) c.append(iconImg(icon, 1));
+    c.append(text);
+    return c;
+  };
+  if (k.startsWith('stat.')) return chip(`${k.slice(5)} ${feel(k.slice(5), d)}`, d > 0 ? 'up' : 'down', STAT_ICON[k.slice(5)]);
+  if (k.startsWith('affinity.')) {
+    const name = content.characters.get(k.slice(9))?.name ?? k.slice(9);
+    return chip(`${name} ${feel(`${name} 호감`, d)}`, d > 0 ? 'bond' : 'down', 'heart');
+  }
+  if (k === 'money') return chip(`은화 ${feel('은화', d)}`, d > 0 ? 'up' : 'down', 'coin');
+  if (k === 'fatigue') return chip(`피로 ${feel('피로', d)}`, d > 0 ? 'down' : 'up', 'zzz');
+  if (k === 'stress') return chip(`스트레스 ${feel('스트레스', d)}`, d > 0 ? 'down' : 'up', 'cloud');
+  if (k === 'shard') return chip(`기억의 파편 ${d > 0 ? '+' : ''}${d}`, d > 0 ? 'up' : 'down', 'shard');
+  if (k.startsWith('item.')) {
+    const it = content.items.get(k.slice(5));
+    return it ? chip(`${it.name}${d < 0 ? ' 잃음' : ''}`, d > 0 ? 'gain' : 'down', it.icon) : null;
+  }
+  if (k.startsWith('talent.') && d > 0) {
+    const t = content.talents.get(k.slice(7).split('.')[0]);
+    return t ? chip(`재능 ${t.name}`, 'gain', 'star') : null;
+  }
+  if (k.startsWith('skill.') && d > 0) {
+    const sk = content.skills.get(k.slice(6));
+    return chip(`기술 ${sk?.name ?? k.slice(6)}`, 'gain', 'scroll');
+  }
+  if (k.startsWith('note.') && k.endsWith('.known')) {
+    const n = content.notes.get(k.slice(5, -6));
+    return n ? chip(`노트 ${n.title}`, 'gain', 'book') : null;
+  }
+  const cr = content.crossroadByKey.get(k);
+  if (cr) return chip(`운명 · ${cr.title}: ${cr.labels[String(ch.value)] ?? String(ch.value)}`, ch.value === cr.canon ? 'down' : 'fate', 'hourglass');
+  return null;
+}
+
+function futureEl(opt: FutureOption | undefined): HTMLElement | null {
+  if (!opt) return null;
+  const box = el('span', 'future');
+  if (opt.veiled) {
+    box.append(el('span', 'fv', '기억에 없는 일이다'));
+    return box;
+  }
+  if (opt.disabled) return null;
+  for (const br of opt.branches) {
+    const row = el('span', 'fb');
+    if (br.label) row.append(el('span', `fl ${br.label === '성공' ? 'ok' : 'ng'}`, `${br.label} ${Math.round((br.chance ?? 0) * 100)}%`));
+    const chips = br.changes.map(futureChip).filter((x): x is HTMLElement => !!x);
+    for (const c of chips.slice(0, 6)) row.append(c);
+    for (const e of br.events.slice(0, 2)) row.append(el('span', 'fc ev', `→ 「${e}」`));
+    if (br.battle) row.append(el('span', 'fc war', `⚔ ${br.battle}`));
+    if (br.death) row.append(el('span', 'fc death', `☠ 죽는다`));
+    if (!chips.length && !br.events.length && !br.battle && !br.death) row.append(el('span', 'fc none', '별일 없다'));
+    if (br.more) row.append(el('span', 'fc more', '…또 고를 일이 생긴다'));
+    box.append(row);
+  }
+  return box;
+}
+
+/** 지금 결정에 대해 본 미래 (이미 본 자리면 공짜로 다시 떠오른다) */
+function currentFuture(): Map<string, FutureOption> | undefined {
+  const g = game!;
+  const key = g.decisionKey();
+  if (!key) return undefined;
+  if (g.state.foresight?.key !== key && g.foresightCost() === 0) g.foresee();
+  if (g.state.foresight?.key !== key) return undefined;
+  return new Map(g.state.foresight.options.map((o) => [o.id, o]));
+}
+
+function memoryBar(): HTMLElement | null {
+  const g = game!;
+  const v = g.view();
+  const cost = v.memory.cost;
+  if (cost === undefined) return null;
+  const bar = el('div', 'memory');
+  const gems = el('span', 'gems');
+  for (let i = 0; i < v.memory.max; i++) gems.append(iconImg('shard', 1, i < v.memory.shard ? 'sh on' : 'sh off'));
+  bar.append(gems);
+  const seen = g.state.foresight?.key === g.decisionKey();
+  if (seen) {
+    bar.append(el('span', 'mtxt', cost === 0 && v.memory.deaths ? '지난 생에 본 미래가 떠오른다.' : '기억 속 미래가 겹쳐 보인다.'));
+    return bar;
+  }
+  const can = cost === 0 || v.memory.shard >= 1;
+  const b = button('remember', cost === 0 ? '본 적 있는 미래를 떠올린다' : '기억을 더듬는다 · 파편 1', () => {
+    if (!game || busy) return;
+    try {
+      game.foresee();
+    } catch {
+      return;
+    }
+    sfx('learn');
+    stage.flash('violet');
+    stage.burst(50, 45, '#b98af0', 18);
+    writeSave();
+    renderControls();
+  });
+  b.prepend(iconImg('shard', 1));
+  b.disabled = !can;
+  if (!can) b.title = '기억의 파편이 없다. 매달 하나씩, 원작을 바꿀 때마다 하나씩 차오른다.';
+  bar.append(b);
+  return bar;
+}
+
+const ODDS_CLASS: Record<string, string> = { 확실: 'hi', 유리: 'hi', 반반: 'mid', 불리: 'lo', 무모: 'lo' };
+
+function oddsChip(ck: NonNullable<ReturnType<Game['view']>['choices'][number]['check']>): HTMLElement {
+  const tag = el('span', `odds ${ODDS_CLASS[ck.odds] ?? 'mid'}`);
+  tag.append(iconImg(ck.icon || 'dice', 1), el('b', undefined, `${ck.label} · ${ck.odds}`));
+  for (const f of ck.factors) tag.append(el('span', `fx ${f.value > 0 ? 'up' : 'down'}`, `${f.label}${f.value > 0 ? '▲' : '▼'}`));
+  return tag;
+}
+
+function renderDeath(c: HTMLElement) {
+  const g = game!;
+  const v = g.view();
+  stage.clearActors();
+  stage.root.classList.add('dead');
+  dialog.show({ kind: 'prompt', name: '', lines: ['……', `${v.dead?.cause ?? ''}`, '의식이 꺼진다.'], speed: 0 });
+  const box = el('div', 'deathbox');
+  box.append(el('p', 'dt', '[ 사망 ]'));
+  box.append(el('p', undefined, '하지만 기억은 꺼지지 않았다. 이번 달 첫 주의 아침으로 돌아간다.'));
+  const b = button('primary regress', '기억을 안고 돌아간다', () => {
+    sfx('stamp');
+    stage.root.classList.remove('dead');
+    act({ type: 'regress' }, '');
+  });
+  box.append(b);
+  c.append(box);
+}
+
 function renderControls() {
   const g = game!;
   const v = g.view();
@@ -1078,6 +1398,11 @@ function renderControls() {
     stage.hudEl.replaceChildren();
     stage.root.classList.remove('battle');
   }
+  if (v.phase === 'dead') {
+    renderDeath(c);
+    return;
+  }
+  stage.root.classList.remove('dead');
   if (v.phase === 'ended') {
     stage.clearActors();
     setBg('rooftop', 'dusk');
@@ -1126,6 +1451,9 @@ function renderControls() {
     const next = g.upcoming(1)[0];
     const sub = next ? [`다음 일정 · ${next.label} (${next.weeks <= 0 ? '이번 주' : `${next.weeks}주 뒤`})`] : [];
     dialog.show({ kind: 'prompt', name: cal.slotName(g.state.time), lines: ['무엇을 할까?', ...sub], speed: 0 });
+    const mb = memoryBar();
+    if (mb) c.append(mb);
+    const fut = currentFuture();
     const grid = el('div', 'activities');
     v.activities.forEach((a, i) => {
       const b: HTMLButtonElement = button('activity', '', () => pick(b, () => act({ type: 'activity', id: a.id }, a.name)));
@@ -1137,6 +1465,13 @@ function renderControls() {
       txt.append(nm);
       if (a.desc) txt.append(el('span', 'ad', a.desc));
       txt.append(previewChips(a.id));
+      const fe = futureEl(fut?.get(a.id));
+      if (fe) {
+        // 미래가 보이면 수치 미리보기 대신 벌어질 일을 보여준다
+        txt.lastElementChild?.remove();
+        txt.append(fe);
+        b.classList.add('seen');
+      }
       b.append(txt);
       grid.append(b);
     });
@@ -1144,6 +1479,9 @@ function renderControls() {
     return;
   }
   if (v.choices.length) {
+    const mb = memoryBar();
+    if (mb) c.append(mb);
+    const fut = currentFuture();
     const list = el('div', 'choices');
     v.choices.forEach((ch, i) => {
       const b: HTMLButtonElement = button('choice', '', () => pick(b, () => act({ type: 'choice', index: ch.index }, ch.text)));
@@ -1153,13 +1491,14 @@ function renderControls() {
       body.append(ch.text);
       if (!ch.enabled) body.append(el('span', 'lock', '조건이 부족하다'));
       if (ch.hint) body.append(el('span', 'hint', `⚠ ${ch.hint}`));
-      b.append(el('span', 'k', String(i + 1)), body);
-      if (ch.check) {
-        const pct = Math.round(ch.check.chance * 100);
-        const tag = el('span', `odds ${pct >= 70 ? 'hi' : pct >= 40 ? 'mid' : 'lo'}`);
-        tag.append(iconImg('dice', 1), `${ch.check.label ?? '판정'} ${pct}%`);
-        b.append(tag);
+      if (ch.past) body.prepend(el('span', 'past', '지난 생에 고른 길'));
+      const fe = futureEl(fut?.get(String(ch.index)));
+      if (fe) {
+        body.append(fe);
+        b.classList.add('seen');
       }
+      b.append(el('span', 'k', String(i + 1)), body);
+      if (ch.check && !ch.check.hidden) b.append(oddsChip(ch.check));
       list.append(b);
     });
     c.append(list);
@@ -1377,7 +1716,12 @@ function act(a: Action, label: string) {
   const enemyName = wasBattle ? content.enemies.get(game.state.battle!.enemy)!.name : '';
   const at = log.length;
   if (a.type === 'activity') lastActivity = a.id;
+  const wasDead = game.state.phase === 'dead';
   game.act(a);
+  if (wasDead) {
+    log.push({ k: 'loop', n: game.state.meta.deaths, when: game.view().time });
+    weekKey = '';
+  }
   const ended = game.state.lastBattle?.result;
   if (wasBattle) {
     const lines = game.state.battle?.log ?? game.state.lastBattle?.log ?? [];
@@ -1404,6 +1748,7 @@ function act(a: Action, label: string) {
     const b = game.state.battle!;
     log.push({ k: 'battle', enemy: content.enemies.get(b.enemy)!.name, lines: b.log, start: true });
   }
+  if (game.state.phase === 'dead' && !wasDead) log.push({ k: 'death', cause: game.state.dead?.cause ?? '' });
   checkWeek();
   if (label || deltas.length || ranks.length) {
     log.splice(at, 0, { k: 'act', text: label, deltas, ranks, icon: a.type === 'activity' ? ACTIVITY_ICON[a.id] : undefined });
@@ -1445,7 +1790,19 @@ function renderLine(l: RenderedLine, tod = 'day', prev = ''): HTMLElement {
     if (title) f.append(el('figcaption', undefined, title));
     return f;
   }
+  if (l.speaker === '판정' && l.check) {
+    const c = l.check;
+    const d = el('div', c.ok ? 'check ok' : 'check ng');
+    d.append(el('span', 'tag', GRADE_LABEL[c.grade]), iconImg(c.icon, 1), el('b', 'clabel', `${c.name} · ${c.odds}`));
+    if (c.factors.length) d.append(el('span', 'cmath', factorText(c.factors, 4)));
+    return d;
+  }
   if (l.speaker === '판정') return renderCheck(l.text);
+  if (l.speaker === '💠' || l.speaker === '🎒') {
+    const d = el('div', 'pin');
+    d.append(iconImg(l.speaker === '💠' ? 'shard' : 'bag', 1), el('span', undefined, l.text));
+    return d;
+  }
   if (l.speaker === '📌') {
     const [kind, rest] = l.text.split(' — ');
     const d = el('div', 'pin');
@@ -1554,6 +1911,8 @@ function renderItem(item: LogItem): HTMLElement {
     d.append(cap);
     return d;
   }
+  if (item.k === 'death') return el('div', 'deathlog', `[ 사망 ] ${item.cause}`);
+  if (item.k === 'loop') return el('div', 'looplog', `↺ 회귀 ${item.n} — ${item.when}`);
   const a = el('article', item.cont || item.flavor ? 'scene cont' : 'scene');
   if (item.strip) {
     const f = el('figure', 'strip');
@@ -1573,7 +1932,7 @@ function renderItem(item: LogItem): HTMLElement {
       prev = '';
     }
     a.append(renderLine(l, item.tod ?? 'day', prev));
-    prev = l.speaker && !['판정', '📌', '시스템', '삽화'].includes(l.speaker) ? l.speaker : '';
+    prev = l.speaker && !['판정', '📌', '💠', '🎒', '시스템', '삽화'].includes(l.speaker) ? l.speaker : '';
   }
   return a;
 }
@@ -1596,6 +1955,7 @@ function renderPanel() {
   const defs: [Tab, string, number?][] = [
     ['goals', '목표', goals.filter((x) => x.status === 'active').length],
     ['status', '상태'],
+    ['bag', '가방', g.inventory().length],
     ['people', '인연', people.length],
     ['notes', '노트', notes.length],
     ['fate', '운명'],
@@ -1638,7 +1998,6 @@ function renderPanel() {
     const who = el('div', 'me-card');
     who.append(portraitImg(lookOf('나')!.key, myLook(), '', 2), el('div', 'legend', content.origins.get(build.origin)?.name ?? ''));
     w.append(who);
-    if (!exact) w.append(el('div', 'legend', '상태창 특전이 없어서 등급만 보인다'));
     for (const s of content.rules.stats) {
       const v = Math.floor(Number(g.get(`stat.${s}`) ?? 0));
       const r = el('div', 'stat');
@@ -1681,6 +2040,25 @@ function renderPanel() {
     }
     tw.append(chips);
     pane.append(tw);
+
+    // 컨셉 시너지: 같은 태그의 재능이 모일수록 깨어난다
+    const sw = window_('[컨셉]');
+    let any = false;
+    for (const sy of content.synergies.values()) {
+      const have = [...content.talents.values()].filter((t) => t.tags.includes(sy.tag) && g.state.vars[`talent.${t.id}`]).length;
+      if (!have) continue;
+      any = true;
+      const tier = g.world.synergyTier(sy);
+      const next = sy.tiers[tier];
+      const r = el('div', `syn${tier ? ' on' : ''}`);
+      r.append(el('b', undefined, `${sy.name}${tier ? ` ${'★'.repeat(tier)}` : ''}`), el('span', 'syn-n', `${sy.tag} ${have}${next ? `/${next.need}` : ''}`));
+      r.append(el('span', 'syn-d', tier ? sy.tiers[tier - 1].desc : `${sy.tag} 재능이 ${next!.need}개면: ${next!.desc}`));
+      sw.append(r);
+    }
+    if (!any) sw.append(el('div', 'legend', '아직 깨어난 컨셉이 없다. 같은 갈래의 재능이 모이면 깨어난다.'));
+    pane.append(sw);
+  } else if (tab === 'bag') {
+    renderBag(pane);
   } else if (tab === 'people') {
     if (!people.length) pane.append(el('p', 'empty', '아직 인연을 맺은 사람이 없다.'));
     for (const r of people) {
