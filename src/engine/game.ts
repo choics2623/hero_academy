@@ -194,7 +194,11 @@ export class Game {
   }
 
   clone(): Game {
-    return new Game(this.content, structuredClone(this.state));
+    // 자동 저장(checkpoint)은 만들어진 뒤 바뀌지 않으므로 복제본끼리 나눠 쓴다 (깊은 복사는 비싸다)
+    const { meta, ...rest } = this.state;
+    const st = structuredClone(rest) as GameState;
+    st.meta = { deaths: meta.deaths, causes: [...meta.causes], foreseen: [...meta.foreseen], chosen: [...meta.chosen], checkpoint: meta.checkpoint };
+    return new Game(this.content, st);
   }
 
   /** 저장해둔 state(JSON)로 이어하기 */

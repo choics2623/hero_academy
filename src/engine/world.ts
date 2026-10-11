@@ -14,6 +14,19 @@ export interface WorldState {
   rng: number;
 }
 
+const tagKeyCache = new WeakMap<Content, Map<string, string[]>>();
+
+/** 태그 → 그 태그를 가진 재능의 변수 이름들 (콘텐츠마다 한 번만 계산) */
+function tagKeys(c: Content, tag: string): string[] {
+  let m = tagKeyCache.get(c);
+  if (!m) {
+    m = new Map();
+    for (const t of c.talents.values()) for (const g of t.tags) m.set(g, [...(m.get(g) ?? []), `talent.${t.id}`]);
+    tagKeyCache.set(c, m);
+  }
+  return m.get(tag) ?? [];
+}
+
 export class World implements Env {
   private deriving = new Set<string>();
 
@@ -99,9 +112,7 @@ export class World implements Env {
   /** 태그가 같은 재능이 모이면 깨어나는 컨셉 단계 (0 = 없음) */
   synergyTier(sy: Synergy): number {
     let n = 0;
-    for (const t of this.content.talents.values()) {
-      if (t.tags.includes(sy.tag) && truthy(this.state.vars[`talent.${t.id}`])) n++;
-    }
+    for (const key of tagKeys(this.content, sy.tag)) if (truthy(this.state.vars[key])) n++;
     let tier = 0;
     sy.tiers.forEach((x, i) => {
       if (n >= x.need) tier = i + 1;
@@ -122,6 +133,7 @@ export class World implements Env {
 
   /** 장비와 시너지가 주는 전투 보정 */
   gear(stat: string): number {
+    if (!this.content.items.size && !this.content.synergies.size) return 0;
     let sum = 0;
     for (const { item } of this.equipped()) sum += item.battle[stat] ?? 0;
     for (const sy of this.content.synergies.values()) {
